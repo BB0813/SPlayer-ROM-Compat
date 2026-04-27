@@ -100,6 +100,9 @@ jobs:
           fi
           keytool -list -keystore android/keystore/release.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
 
+      - name: Ensure Gradle wrapper executable
+        run: chmod +x android/gradlew
+
       - name: Build arm64-v8a / armeabi-v7a / x86_64 APKs
         run: pnpm android:apk:all
         env:

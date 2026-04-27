@@ -53,4 +53,5 @@ pnpm android:apk:all
 - `ANDROID_KEYSTORE_BASE64 不是有效的 Base64`：重新生成 `ANDROID_KEYSTORE_BASE64.txt`，只复制文件里的单行内容，不要复制引号或 `certutil` 的头尾说明。
 - `Keystore was tampered with, or password was incorrect`：检查 keystore 密码或 Base64 内容是否复制完整。
 - `Cannot recover key`：检查 `ANDROID_KEY_PASSWORD` 和 `ANDROID_KEY_ALIAS`。
+- `android/gradlew EACCES`：Linux Runner 没有 Gradle Wrapper 执行权限，当前 CI 会先执行 `chmod +x android/gradlew`，脚本也会通过 `sh android/gradlew` 兜底。
 - 没有分架构 APK：确认运行的是 `Android Release`，并查看 `Build Android split APKs` Job 下的三个上传步骤。

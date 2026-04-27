@@ -1,4 +1,4 @@
-# SPlayer-ROM-Compat
+﻿# SPlayer-ROM-Compat
 
 <p align="center">
   <img alt="logo" height="100" width="100" src="public/icons/logo-icon.png" />
@@ -149,27 +149,30 @@ CI 中可以直接看 job 与步骤名称确认是否为 Android 分架构构建
 
 GitHub Actions 签名工作流需要在仓库 `Settings` → `Secrets and variables` → `Actions` → `New repository secret` 中配置以下 4 个密钥。
 
-| Secret                      | 说明                         | 常见错误                                |
-| --------------------------- | ---------------------------- | --------------------------------------- |
-| `ANDROID_KEYSTORE_BASE64`   | `release.jks` 的 Base64 编码 | 复制时缺失字符、包含多余空格或换行异常  |
-| `ANDROID_KEYSTORE_PASSWORD` | Keystore 密码                | 与本地 `keystore.properties` 不一致     |
-| `ANDROID_KEY_ALIAS`         | Key 别名                     | 与 keystore 内实际 alias 不一致         |
-| `ANDROID_KEY_PASSWORD`      | Key 密码                     | 与生成 keystore 时填写的 key 密码不一致 |
+| Secret                      | 说明                         | 常见错误                                           |
+| --------------------------- | ---------------------------- | -------------------------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`   | `release.jks` 的 Base64 编码 | 复制时缺失字符、混入引号、复制了 certutil 头尾说明 |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore 密码                | 与本地 `keystore.properties` 不一致                |
+| `ANDROID_KEY_ALIAS`         | Key 别名                     | 与 keystore 内实际 alias 不一致                    |
+| `ANDROID_KEY_PASSWORD`      | Key 密码                     | 与生成 keystore 时填写的 key 密码不一致            |
 
 Windows PowerShell 生成 `ANDROID_KEYSTORE_BASE64`：
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("android\keystore\release.jks")) | Set-Content -Encoding ascii android\keystore\ANDROID_KEYSTORE_BASE64.txt
+$base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("android\keystore\release.jks"))
+Set-Content -Path android\keystore\ANDROID_KEYSTORE_BASE64.txt -Value $base64 -Encoding ascii -NoNewline
 ```
 
-把 `ANDROID_KEYSTORE_BASE64.txt` 的完整内容填入 `ANDROID_KEYSTORE_BASE64`，其余三项按 `android/keystore/android-release-secrets.txt` 或本地 `android/keystore.properties` 填写。`android/keystore/` 已被 `.gitignore` 忽略，禁止提交 keystore 或 Secrets 明文。
+把 `ANDROID_KEYSTORE_BASE64.txt` 的完整单行内容填入 `ANDROID_KEYSTORE_BASE64`，不要额外复制引号、文件名、空格或 `certutil` 生成的头尾说明；其余三项按 `android/keystore/android-release-secrets.txt` 或本地 `android/keystore.properties` 填写。`android/keystore/` 已被 `.gitignore` 忽略，禁止提交 keystore 或 Secrets 明文。
 
 ### CI 排错清单
 
 - 没看到 APK：确认进入的是 `Android Release`，不是 `Desktop Release (Manual Only)`。
 - 只有一个包：确认查看的是 Android Release 的三个 ABI Artifact，或 tag 对应的 GitHub Release 附件。
+- 解码失败：重新用 README 中的 PowerShell 命令生成 `ANDROID_KEYSTORE_BASE64.txt`，只复制文件里的单行内容，不要复制引号、文件名或 `certutil` 的头尾说明。
 - 签名失败：检查 4 个 Secrets 是否完整，尤其是 `ANDROID_KEY_ALIAS` 是否等于 keystore 内别名。
 - 格式检查失败：本地执行 `pnpm format` 后重新提交。
+- `android/gradlew EACCES`：Linux Runner 没有 Gradle Wrapper 执行权限，当前 CI 会先执行 `chmod +x android/gradlew`，脚本也会通过 `sh android/gradlew` 兜底。
 - 构建失败：本地先执行 `pnpm lint`、`pnpm build`、`pnpm android:apk:all` 复现。
 
 ---
