@@ -1,0 +1,1 @@
+const r={required:!0,message:"请填写必要信息",trigger:["blur"]},e={required:!0,type:"number",message:"请输入数字",trigger:["input","blur"]},t={required:!0,type:"number",message:"请输入正确的手机号",trigger:["input","blur"],validator:(r,e)=>e?!!/^1(3\d|4[5-9]|5[0-35-9]|6[567]|7[0-8]|8\d|9[0-35-9])\d{8}$/.test(e)||new Error("请输入正确的手机号"):new Error("请输入手机号")};export{e as n,t as p,r as t};

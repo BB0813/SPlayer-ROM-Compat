@@ -1,0 +1,17 @@
+<resources>
+  <string name="app_name">SPlayer-ROM-Compat</string>
+  <string name="playback_notification_channel_name">SPlayer-ROM-Compat 原生播放控制</string>
+  <string name="notification_action_previous">上一首</string>
+  <string name="notification_action_play">播放</string>
+  <string name="notification_action_pause">暂停</string>
+  <string name="notification_action_next">下一首</string>
+  <string name="notification_action_seek_backward">快退 15 秒</string>
+  <string name="notification_action_seek_forward">快进 15 秒</string>
+  <string name="notification_action_seek_10_percent">跳转到 10% 进度</string>
+  <string name="notification_action_seek_30_percent">跳转到 30% 进度</string>
+  <string name="notification_action_seek_50_percent">跳转到 50% 进度</string>
+  <string name="notification_action_seek_70_percent">跳转到 70% 进度</string>
+  <string name="notification_action_seek_90_percent">跳转到 90% 进度</string>
+  <string name="enhanced_notification_cover">歌曲封面</string>
+  <string name="playback_notification_play_pause">播放或暂停</string>
+</resources>

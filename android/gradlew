@@ -1,0 +1,21 @@
+﻿#!/usr/bin/env sh
+set -eu
+
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+DIST_URL="https://services.gradle.org/distributions/gradle-8.14.3-all.zip"
+DIST_DIR="$HOME/.gradle/wrapper/dists/gradle-8.14.3"
+BIN_PATH="$DIST_DIR/bin/gradle"
+ZIP_PATH="$HOME/.gradle/wrapper/dists/gradle-8.14.3-all.zip"
+
+mkdir -p "$HOME/.gradle/wrapper/dists"
+
+if [ ! -x "$BIN_PATH" ]; then
+  rm -rf "$DIST_DIR"
+  mkdir -p "$DIST_DIR"
+  if [ ! -f "$ZIP_PATH" ]; then
+    curl -L "$DIST_URL" -o "$ZIP_PATH"
+  fi
+  unzip -oq "$ZIP_PATH" -d "$HOME/.gradle/wrapper/dists"
+fi
+
+exec "$BIN_PATH" -p "$APP_HOME" "$@"

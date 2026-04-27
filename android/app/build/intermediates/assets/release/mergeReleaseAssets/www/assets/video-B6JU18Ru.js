@@ -1,0 +1,1 @@
+import{di as a}from"./stores-Cv-Kdviq.js";const r=(r,s)=>a({url:`/${s}/detail`,params:"mv"===s?{mvid:r}:{id:r}}),s=(r,s,i)=>a({url:`/${s}/url`,params:{id:r,r:i}}),i=(r,s)=>a({url:`/${s}/detail/info`,params:"mv"===s?{mvid:r}:{vid:r}}),m=(r,s,i,m=12,l=0)=>a({url:"/mv/all",params:{area:r,type:s,order:i,limit:m,offset:l}});export{m as a,i as b,s as c,r as v};
