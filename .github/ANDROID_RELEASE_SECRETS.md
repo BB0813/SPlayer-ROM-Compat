@@ -22,10 +22,11 @@ CI 自动打包使用 `.github/workflows/android-release.yml`。发布 `v*` / `a
 Windows PowerShell：
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("android\keystore\release.jks")) | Set-Content -Encoding ascii android\keystore\ANDROID_KEYSTORE_BASE64.txt
+$base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("android\keystore\release.jks"))
+Set-Content -Path android\keystore\ANDROID_KEYSTORE_BASE64.txt -Value $base64 -Encoding ascii -NoNewline
 ```
 
-把 `ANDROID_KEYSTORE_BASE64.txt` 的完整内容填入 `ANDROID_KEYSTORE_BASE64`，其余三项按 `android-release-secrets.txt` 或本地 `android/keystore.properties` 中的密码和别名填写。
+把 `ANDROID_KEYSTORE_BASE64.txt` 的完整单行内容填入 `ANDROID_KEYSTORE_BASE64`，不要额外复制引号、文件名、空格或 `certutil` 生成的头尾说明。其余三项按 `android-release-secrets.txt` 或本地 `android/keystore.properties` 中的密码和别名填写。
 
 ## 触发方式
 
@@ -49,6 +50,7 @@ pnpm android:apk:all
 ## 常见失败
 
 - `缺少 GitHub Actions Secret`：补齐提示中对应的 Secret。
+- `ANDROID_KEYSTORE_BASE64 不是有效的 Base64`：重新生成 `ANDROID_KEYSTORE_BASE64.txt`，只复制文件里的单行内容，不要复制引号或 `certutil` 的头尾说明。
 - `Keystore was tampered with, or password was incorrect`：检查 keystore 密码或 Base64 内容是否复制完整。
 - `Cannot recover key`：检查 `ANDROID_KEY_PASSWORD` 和 `ANDROID_KEY_ALIAS`。
 - 没有分架构 APK：确认运行的是 `Android Release`，并查看 `Build Android split APKs` Job 下的三个上传步骤。

@@ -84,9 +84,21 @@ jobs:
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
+          set -euo pipefail
           mkdir -p android/keystore
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/keystore/release.jks
+          sanitized_keystore_base64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')"
+          if ! printf '%s' "$sanitized_keystore_base64" | base64 --decode > android/keystore/release.jks; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 不是有效的 Base64，请重新复制 release.jks 的 Base64 内容"
+            exit 1
+          fi
+          if [ ! -s android/keystore/release.jks ]; then
+            echo "::error::release.jks 解码后为空，请检查 ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          keytool -list -keystore android/keystore/release.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
 
       - name: Build arm64-v8a / armeabi-v7a / x86_64 APKs
         run: pnpm android:apk:all
