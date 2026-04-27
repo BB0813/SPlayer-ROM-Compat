@@ -1,24 +1,13 @@
-# Dev 分支推送部署预览
-name: Build Dev
+﻿# 桌面端历史 Dev 构建流程，仅手动触发。
+name: Desktop Dev Build (Manual Only)
 
 on:
-  push:
-    branches:
-      - dev
-    paths:
-      - "src/**"
-      - "web/**"
-      - "electron/**"
-      - "public/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "electron-builder.config.ts"
-      - "electron.vite.config.ts"
-      - "tsconfig*.json"
-      - ".env.example"
-      - "Dockerfile"
-      - "docker-compose.yml"
   workflow_dispatch:
+    inputs:
+      reason:
+        description: "手动构建桌面端 Dev 包的原因"
+        required: false
+        type: string
 
 env:
   NODE_VERSION: 22.x

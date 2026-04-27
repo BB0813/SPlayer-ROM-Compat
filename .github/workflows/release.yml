@@ -1,10 +1,14 @@
-name: Build & Release
+﻿name: Desktop Release (Manual Only)
 
+# 桌面端历史发布流程仅手动触发。
+# Android 发布请使用 android-release.yml，避免 v* 标签误跑 macOS/Windows/Linux。
 on:
-  push:
-    tags:
-      - v* # 只在 tag v* 时触发
   workflow_dispatch:
+    inputs:
+      reason:
+        description: "手动构建桌面端包的原因"
+        required: false
+        type: string
 
 env:
   NODE_VERSION: 22.x

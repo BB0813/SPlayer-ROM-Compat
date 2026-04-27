@@ -1,9 +1,13 @@
-name: Weekly Nightly Build
+﻿name: Desktop Nightly Build (Manual Only)
 
+# 桌面端历史 Nightly 构建流程，仅手动触发。
 on:
-  schedule:
-    - cron: "0 10 * * 5" # 每周五 18:00 (UTC+8)
   workflow_dispatch:
+    inputs:
+      reason:
+        description: "手动构建桌面端 Nightly 包的原因"
+        required: false
+        type: string
 
 permissions:
   contents: write
