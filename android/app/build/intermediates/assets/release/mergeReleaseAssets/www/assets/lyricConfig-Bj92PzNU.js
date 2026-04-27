@@ -1,1 +1,0 @@
-const o={isLock:!1,playedColor:"#fe7971",unplayedColor:"#ccc",shadowColor:"rgba(0, 0, 0, 0.5)",fontFamily:"system-ui",fontSize:24,fontWeight:400,showTran:!0,showWordLyrics:!0,isDoubleLine:!0,position:"both",limitBounds:!1,textBackgroundMask:!1,backgroundMaskColor:"rgba(0, 0, 0, 0.5)",alwaysShowPlayInfo:!1,animation:!0};export{o as c};

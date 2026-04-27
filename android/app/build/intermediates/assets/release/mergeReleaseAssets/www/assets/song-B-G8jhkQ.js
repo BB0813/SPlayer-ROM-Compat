@@ -1,1 +1,0 @@
-import{_ as a}from"./SongList-CbJ_s9tB.js";import{d as s,ac as o,l as t,F as d}from"./stores-Cv-Kdviq.js";import"./cloud-B8-S_BJM.js";const l={class:"streaming-songs"},n=s({__name:"song",props:{data:{},loading:{type:Boolean}},setup:s=>(n,i)=>(d(),o("div",l,[t(a,{data:s.data,loading:s.loading,"disabled-sort":""},null,8,["data","loading"])]))});export{n as default};

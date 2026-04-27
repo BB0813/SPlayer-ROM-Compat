@@ -1,1 +1,0 @@
-import{_ as s}from"./ArtistList-C58RIInH.js";import{d as t,Q as a,u as e,ac as r,l as i,h as o,F as d}from"./stores-Cv-Kdviq.js";const n={class:"like-type"},l=t({__name:"artists",setup(t){const l=a(),u=e();return(t,a)=>{const e=s;return d(),r("div",n,[i(e,{data:o(l).userLikeData.artists,hiddenCover:o(u).hiddenCovers.like},null,8,["data","hiddenCover"])])}}});export{l as default};

@@ -48,3 +48,41 @@ android/keystore/
 
 .ai/
 
+
+# Local env / secrets
+.env.local
+*.jks
+*.keystore
+*.p12
+*.pem
+ANDROID_KEYSTORE_BASE64.txt
+
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+out/
+target/
+android-web-dist/
+android/.gradle/
+android/build/
+android/dist/
+android/app/build/
+android/app/src/main/assets/www/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+native/**/target/
+
+# Android artifacts
+*.apk
+*.aab
+*.apks
+*.dm
+
+# Logs / temp
+logs_*/
+.trae/
+.cursor/
+.claude/
+.ai_utf8_test.txt
