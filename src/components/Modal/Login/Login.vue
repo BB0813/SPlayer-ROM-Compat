@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="login">
     <img src="/icons/favicon.png?asset" alt="logo" class="logo" />
     <!-- 登录方式 -->
@@ -67,22 +67,31 @@ const saveLogin = async (loginData: any, type: LoginType = "qr") => {
   console.log("loginData:", loginData);
   if (!loginData) return;
   if (loginData.code === 200) {
-    // 更改状态
-    emit("close");
-    dataStore.userLoginStatus = true;
-    dataStore.loginType = type;
-    window.$message.success("登录成功");
-    // 保存 cookie
-    if (type !== "uid") setCookies(loginData.cookie);
-    // 保存登录时间
-    localStorage.setItem("lastLoginTime", Date.now().toString());
-    // 获取用户信息
-    if (type !== "uid") {
-      await updateUserData();
-    } else {
-      await updateSpecialUserData(loginData?.profile);
+    try {
+      // 保存 cookie
+      if (type !== "uid") {
+        if (!loginData.cookie) throw new Error("登录 Cookie 为空");
+        setCookies(loginData.cookie);
+      }
+      // 更改状态
+      dataStore.userLoginStatus = true;
+      dataStore.loginType = type;
+      // 保存登录时间
+      localStorage.setItem("lastLoginTime", Date.now().toString());
+      // 获取用户信息
+      if (type !== "uid") {
+        await updateUserData();
+      } else {
+        await updateSpecialUserData(loginData?.profile);
+      }
+      emit("close");
+      window.$message.success("登录成功");
+      emit("success");
+    } catch (error) {
+      console.error("登录信息同步失败：", error);
+      dataStore.userLoginStatus = false;
+      window.$message.error("登录信息同步失败，请重试");
     }
-    emit("success");
   } else {
     window.$message.error(loginData.msg ?? loginData.message ?? "账号或密码错误，请重试");
   }

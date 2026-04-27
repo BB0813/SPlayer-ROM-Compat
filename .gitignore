@@ -48,13 +48,33 @@ android/keystore/
 
 .ai/
 
+# Android / Gradle build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/dist/
+android/app/src/main/assets/www/
+*.apk
+*.aab
+*.apks
+*.dm
+# Native build outputs
+/target/
 
-# Local env / secrets
-.env.local
+logs_*/
+.gradle/
+**/.gradle/
+**/target/
+native/**/target/
 *.jks
 *.keystore
 *.p12
 *.pem
+gradle-*-all.zip
+gradle-*-bin.zip
+
+# Local env / secrets
+.env.local
 ANDROID_KEYSTORE_BASE64.txt
 
 # Dependency directories
@@ -65,23 +85,12 @@ dist/
 out/
 target/
 android-web-dist/
-android/.gradle/
-android/build/
-android/dist/
-android/app/build/
-android/app/src/main/assets/www/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
-native/**/target/
 
 # Android artifacts
-*.apk
-*.aab
-*.apks
-*.dm
 
 # Logs / temp
-logs_*/
 .trae/
 .cursor/
 .claude/

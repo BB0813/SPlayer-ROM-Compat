@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="login-qrcode">
     <div class="qr-img">
       <div
@@ -89,6 +89,7 @@ const getQrData = async () => {
   } catch (error) {
     pauseCheck();
     console.error("二维码获取失败：", error);
+    window.$message.error("二维码获取失败，请检查网络后重试");
   }
 };
 
@@ -96,7 +97,16 @@ const getQrData = async () => {
 const checkQrStatus = async () => {
   if (!qrUnikey.value || props.pause) return;
   // 检查状态
-  const { code, cookie, nickname, avatarUrl } = await checkQr(qrUnikey.value);
+  let result: Awaited<ReturnType<typeof checkQr>>;
+  try {
+    result = await checkQr(qrUnikey.value);
+  } catch (error) {
+    pauseCheck();
+    console.error("二维码状态检查失败：", error);
+    window.$message.error("二维码状态检查失败，请刷新重试");
+    return;
+  }
+  const { code, cookie, nickname, avatarUrl } = result;
   switch (code) {
     // 二维码过期
     case 800:

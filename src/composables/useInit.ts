@@ -19,6 +19,7 @@ import { debounce } from "lodash-es";
 import { onMounted, watch } from "vue";
 
 const FINAL_FOCUS_DELAY_MS = 500;
+const ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS = 15000;
 
 export const useInit = () => {
   const dataStore = useDataStore();
@@ -29,6 +30,7 @@ export const useInit = () => {
 
   const player = usePlayerController();
   const downloadManager = useDownloadManager();
+  let lastAndroidLyricMetadataSyncAt = 0;
 
   initEventListener();
 
@@ -73,13 +75,32 @@ export const useInit = () => {
           musicStore.songCover,
           musicStore.songLyric.lrcData.length,
           musicStore.songLyric.yrcData.length,
-          statusStore.lyricIndex,
           settingStore.showWordLyrics,
           settingStore.androidNotificationSubtitleMode,
           settingStore.androidEnhancedNotificationEnabled,
           settingStore.androidEnhancedNotificationExclusive,
         ],
         () => {
+          syncAndroidNowPlayingFromStores();
+        },
+      );
+      watch(
+        () => statusStore.lyricIndex,
+        () => {
+          const usesLyricSubtitle = settingStore.androidNotificationSubtitleMode === "lyric";
+          const usesEnhancedNotification = settingStore.androidEnhancedNotificationEnabled;
+          if (!usesLyricSubtitle && !usesEnhancedNotification) return;
+
+          const now = Date.now();
+          if (
+            usesLyricSubtitle &&
+            !usesEnhancedNotification &&
+            now - lastAndroidLyricMetadataSyncAt < ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS
+          ) {
+            return;
+          }
+
+          lastAndroidLyricMetadataSyncAt = now;
           syncAndroidNowPlayingFromStores();
         },
       );

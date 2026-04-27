@@ -1,4 +1,4 @@
-import { AUDIO_EVENTS, type AudioErrorDetail } from "./BaseAudioPlayer";
+﻿import { AUDIO_EVENTS, type AudioErrorDetail } from "./BaseAudioPlayer";
 import type {
   EngineCapabilities,
   IPlaybackEngine,
@@ -17,6 +17,10 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   private _rate = 1;
   private _errorCode = 0;
   private isInitialized = false;
+  private lastTimeSyncAt = 0;
+  private lastNativeGetterSyncAt = 0;
+
+  private static readonly NATIVE_GETTER_THROTTLE_MS = 1000;
 
   public readonly capabilities: EngineCapabilities = {
     supportsRate: true,
@@ -31,27 +35,28 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
     if (!payload) return;
 
     const detail = payload.detail ?? {};
+    this.applyNativeSnapshot(detail);
 
     switch (payload.type) {
       case AUDIO_EVENTS.LOAD_START:
         this.dispatchEvent(new Event(AUDIO_EVENTS.LOAD_START));
         break;
       case AUDIO_EVENTS.CAN_PLAY:
-        this._duration = Number(detail.duration ?? this._duration);
         this.dispatchEvent(new Event(AUDIO_EVENTS.CAN_PLAY));
         break;
       case AUDIO_EVENTS.PLAY:
       case AUDIO_EVENTS.PLAYING:
         this._paused = false;
+        this.lastTimeSyncAt = performance.now();
         this.dispatchEvent(new Event(payload.type));
         break;
       case AUDIO_EVENTS.PAUSE:
+        this._currentTime = this.getEstimatedCurrentTime();
         this._paused = true;
+        this.lastTimeSyncAt = performance.now();
         this.dispatchEvent(new Event(AUDIO_EVENTS.PAUSE));
         break;
       case AUDIO_EVENTS.TIME_UPDATE:
-        this._currentTime = Number(detail.currentTime ?? this._currentTime);
-        this._duration = Number(detail.duration ?? this._duration);
         this.dispatchEvent(new Event(AUDIO_EVENTS.TIME_UPDATE));
         break;
       case AUDIO_EVENTS.SEEKING:
@@ -60,15 +65,6 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
       case AUDIO_EVENTS.ENDED:
       case AUDIO_EVENTS.VOLUME_CHANGE:
       case AUDIO_EVENTS.EMPTIED:
-        if (detail.currentTime !== undefined) {
-          this._currentTime = Number(detail.currentTime);
-        }
-        if (detail.duration !== undefined) {
-          this._duration = Number(detail.duration);
-        }
-        if (detail.volume !== undefined) {
-          this._volume = Number(detail.volume);
-        }
         this.dispatchEvent(new Event(payload.type));
         break;
       case AUDIO_EVENTS.ERROR: {
@@ -97,6 +93,43 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
     }
   };
 
+  private applyNativeSnapshot(detail: Record<string, unknown>): void {
+    if (detail.currentTime !== undefined) {
+      this._currentTime = Number(detail.currentTime);
+      this.lastTimeSyncAt = performance.now();
+    }
+    if (detail.duration !== undefined) {
+      this._duration = Number(detail.duration);
+    }
+    if (detail.volume !== undefined) {
+      this._volume = Number(detail.volume);
+    }
+    if (detail.rate !== undefined) {
+      this._rate = Number(detail.rate);
+    }
+    if (detail.src !== undefined) {
+      this._src = String(detail.src || this._src);
+    }
+  }
+
+  private getEstimatedCurrentTime(): number {
+    if (this._paused || this.lastTimeSyncAt <= 0) return this._currentTime;
+
+    const elapsed = ((performance.now() - this.lastTimeSyncAt) / 1000) * this._rate;
+    const estimatedTime = this._currentTime + Math.max(elapsed, 0);
+    if (this._duration > 0) return Math.min(estimatedTime, this._duration);
+    return estimatedTime;
+  }
+
+  private shouldSyncNativeGetter(): boolean {
+    const now = performance.now();
+    if (now - this.lastNativeGetterSyncAt < AndroidNativeAudioPlayer.NATIVE_GETTER_THROTTLE_MS) {
+      return false;
+    }
+    this.lastNativeGetterSyncAt = now;
+    return true;
+  }
+
   public init(): void {
     if (this.isInitialized) return;
     window.addEventListener(ANDROID_PLAYER_EVENT, this.handlePlayerEvent as EventListener);
@@ -117,6 +150,10 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
 
     if (url) {
       this._src = url;
+      this._currentTime = Number(options?.seek ?? 0);
+      this._duration = 0;
+      this._paused = options?.autoPlay === false;
+      this.lastTimeSyncAt = performance.now();
       player.play(url, JSON.stringify(options ?? {}));
       return;
     }
@@ -129,12 +166,17 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   public async resume(options?: { fadeIn?: boolean; fadeDuration?: number }): Promise<void> {
     const player = getAndroidPlayerBridge();
     if (!player) throw new Error("AndroidNativeAudioPlayer bridge unavailable");
+    this._paused = false;
+    this.lastTimeSyncAt = performance.now();
     player.resume(JSON.stringify(options ?? {}));
   }
 
   public pause(options?: PauseOptions): void {
     const player = getAndroidPlayerBridge();
     if (!player) return;
+    this._currentTime = this.getEstimatedCurrentTime();
+    this._paused = true;
+    this.lastTimeSyncAt = performance.now();
     player.pause(JSON.stringify(options ?? {}));
   }
 
@@ -146,12 +188,14 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
     this._currentTime = 0;
     this._duration = 0;
     this._paused = true;
+    this.lastTimeSyncAt = 0;
   }
 
   public seek(time: number): void {
     const player = getAndroidPlayerBridge();
     if (!player) return;
     this._currentTime = time;
+    this.lastTimeSyncAt = performance.now();
     player.seek(time);
   }
 
@@ -200,7 +244,7 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
 
   public get duration(): number {
     const player = getAndroidPlayerBridge();
-    if (player) {
+    if (player && (this._duration <= 0 || this._paused) && this.shouldSyncNativeGetter()) {
       this._duration = Number(player.getDuration());
     }
     return this._duration;
@@ -208,23 +252,25 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
 
   public get currentTime(): number {
     const player = getAndroidPlayerBridge();
-    if (player) {
+    if (player && this._paused && this.shouldSyncNativeGetter()) {
       this._currentTime = Number(player.getCurrentTime());
+      this.lastTimeSyncAt = performance.now();
     }
-    return this._currentTime;
+    return this.getEstimatedCurrentTime();
   }
 
   public get paused(): boolean {
     const player = getAndroidPlayerBridge();
-    if (player) {
+    if (player && this.shouldSyncNativeGetter()) {
       this._paused = !!player.isPaused();
+      this.lastTimeSyncAt = performance.now();
     }
     return this._paused;
   }
 
   public get src(): string {
     const player = getAndroidPlayerBridge();
-    if (player) {
+    if (player && !this._src && this.shouldSyncNativeGetter()) {
       this._src = player.getSrc() || this._src;
     }
     return this._src;

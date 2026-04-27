@@ -1,4 +1,4 @@
-package top.imsyy.splayer.android.player
+﻿package top.imsyy.splayer.android.player
 
 import android.app.PendingIntent
 import android.content.Context
@@ -36,16 +36,18 @@ object AndroidNativeAudioPlayer {
   private const val TAG = "SPlayerNativeAudio"
   private const val ACTION_PREVIOUS = "playPrev"
   private const val ACTION_NEXT = "playNext"
-  private const val ACTION_NOTIFICATION_PREVIOUS = "top.imsyy.splayer.NOTIFICATION_PREVIOUS"
-  private const val ACTION_NOTIFICATION_PLAY = "top.imsyy.splayer.NOTIFICATION_PLAY"
-  private const val ACTION_NOTIFICATION_PAUSE = "top.imsyy.splayer.NOTIFICATION_PAUSE"
-  private const val ACTION_NOTIFICATION_NEXT = "top.imsyy.splayer.NOTIFICATION_NEXT"
-  private const val ACTION_NOTIFICATION_SEEK_BACKWARD = "top.imsyy.splayer.NOTIFICATION_SEEK_BACKWARD"
-  private const val ACTION_NOTIFICATION_SEEK_FORWARD = "top.imsyy.splayer.NOTIFICATION_SEEK_FORWARD"
-  private const val ACTION_NOTIFICATION_SEEK_TO_PERCENT = "top.imsyy.splayer.NOTIFICATION_SEEK_TO_PERCENT"
-  private const val EXTRA_NOTIFICATION_SEEK_PERCENT = "top.imsyy.splayer.extra.SEEK_PERCENT"
+  private const val ACTION_NOTIFICATION_PREVIOUS = "top.imsyy.splayer.romcompat.NOTIFICATION_PREVIOUS"
+  private const val ACTION_NOTIFICATION_PLAY = "top.imsyy.splayer.romcompat.NOTIFICATION_PLAY"
+  private const val ACTION_NOTIFICATION_PAUSE = "top.imsyy.splayer.romcompat.NOTIFICATION_PAUSE"
+  private const val ACTION_NOTIFICATION_NEXT = "top.imsyy.splayer.romcompat.NOTIFICATION_NEXT"
+  private const val ACTION_NOTIFICATION_SEEK_BACKWARD = "top.imsyy.splayer.romcompat.NOTIFICATION_SEEK_BACKWARD"
+  private const val ACTION_NOTIFICATION_SEEK_FORWARD = "top.imsyy.splayer.romcompat.NOTIFICATION_SEEK_FORWARD"
+  private const val ACTION_NOTIFICATION_SEEK_TO_PERCENT = "top.imsyy.splayer.romcompat.NOTIFICATION_SEEK_TO_PERCENT"
+  private const val EXTRA_NOTIFICATION_SEEK_PERCENT = "top.imsyy.splayer.romcompat.extra.SEEK_PERCENT"
   private const val NOTIFICATION_SEEK_STEP_MS = 15000L
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
+  private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
+  private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
   private val notificationSeekPercentStops = intArrayOf(10, 30, 50, 70, 90)
 
   enum class NotificationAction {
@@ -57,8 +59,16 @@ object AndroidNativeAudioPlayer {
     SEEK_FORWARD,
   }
 
-  private val previousCommand = SessionCommand("top.imsyy.splayer.PREVIOUS", Bundle.EMPTY)
-  private val nextCommand = SessionCommand("top.imsyy.splayer.NEXT", Bundle.EMPTY)
+  private data class MetadataApplyResult(
+    val mediaFieldsChanged: Boolean,
+    val lyricLineChanged: Boolean,
+  ) {
+    val changed: Boolean
+      get() = mediaFieldsChanged || lyricLineChanged
+  }
+
+  private val previousCommand = SessionCommand("top.imsyy.splayer.romcompat.PREVIOUS", Bundle.EMPTY)
+  private val nextCommand = SessionCommand("top.imsyy.splayer.romcompat.NEXT", Bundle.EMPTY)
 
   private var appContext: Context? = null
   private var player: ExoPlayer? = null
@@ -74,20 +84,25 @@ object AndroidNativeAudioPlayer {
   private var notificationSubtitleMode: String = NOTIFICATION_SUBTITLE_ARTIST
   private var enhancedNotificationEnabled: Boolean = false
   private var enhancedNotificationExclusive: Boolean = false
+  private var enhancedNotificationShown: Boolean = false
 
   private var currentTitle: String = ""
   private var currentArtist: String = ""
   private var currentAlbum: String = ""
   private var currentLyricLine: String = ""
   private var currentArtworkUri: String = ""
+  private var lastMediaMetadataKey: String = ""
+  private var lastMediaMetadataLyricUpdateAt: Long = 0L
 
   private val progressTask = object : Runnable {
     override fun run() {
       emit("timeupdate", snapshot())
-      appContext?.let { updateEnhancedNotification(it) }
+      if (enhancedNotificationEnabled) {
+        appContext?.let { updateEnhancedNotification(it) }
+      }
       val currentPlayer = player ?: return
       if (currentPlayer.isPlaying || currentPlayer.playbackState == Player.STATE_READY) {
-        handler.postDelayed(this, 500)
+        handler.postDelayed(this, PROGRESS_EVENT_INTERVAL_MS)
       }
     }
   }
@@ -245,6 +260,7 @@ object AndroidNativeAudioPlayer {
     errorCode = 0
 
     applyMetadataFromJson(options)
+    lastMediaMetadataKey = ""
     emit("loadstart", snapshot())
 
     val mediaItem =
@@ -253,9 +269,10 @@ object AndroidNativeAudioPlayer {
         .setMediaMetadata(buildNotificationMediaMetadata())
         .build()
     currentPlayer.setMediaItem(mediaItem)
+    lastMediaMetadataKey = buildMediaMetadataKey()
+    lastMediaMetadataLyricUpdateAt = System.currentTimeMillis()
     currentPlayer.prepare()
     setRate(options.optDouble("rate", getRate()))
-    appContext?.let { updateEnhancedNotification(it, true) }
 
     val seek = options.optDouble("seek", 0.0)
     if (seek > 0) {
@@ -294,6 +311,8 @@ object AndroidNativeAudioPlayer {
     currentAlbum = ""
     currentLyricLine = ""
     currentArtworkUri = ""
+    lastMediaMetadataKey = ""
+    lastMediaMetadataLyricUpdateAt = 0L
     stopProgressLoop()
     appContext?.let { cancelEnhancedNotification(it) }
     emit("emptied", snapshot())
@@ -388,9 +407,14 @@ object AndroidNativeAudioPlayer {
   fun updateEnhancedNotification(context: Context, force: Boolean = false) {
     val appContext = context.applicationContext
     if (!enhancedNotificationEnabled || currentSrc.isBlank()) {
-      AndroidEnhancedNotificationManager.cancel(appContext)
+      if (enhancedNotificationShown || force) {
+        AndroidEnhancedNotificationManager.cancel(appContext)
+        enhancedNotificationShown = false
+      }
       return
     }
+
+    enhancedNotificationShown = true
 
     val currentPlayer = player
     val duration = currentPlayer?.duration?.takeIf { it > 0L } ?: 0L
@@ -426,6 +450,7 @@ object AndroidNativeAudioPlayer {
   }
 
   fun cancelEnhancedNotification(context: Context) {
+    enhancedNotificationShown = false
     AndroidEnhancedNotificationManager.cancel(context.applicationContext)
   }
 
@@ -548,7 +573,7 @@ object AndroidNativeAudioPlayer {
           .commit()
 
       mediaSession?.setSessionActivity(buildSessionActivity(context.applicationContext))
-      updateCurrentMediaItemMetadata()
+      updateCurrentMediaItemMetadata(force = true)
       updateEnhancedNotification(context.applicationContext, true)
       saved
     } catch (_: Exception) {
@@ -559,31 +584,85 @@ object AndroidNativeAudioPlayer {
   fun updateMetadata(metadataJson: String?): Boolean {
     return try {
       val metadata = metadataJson?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
-      applyMetadataFromJson(metadata)
-      updateCurrentMediaItemMetadata()
-      appContext?.let { updateEnhancedNotification(it, true) }
+      val applyResult = applyMetadataFromJson(metadata)
+      if (shouldRefreshNativeMediaMetadata(applyResult)) {
+        updateCurrentMediaItemMetadata()
+      }
+      if (applyResult.changed) {
+        appContext?.let { updateEnhancedNotification(it, true) }
+      }
       true
     } catch (_: Exception) {
       false
     }
   }
 
-  private fun applyMetadataFromJson(data: JSONObject) {
+  private fun applyMetadataFromJson(data: JSONObject): MetadataApplyResult {
+    var mediaFieldsChanged = false
+    var lyricLineChanged = false
+
     if (data.has("title")) {
-      currentTitle = data.optString("title").trim()
+      val nextTitle = data.optString("title").trim()
+      if (nextTitle != currentTitle) {
+        currentTitle = nextTitle
+        mediaFieldsChanged = true
+      }
     }
     if (data.has("artist")) {
-      currentArtist = data.optString("artist").trim()
+      val nextArtist = data.optString("artist").trim()
+      if (nextArtist != currentArtist) {
+        currentArtist = nextArtist
+        mediaFieldsChanged = true
+      }
     }
     if (data.has("album")) {
-      currentAlbum = data.optString("album").trim()
+      val nextAlbum = data.optString("album").trim()
+      if (nextAlbum != currentAlbum) {
+        currentAlbum = nextAlbum
+        mediaFieldsChanged = true
+      }
     }
     if (data.has("lyricLine")) {
-      currentLyricLine = data.optString("lyricLine").trim()
+      val nextLyricLine = data.optString("lyricLine").trim()
+      if (nextLyricLine != currentLyricLine) {
+        currentLyricLine = nextLyricLine
+        lyricLineChanged = true
+      }
     }
     if (data.has("artworkUri")) {
-      currentArtworkUri = normalizeArtworkUri(data.optString("artworkUri"))
+      val nextArtworkUri = normalizeArtworkUri(data.optString("artworkUri"))
+      if (nextArtworkUri != currentArtworkUri) {
+        currentArtworkUri = nextArtworkUri
+        mediaFieldsChanged = true
+      }
     }
+
+    return MetadataApplyResult(mediaFieldsChanged, lyricLineChanged)
+  }
+
+  private fun shouldRefreshNativeMediaMetadata(result: MetadataApplyResult): Boolean {
+    if (result.mediaFieldsChanged) return true
+    if (!result.lyricLineChanged || notificationSubtitleMode != NOTIFICATION_SUBTITLE_LYRIC) return false
+    if (enhancedNotificationEnabled) return false
+
+    val now = System.currentTimeMillis()
+    if (now - lastMediaMetadataLyricUpdateAt < MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS) {
+      return false
+    }
+
+    lastMediaMetadataLyricUpdateAt = now
+    return true
+  }
+
+  private fun buildMediaMetadataKey(): String {
+    val subtitle =
+      when (notificationSubtitleMode) {
+        NOTIFICATION_SUBTITLE_ALBUM -> currentAlbum.ifBlank { currentArtist }
+        NOTIFICATION_SUBTITLE_LYRIC -> currentLyricLine.ifBlank { currentArtist.ifBlank { currentAlbum } }
+        else -> currentArtist.ifBlank { currentAlbum }
+      }
+    val artworkKey = if (notificationShowCover) currentArtworkUri else ""
+    return listOf(currentTitle, subtitle, currentAlbum, artworkKey).joinToString("\u0001")
   }
 
   private fun buildNotificationMediaMetadata(): MediaMetadata {
@@ -606,9 +685,12 @@ object AndroidNativeAudioPlayer {
     return builder.build()
   }
 
-  private fun updateCurrentMediaItemMetadata() {
+  private fun updateCurrentMediaItemMetadata(force: Boolean = false) {
     val currentPlayer = player ?: return
     if (currentSrc.isBlank()) return
+
+    val metadataKey = buildMediaMetadataKey()
+    if (!force && metadataKey == lastMediaMetadataKey && currentPlayer.mediaItemCount > 0) return
 
     val currentIndex = currentPlayer.currentMediaItemIndex
     val safeIndex = if (currentIndex == C.INDEX_UNSET) 0 else currentIndex
@@ -637,7 +719,7 @@ object AndroidNativeAudioPlayer {
     }
 
     currentPlayer.playWhenReady = playWhenReady
-    appContext?.let { updateEnhancedNotification(it, true) }
+    lastMediaMetadataKey = metadataKey
   }
 
   private fun normalizePlaybackUrl(url: String): String {
@@ -683,6 +765,7 @@ object AndroidNativeAudioPlayer {
     currentAlbum = ""
     currentLyricLine = ""
     currentArtworkUri = ""
+    enhancedNotificationShown = false
     errorCode = 0
   }
 
@@ -801,3 +884,6 @@ object AndroidNativeAudioPlayer {
   private const val NOTIFICATION_SUBTITLE_ALBUM = "album"
   private const val NOTIFICATION_SUBTITLE_LYRIC = "lyric"
 }
+
+
+

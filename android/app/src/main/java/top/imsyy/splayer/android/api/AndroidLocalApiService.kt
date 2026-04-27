@@ -48,6 +48,7 @@ class AndroidLocalApiService {
         requestUrl.path == "/api/netease/mv/all" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildMvAllFallbackResponse)
         requestUrl.path == "/api/netease/search/hot/detail" -> handleNeteaseSearchHotDetailRequest(requestUrl)
         requestUrl.path == "/api/netease/search/default" -> handleNeteaseSearchDefaultRequest(requestUrl)
+        AndroidNeteaseApiService.canHandle(requestUrl.path) -> AndroidNeteaseApiService.handle(request, requestUrl)
         requestUrl.path == "/api/netease/login/status" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLoginStatusFallbackResponse)
         requestUrl.path == "/api/netease/search/suggest" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildSearchSuggestFallbackResponse)
         requestUrl.path == "/api/netease/search/multimatch" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildSearchMultimatchFallbackResponse)
@@ -1518,5 +1519,6 @@ class AndroidLocalApiService {
   }
 
 }
+
 
 

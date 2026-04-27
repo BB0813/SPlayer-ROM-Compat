@@ -1,4 +1,14 @@
-import Cookies from "js-cookie";
+﻿import Cookies from "js-cookie";
+
+const COOKIE_ATTRIBUTE_NAMES = new Set([
+  "domain",
+  "expires",
+  "httponly",
+  "max-age",
+  "path",
+  "samesite",
+  "secure",
+]);
 
 // 获取 Cookie
 export const getCookie = (key: string) => {
@@ -13,37 +23,35 @@ export const removeCookie = (key: string) => {
 
 // 设置 Cookie
 export const setCookies = (cookieValue: string) => {
-  // URL解码
   let decodedCookie = cookieValue;
   try {
-    // 如果包含URL编码字符，尝试解码
     if (cookieValue.includes("%")) {
       decodedCookie = decodeURIComponent(cookieValue);
     }
-  } catch (e) {
-    console.warn("Cookie URL解码失败，使用原始值:", e);
+  } catch (error) {
+    console.warn("Cookie URL 解码失败，使用原始值：", error);
   }
-  // 确保以分号结尾（用于正确分割）
+
   if (!decodedCookie.endsWith(";")) decodedCookie += ";";
   const cookies = decodedCookie.split(";");
   const date = new Date();
-  // 永不过期
   date.setFullYear(date.getFullYear() + 50);
   const expires = `expires=${date.toUTCString()}`;
-  // 写入
+
   cookies.forEach((cookie) => {
-    // 跳过空字符串
     const trimmedCookie = cookie.trim();
     if (!trimmedCookie) return;
-    const nameValuePair = trimmedCookie.split("=");
-    const name = nameValuePair[0]?.trim();
-    const value = nameValuePair[1]?.trim();
-    // 跳过无效的cookie
-    if (!name || !value) return;
-    console.info(`name: ${name}, value: ${value}`);
-    // 设置 cookie
+
+    const separatorIndex = trimmedCookie.indexOf("=");
+    const name =
+      separatorIndex > 0 ? trimmedCookie.substring(0, separatorIndex).trim() : trimmedCookie;
+    const normalizedName = name.toLowerCase();
+    if (!name || COOKIE_ATTRIBUTE_NAMES.has(normalizedName)) return;
+
+    const value = separatorIndex > 0 ? trimmedCookie.substring(separatorIndex + 1).trim() : "";
+    if (!value) return;
+
     document.cookie = `${name}=${value}; ${expires}; path=/`;
-    // 保存 cookie
     localStorage.setItem(`cookie-${name}`, value);
   });
 };

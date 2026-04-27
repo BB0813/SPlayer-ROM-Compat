@@ -50,7 +50,6 @@ const formatAndroidRomCompatActions = (
     })
     .join("、");
 };
-
 export const usePlaySettings = (): SettingConfig => {
   const settingStore = useSettingStore();
   const outputDevices = ref<SelectOption[]>([]);
@@ -113,34 +112,33 @@ export const usePlaySettings = (): SettingConfig => {
 
     return `${info.manufacturer} / ${info.brand} / ${model} | Android ${info.version} | ${romName} | ${batteryStatus} | ${notificationStatus}`;
   });
-
   const androidRomSummary = computed(() => {
     const profile = androidRomProfile.value;
     if (!profile) {
-      return "\u5f53\u524d\u6682\u672a\u8bc6\u522b\u5230 ROM \u753b\u50cf\u3002";
+      return "当前暂未识别到 ROM 画像。";
     }
 
-    const requiredText = profile.requiredActions.slice(0, 3).join(", ");
-    const recommendedText = profile.recommendedActions.slice(0, 2).join(", ");
+    const requiredText = profile.requiredActions.slice(0, 3).join("、") || "无";
+    const recommendedText = profile.recommendedActions.slice(0, 2).join("、") || "无";
     const taskLockText = profile.supportsTaskLockGuide
-      ? "\u82e5\u7cfb\u7edf\u652f\u6301\uff0c\u5efa\u8bae\u5c06\u5e94\u7528\u52a0\u5165\u6700\u8fd1\u4efb\u52a1\u9501\u5b9a\u540d\u5355\u3002"
-      : "\u82e5\u4e0d\u652f\u6301\u4efb\u52a1\u9501\u5b9a\uff0c\u4ecd\u5efa\u8bae\u5173\u95ed\u7535\u6c60\u4f18\u5316\u3002";
+      ? "若系统支持，建议将应用加入最近任务锁定名单。"
+      : "若不支持任务锁定，仍建议关闭电池优化。";
 
-    return `${profile.displayName} | 风险： ${profile.riskLabel} | 必做： ${requiredText} | 建议： ${recommendedText} | ${taskLockText}`;
+    return `${profile.displayName} | 风险：${profile.riskLabel} | 必做：${requiredText} | 建议：${recommendedText} | ${taskLockText}`;
   });
 
   const androidPowerManagerSummary = computed(() => {
     const profile = androidRomProfile.value;
     if (!profile) {
-      return "\u6253\u5f00\u5382\u5546\u8017\u7535\u7ba1\u7406\u6216\u540e\u53f0\u4fdd\u6d3b\u8bbe\u7f6e\uff0c\u68c0\u67e5\u662f\u5426\u5b58\u5728\u9650\u5236\u3002";
+      return "打开厂商耗电管理或后台保活设置，检查是否存在限制。";
     }
-    return `建议优先检查：${profile.settingsGuides.slice(0, 3).join("、")}。`;
+    return `建议优先检查：${profile.settingsGuides.slice(0, 3).join("、") || "通知与后台权限"}。`;
   });
 
   const androidBackgroundActivitySummary = computed(() => {
     const profile = androidRomProfile.value;
     if (!profile) {
-      return "\u8fdb\u5165\u540e\u53f0\u6d3b\u52a8\u6216\u5e94\u7528\u542f\u52a8\u7ba1\u7406\u9875\uff0c\u907f\u514d\u606f\u5c4f\u540e\u88ab\u7cfb\u7edf\u56de\u6536\u3002";
+      return "进入后台活动或应用启动管理页，避免息屏后被系统回收。";
     }
     return `请开启后台活动、关联启动或受保护应用权限，减少 ${profile.displayName} 的后台限制。`;
   });
@@ -148,50 +146,48 @@ export const usePlaySettings = (): SettingConfig => {
   const androidBackgroundPopupSummary = computed(() => {
     const profile = androidRomProfile.value;
     if (!profile) {
-      return "\u8fdb\u5165\u540e\u53f0\u5f39\u51fa\u754c\u9762\u6216\u60ac\u6d6e\u7a97\u7ba1\u7406\u9875\uff0c\u907f\u514d\u7cfb\u7edf\u62e6\u622a\u901a\u77e5\u5524\u8d77\u3002";
+      return "进入后台弹出界面或悬浮窗管理页，避免系统拦截通知唤起。";
     }
     return `请检查弹窗、悬浮窗和相关权限，避免 ${profile.displayName} 阻止通知唤醒。`;
   });
 
   const androidBatteryOptimizationSummary = computed(() => {
     return androidSystemInfo.value?.ignoringBatteryOptimizations
-      ? "\u5f53\u524d\u5e94\u7528\u5df2\u52a0\u5165\u7535\u6c60\u4f18\u5316\u767d\u540d\u5355\u3002"
-      : "\u5efa\u8bae\u5ffd\u7565\u7535\u6c60\u4f18\u5316\uff0c\u4ee5\u4fdd\u8bc1\u540e\u53f0\u64ad\u653e\u7a33\u5b9a\u3002";
+      ? "当前应用已加入电池优化白名单。"
+      : "建议忽略电池优化，以保证后台播放稳定。";
   });
 
   const androidNotificationSummary = computed(() => {
     return androidNotificationPermissionGranted.value
-      ? "\u901a\u77e5\u6743\u9650\u5df2\u5f00\u542f\uff0c\u53ef\u663e\u793a\u7cfb\u7edf\u5a92\u4f53\u63a7\u5236\u3002"
-      : "\u901a\u77e5\u6743\u9650\u672a\u5f00\u542f\uff0c\u7cfb\u7edf\u5a92\u4f53\u63a7\u5236\u53ef\u80fd\u4e0d\u4f1a\u663e\u793a\u3002";
+      ? "通知权限已开启，可显示系统媒体控制。"
+      : "通知权限未开启，系统媒体控制可能不会显示。";
   });
 
   const androidMediaSummary = computed(() => {
     const permissionText = androidAudioPermissionGranted.value
-      ? "\u5df2\u6388\u4e88\u672c\u5730\u5a92\u4f53\u8bfb\u53d6\u6743\u9650"
-      : "\u5c1a\u672a\u6388\u4e88\u672c\u5730\u5a92\u4f53\u8bfb\u53d6\u6743\u9650";
+      ? "已授予本地媒体读取权限"
+      : "尚未授予本地媒体读取权限";
     const scanTimeText = androidMediaLastScanAt.value
       ? `上次扫描：${androidMediaLastScanAt.value}`
-      : "\u5c1a\u672a\u626b\u63cf\u672c\u5730\u5a92\u4f53\u5e93\u3002";
+      : "尚未扫描本地媒体库。";
     return `${permissionText} | 已缓存 ${androidMediaTrackCount.value} 首本地音频 | ${scanTimeText}`;
   });
 
   const androidNotificationControlSummary = computed(() => {
     const modeText = settingStore.androidKeepNotificationOnPause
-      ? "\u6682\u505c\u65f6\u4fdd\u7559\u5a92\u4f53\u901a\u77e5"
-      : "\u6682\u505c\u65f6\u79fb\u9664\u5a92\u4f53\u901a\u77e5";
+      ? "暂停时保留媒体通知"
+      : "暂停时移除媒体通知";
     const tapText =
       settingStore.androidNotificationTapAction === "player"
-        ? "\u70b9\u51fb\u901a\u77e5\u6253\u5f00\u64ad\u653e\u5668\u9875"
-        : "\u70b9\u51fb\u901a\u77e5\u56de\u5230\u5e94\u7528\u9996\u9875";
-    const coverText = settingStore.androidNotificationShowCover
-      ? "\u901a\u77e5\u663e\u793a\u5c01\u9762"
-      : "\u901a\u77e5\u9690\u85cf\u5c01\u9762";
+        ? "点击通知打开播放器页"
+        : "点击通知回到应用首页";
+    const coverText = settingStore.androidNotificationShowCover ? "通知显示封面" : "通知隐藏封面";
     const subtitleText =
       settingStore.androidNotificationSubtitleMode === "album"
-        ? "\u526f\u6807\u9898\u663e\u793a\u4e13\u8f91"
+        ? "副标题显示专辑"
         : settingStore.androidNotificationSubtitleMode === "lyric"
-          ? "\u526f\u6807\u9898\u663e\u793a\u6b4c\u8bcd"
-          : "\u526f\u6807\u9898\u663e\u793a\u6b4c\u624b";
+          ? "副标题显示歌词"
+          : "副标题显示歌手";
     const enhancedText = settingStore.androidEnhancedNotificationEnabled
       ? settingStore.androidEnhancedNotificationExclusive
         ? "已启用第三方 ROM 增强卡片（独占）"
@@ -204,16 +200,16 @@ export const usePlaySettings = (): SettingConfig => {
     switch (androidRomProfile.value?.family) {
       case "hyperos":
       case "miui":
-        return "\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e";
+        return "打开自启动设置";
       case "harmonyos":
       case "emui":
       case "magicos":
-        return "\u6253\u5f00\u540e\u53f0\u6d3b\u52a8";
+        return "打开后台活动";
       case "coloros":
       case "originos":
-        return "\u6253\u5f00\u540e\u53f0\u5f39\u51fa";
+        return "打开后台弹出";
       default:
-        return "\u6253\u5f00\u8017\u7535\u7ba1\u7406";
+        return "打开耗电管理";
     }
   });
 
@@ -239,11 +235,11 @@ export const usePlaySettings = (): SettingConfig => {
     const reportText = formatAndroidRomCompatActions(androidRomCompatReport.value?.actions);
     const profile = androidRomProfile.value;
     if (!profile) {
-      return `第二阶段将围绕通知常驻、后台弹出和厂商耗电管理做精细排查。原生入口：${reportText}。`;
+      return `第二阶段会围绕通知常驻、后台弹出和厂商耗电管理做精细排查。原生入口：${reportText}。`;
     }
 
-    const focusText = profile.settingsGuides.slice(0, 3).join("、");
-    const issueText = profile.knownIssues.slice(0, 2).join("；");
+    const focusText = profile.settingsGuides.slice(0, 3).join("、") || "通知与后台权限";
+    const issueText = profile.knownIssues.slice(0, 2).join("；") || "暂无";
 
     let verifyText = "重点确认系统通知、后台权限和耗电管理均已放行。";
     if (profile.family === "hyperos" || profile.family === "miui") {
@@ -254,7 +250,7 @@ export const usePlaySettings = (): SettingConfig => {
       verifyText = "重点确认后台弹出、关联启动和高耗电限制均已关闭。";
     }
 
-    return `第二阶段用于细抠 ${profile.displayName} 的定制限制，建议依次检查 ${focusText}。常见风险：${issueText || "暂无"}。${verifyText} 原生入口：${reportText}。通知栏默认使用 Android 系统媒体控制卡片。`;
+    return `第二阶段用于细化 ${profile.displayName} 的定制限制，建议依次检查 ${focusText}。常见风险：${issueText}。${verifyText} 原生入口：${reportText}。通知栏默认使用 Android 系统媒体控制卡片。`;
   });
   const syncCurrentSongMetadataToAndroid = () => {
     syncAndroidNowPlayingFromStores();
@@ -352,7 +348,6 @@ export const usePlaySettings = (): SettingConfig => {
       refreshAndroidSystemInfo();
     }, 1200);
   };
-
   const openAndroidRomSecurityCenter = () => {
     openAndroidSettings(
       openAndroidRomSecurityCenterSettings,
@@ -364,24 +359,24 @@ export const usePlaySettings = (): SettingConfig => {
   const openAndroidPowerManager = () => {
     openAndroidSettings(
       openAndroidPowerManagerSettings,
-      "\u5df2\u6253\u5f00\u5382\u5546\u8017\u7535\u7ba1\u7406\u8bbe\u7f6e\u3002",
-      "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u5382\u5546\u8017\u7535\u7ba1\u7406\u8bbe\u7f6e\u3002",
+      "已打开厂商耗电管理设置。",
+      "当前 ROM 暂不支持直接打开厂商耗电管理设置。",
     );
   };
 
   const openAndroidBackgroundActivity = () => {
     openAndroidSettings(
       openAndroidBackgroundActivitySettings,
-      "\u5df2\u6253\u5f00\u540e\u53f0\u6d3b\u52a8\u8bbe\u7f6e\u3002",
-      "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u540e\u53f0\u6d3b\u52a8\u8bbe\u7f6e\u3002",
+      "已打开后台活动设置。",
+      "当前 ROM 暂不支持直接打开后台活动设置。",
     );
   };
 
   const openAndroidBackgroundPopup = () => {
     openAndroidSettings(
       openAndroidBackgroundPopupSettings,
-      "\u5df2\u6253\u5f00\u540e\u53f0\u5f39\u51fa\u754c\u9762\u8bbe\u7f6e\u3002",
-      "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u540e\u53f0\u5f39\u51fa\u754c\u9762\u8bbe\u7f6e\u3002",
+      "已打开后台弹出界面设置。",
+      "当前 ROM 暂不支持直接打开后台弹出界面设置。",
     );
   };
 
@@ -391,8 +386,8 @@ export const usePlaySettings = (): SettingConfig => {
       case "miui":
         openAndroidSettings(
           openAndroidAutoStartSettings,
-          "\u5df2\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e\u3002",
-          "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e\u3002",
+          "已打开自启动设置。",
+          "当前 ROM 暂不支持直接打开自启动设置。",
         );
         return;
       case "harmonyos":
@@ -446,36 +441,35 @@ export const usePlaySettings = (): SettingConfig => {
     const romCompatReport = androidRomCompatReport.value;
     const nativeActionReport = formatAndroidRomCompatActions(romCompatReport?.actions);
     const lines = [
-      "SPlayer Android \u8bca\u65ad\u6458\u8981",
-      `\u54c1\u724c\uff1a${info?.brand || "\u672a\u77e5"}`,
-      `\u5382\u5546\uff1a${info?.manufacturer || "\u672a\u77e5"}`,
-      `\u673a\u578b\uff1a${info?.model || "\u672a\u77e5"}`,
-      `Android \u7248\u672c\uff1a${info?.version || "\u672a\u77e5"}`,
-      `ROM\uff1a${info?.romName || "\u672a\u77e5"}`,
-      `ROM \u98ce\u9669\u7b49\u7ea7\uff1a${profile?.riskLabel || "\u672a\u77e5"}`,
-      `\u901a\u77e5\u6743\u9650\uff1a${androidNotificationPermissionGranted.value ? "\u5df2\u5f00\u542f" : "\u672a\u5f00\u542f"}`,
-      `\u7535\u6c60\u4f18\u5316\u767d\u540d\u5355\uff1a${info?.ignoringBatteryOptimizations ? "\u5df2\u52a0\u5165" : "\u672a\u52a0\u5165"}`,
-      `\u64ad\u653e\u5f15\u64ce\uff1a${settingStore.playbackEngine}`,
-      `\u97f3\u9891\u89e3\u7801\u5f15\u64ce\uff1a${settingStore.audioEngine}`,
-      `\u901a\u77e5\u4fdd\u7559\uff1a${settingStore.androidKeepNotificationOnPause ? "\u662f" : "\u5426"}`,
-      `\u901a\u77e5\u70b9\u51fb\u884c\u4e3a\uff1a${settingStore.androidNotificationTapAction === "player" ? "\u6253\u5f00\u64ad\u653e\u5668\u9875" : "\u56de\u5230\u5e94\u7528\u9996\u9875"}`,
-      `\u901a\u77e5\u663e\u793a\u5c01\u9762: ${settingStore.androidNotificationShowCover ? "\u662f" : "\u5426"}`,
-      `\u901a\u77e5\u526f\u6807\u9898\uff1a${settingStore.androidNotificationSubtitleMode}`,
+      "SPlayer Android 诊断摘要",
+      `品牌：${info?.brand || "未知"}`,
+      `厂商：${info?.manufacturer || "未知"}`,
+      `机型：${info?.model || "未知"}`,
+      `Android 版本：${info?.version || "未知"}`,
+      `ROM：${info?.romName || "未知"}`,
+      `ROM 风险等级：${profile?.riskLabel || "未知"}`,
+      `通知权限：${androidNotificationPermissionGranted.value ? "已开启" : "未开启"}`,
+      `电池优化白名单：${info?.ignoringBatteryOptimizations ? "已加入" : "未加入"}`,
+      `播放引擎：${settingStore.playbackEngine}`,
+      `音频解码引擎：${settingStore.audioEngine}`,
+      `通知保留：${settingStore.androidKeepNotificationOnPause ? "是" : "否"}`,
+      `通知点击行为：${settingStore.androidNotificationTapAction === "player" ? "打开播放器页" : "回到应用首页"}`,
+      `通知显示封面：${settingStore.androidNotificationShowCover ? "是" : "否"}`,
+      `通知副标题：${settingStore.androidNotificationSubtitleMode}`,
       `增强通知卡片：${settingStore.androidEnhancedNotificationEnabled ? "已开启" : "未开启"}`,
-      `\u672c\u5730\u5a92\u4f53\u6743\u9650\uff1a${androidAudioPermissionGranted.value ? "\u5df2\u5f00\u542f" : "\u672a\u5f00\u542f"}`,
-      `\u672c\u5730\u5a92\u4f53\u7f13\u5b58\u6570\u91cf\uff1a${androidMediaTrackCount.value}`,
-      `\u6700\u8fd1\u626b\u63cf\u65f6\u95f4\uff1a${androidMediaLastScanAt.value || "未扫描"}`,
-      `\u5fc5\u505a\u9879\uff1a${profile?.requiredActions.join("、") || "无"}`,
-      `\u5efa\u8bae\u9879\uff1a${profile?.recommendedActions.join("、") || "无"}`,
-      `\u5df2\u77e5\u95ee\u9898\uff1a${profile?.knownIssues.join("；") || "无"}`,
-      `\u539f\u751f\u5165\u53e3\u63a2\u6d4b\uff1a${nativeActionReport}`,
-      `\u539f\u751f\u901a\u77e5\u72b6\u6001\uff1a${romCompatReport?.notificationsEnabled ? "\u5df2\u5f00\u542f" : "\u672a\u5f00\u542f\u6216\u672a\u77e5"}`,
-      `\u539f\u751f\u7535\u6c60\u767d\u540d\u5355\uff1a${romCompatReport?.ignoringBatteryOptimizations ? "\u5df2\u52a0\u5165" : "\u672a\u52a0\u5165\u6216\u672a\u77e5"}`,
+      `本地媒体权限：${androidAudioPermissionGranted.value ? "已开启" : "未开启"}`,
+      `本地媒体缓存数量：${androidMediaTrackCount.value}`,
+      `最近扫描时间：${androidMediaLastScanAt.value || "未扫描"}`,
+      `必做项：${profile?.requiredActions.join("、") || "无"}`,
+      `建议项：${profile?.recommendedActions.join("、") || "无"}`,
+      `已知问题：${profile?.knownIssues.join("；") || "无"}`,
+      `原生入口探测：${nativeActionReport}`,
+      `原生通知状态：${romCompatReport?.notificationsEnabled ? "已开启" : "未开启或未知"}`,
+      `原生电池白名单：${romCompatReport?.ignoringBatteryOptimizations ? "已加入" : "未加入或未知"}`,
     ];
 
-    await copyData(lines.join("\n"), "\u5df2\u590d\u5236 Android \u8bca\u65ad\u6458\u8981\u3002");
+    await copyData(lines.join("\n"), "已复制 Android 诊断摘要。");
   };
-
   const handleAndroidMediaScan = async () => {
     if (!checkAndroidAudioPermission()) {
       requestAndroidMediaPermission();
@@ -757,32 +751,32 @@ export const usePlaySettings = (): SettingConfig => {
         ],
       },
       {
-        title: "Android \u4e13\u9879\u9002\u914d",
+        title: "Android 专项适配",
         show: isAndroidApp,
         items: [
           {
             key: "androidSystemSummary",
-            label: "\u7cfb\u7edf\u4e0e ROM \u4fe1\u606f",
+            label: "系统与 ROM 信息",
             type: "button",
-            buttonLabel: "\u6253\u5f00\u5e94\u7528\u8bbe\u7f6e",
+            buttonLabel: "打开应用设置",
             description: () => androidSystemSummary.value,
             action: () => {
               openAndroidSettings(
                 openAndroidAppDetailSettings,
-                "\u5df2\u6253\u5f00\u5e94\u7528\u8be6\u60c5\u8bbe\u7f6e\u3002",
-                "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u5e94\u7528\u8be6\u60c5\u8bbe\u7f6e\u3002",
+                "已打开应用详情设置。",
+                "当前 ROM 暂不支持直接打开应用详情设置。",
               );
             },
           },
           {
             key: "androidRomProfile",
-            label: "ROM \u517c\u5bb9\u753b\u50cf",
+            label: "ROM 兼容画像",
             type: "button",
             buttonLabel: computed(() => androidRomPrimaryActionLabel.value),
             description: () => androidRomSummary.value,
             action: openAndroidPrimaryRomGuide,
             extraButton: {
-              label: "\u590d\u5236\u8bca\u65ad",
+              label: "复制诊断",
               type: "primary",
               secondary: true,
               strong: true,
@@ -808,52 +802,49 @@ export const usePlaySettings = (): SettingConfig => {
           },
           {
             key: "androidBatteryOptimization",
-            label: "\u7535\u6c60\u4f18\u5316",
+            label: "电池优化",
             type: "button",
             buttonLabel: computed(() =>
-              androidSystemInfo.value?.ignoringBatteryOptimizations
-                ? "\u5df2\u5ffd\u7565"
-                : "\u5ffd\u7565\u7535\u6c60\u4f18\u5316",
+              androidSystemInfo.value?.ignoringBatteryOptimizations ? "已忽略" : "忽略电池优化",
             ),
             description: () => androidBatteryOptimizationSummary.value,
             action: requestIgnoreBatteryOptimization,
           },
           {
             key: "androidAutoStart",
-            label: "\u81ea\u542f\u52a8\u7ba1\u7406",
+            label: "自启动管理",
             type: "button",
-            buttonLabel: "\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e",
-            description:
-              "\u90e8\u5206\u56fd\u5185 ROM \u9700\u8981\u624b\u52a8\u5f00\u542f\u81ea\u542f\u52a8\u548c\u540e\u53f0\u767d\u540d\u5355\u3002",
+            buttonLabel: "打开自启动设置",
+            description: "部分国内 ROM 需要手动开启自启动和后台白名单。",
             action: () => {
               openAndroidSettings(
                 openAndroidAutoStartSettings,
-                "\u5df2\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e\u3002",
-                "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u81ea\u542f\u52a8\u8bbe\u7f6e\u3002",
+                "已打开自启动设置。",
+                "当前 ROM 暂不支持直接打开自启动设置。",
               );
             },
           },
           {
             key: "androidBackgroundActivity",
-            label: "\u540e\u53f0\u6d3b\u52a8",
+            label: "后台活动",
             type: "button",
-            buttonLabel: "\u6253\u5f00\u540e\u53f0\u6d3b\u52a8",
+            buttonLabel: "打开后台活动",
             description: () => androidBackgroundActivitySummary.value,
             action: openAndroidBackgroundActivity,
           },
           {
             key: "androidBackgroundPopup",
-            label: "\u540e\u53f0\u5f39\u51fa\u754c\u9762",
+            label: "后台弹出界面",
             type: "button",
-            buttonLabel: "\u6253\u5f00\u540e\u53f0\u5f39\u51fa",
+            buttonLabel: "打开后台弹出",
             description: () => androidBackgroundPopupSummary.value,
             action: openAndroidBackgroundPopup,
           },
           {
             key: "androidPowerManager",
-            label: "\u5382\u5546\u8017\u7535\u7ba1\u7406",
+            label: "厂商耗电管理",
             type: "button",
-            buttonLabel: "\u6253\u5f00\u8017\u7535\u7ba1\u7406",
+            buttonLabel: "打开耗电管理",
             description: () => androidPowerManagerSummary.value,
             action: openAndroidPowerManager,
           },
@@ -862,9 +853,7 @@ export const usePlaySettings = (): SettingConfig => {
             label: "通知权限",
             type: "button",
             buttonLabel: computed(() =>
-              androidNotificationPermissionGranted.value
-                ? "\u5df2\u5f00\u542f"
-                : "\u7533\u8bf7\u6743\u9650",
+              androidNotificationPermissionGranted.value ? "已开启" : "申请权限",
             ),
             description: () => androidNotificationSummary.value,
             action: requestAndroidNotificationAccess,
@@ -874,13 +863,12 @@ export const usePlaySettings = (): SettingConfig => {
             label: "通知设置",
             type: "button",
             buttonLabel: "打开通知设置",
-            description:
-              "\u6253\u5f00\u7cfb\u7edf\u901a\u77e5\u9009\u9879\uff0c\u53ef\u8fdb\u4e00\u6b65\u914d\u7f6e\u9501\u5c4f\u663e\u793a\u3001\u6a2a\u5e45\u7b49\u884c\u4e3a\u3002",
+            description: "打开系统通知选项，可进一步配置锁屏显示、横幅等行为。",
             action: () => {
               openAndroidSettings(
                 openAndroidNotificationSettings,
-                "\u5df2\u6253\u5f00\u901a\u77e5\u8bbe\u7f6e\u3002",
-                "\u5f53\u524d ROM \u6682\u4e0d\u652f\u6301\u76f4\u63a5\u6253\u5f00\u901a\u77e5\u8bbe\u7f6e\u3002",
+                "已打开通知设置。",
+                "当前 ROM 暂不支持直接打开通知设置。",
               );
             },
           },
@@ -918,8 +906,7 @@ export const usePlaySettings = (): SettingConfig => {
             key: "androidNotificationShowCover",
             label: "在通知中显示封面",
             type: "switch",
-            description:
-              "\u5173\u95ed\u540e\u4e0d\u663e\u793a\u5c01\u9762\uff0c\u7cfb\u7edf\u5a92\u4f53\u5361\u7247\u4f1a\u66f4\u7d27\u51d1\u3002",
+            description: "关闭后不显示封面，系统媒体卡片会更紧凑。",
             value: computed({
               get: () => settingStore.androidNotificationShowCover,
               set: (value) => {
@@ -932,12 +919,11 @@ export const usePlaySettings = (): SettingConfig => {
             key: "androidNotificationSubtitleMode",
             label: "通知副标题",
             type: "select",
-            description:
-              "\u9009\u62e9\u7cfb\u7edf\u5a92\u4f53\u5361\u7247\u526f\u6807\u9898\u663e\u793a\u6b4c\u624b\u3001\u4e13\u8f91\u6216\u5f53\u524d\u6b4c\u8bcd\u3002",
+            description: "选择系统媒体卡片副标题显示歌手、专辑或当前歌词。",
             options: [
-              { label: "\u663e\u793a\u6b4c\u624b", value: "artist" },
+              { label: "显示歌手", value: "artist" },
               { label: "显示专辑", value: "album" },
-              { label: "\u663e\u793a\u6b4c\u8bcd", value: "lyric" },
+              { label: "显示歌词", value: "lyric" },
             ],
             value: computed({
               get: () => settingStore.androidNotificationSubtitleMode,
@@ -952,7 +938,7 @@ export const usePlaySettings = (): SettingConfig => {
             label: "第三方 ROM 增强通知卡片",
             type: "switch",
             description:
-              "开启后会额外显示一张 App 自定义音频控制通知，补齐封面、进度条、上一首、播放暂停和下一首；默认与系统原生媒体卡片双轨共存。",
+              "开启后会额外显示一张应用增强音频控制通知，用于补齐封面、进度、上一首、播放暂停和下一首；默认与系统原生媒体卡片共存。",
             value: computed({
               get: () => settingStore.androidEnhancedNotificationEnabled,
               set: (value) => {

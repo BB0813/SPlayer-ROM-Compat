@@ -1,8 +1,9 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 
 const androidDir = path.resolve(import.meta.dirname, "../android");
+const gradleWrapperPath = path.join(androidDir, "gradlew");
 const rawArgs = process.argv.slice(2);
 const args = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
 
@@ -13,7 +14,7 @@ const result =
         stdio: "inherit",
         shell: false,
       })
-    : spawnSync(path.join(androidDir, "gradlew"), args, {
+    : spawnSync("sh", [gradleWrapperPath, ...args], {
         cwd: androidDir,
         stdio: "inherit",
         shell: false,

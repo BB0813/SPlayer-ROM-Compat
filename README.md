@@ -47,6 +47,7 @@
 | 自适应 UI    | 针对手机、平板、虚拟机分辨率继续优化列表、播放页、设置页和安全区域。                                |
 | 分架构打包   | 支持 `arm64-v8a`、`armeabi-v7a`、`x86_64` 独立 APK，方便测试用户按设备架构安装。                    |
 | CI 发布      | GitHub Actions 可自动解码 keystore 并构建签名 Release APK。                                         |
+| 独立包名     | Android `applicationId` 使用 `top.imsyy.splayer.romcompat`，可与 SPlayer-For-Android 共存安装。     |
 
 ---
 
@@ -79,6 +80,9 @@
 - 修复第三方 ROM 增强通知卡片播放 / 暂停状态与软件内状态不同步的问题。
 - 新增增强通知独占模式，开启后可尽量隐藏原生 ROM 媒体卡片。
 - 增强通知进度条增加 10% / 30% / 50% / 70% / 90% 触控跳转区域。
+- Android 播放页默认降载：关闭 AMLyric / 频谱绘制 / 重模糊背景，降低播放时 WebView 渲染压力。
+- 原生播放元数据改为差异更新，歌词变化不再频繁重建 MediaItem，减少播放中卡顿。
+- 清理构建产物、签名文件和本地缓存，并补齐 `.gitignore`，避免再次误提交 APK、Gradle、Rust target 或 keystore。
 
 ---
 
@@ -114,6 +118,22 @@ pnpm android:apk:armeabi-v7a
 pnpm android:apk:x86_64
 pnpm android:apk:all
 ```
+
+### 提交前检查
+
+```bash
+pnpm format
+pnpm lint
+pnpm build
+```
+
+提交前请确认以下目录或文件没有进入 Git：
+
+- `android/dist/`、`android/app/build/`、`android/.gradle/`
+- `android/app/src/main/assets/www/`、`android-web-dist/`
+- `out/`、`dist/`、`target/`、`native/**/target/`
+- `*.apk`、`*.aab`、`*.apks`、`*.jks`、`*.keystore`
+- `.env.local`、`android/keystore.properties`、`android/keystore/`
 
 ---
 

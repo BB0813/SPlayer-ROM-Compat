@@ -1,4 +1,4 @@
-import axios, {
+﻿import axios, {
   AxiosError,
   AxiosHeaders,
   AxiosInstance,
@@ -10,7 +10,7 @@ import axiosRetry from "axios-retry";
 import { getAndroidApiBridge } from "@/platform/bridge/android";
 import { useSettingStore } from "@/stores";
 import { isLogin } from "./auth";
-import { getCookie } from "./cookie";
+import { getCookie, setCookies } from "./cookie";
 import { isAndroidApp, isDev } from "./env";
 
 const baseURL: string = (() => {
@@ -189,6 +189,36 @@ const parseBridgeBody = (contentType: string, body: string): unknown => {
   return body;
 };
 
+const splitSetCookieHeader = (value: string): string[] => {
+  return value
+    .split(/\n|,(?=\s*[^;,\s]+=)/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const findHeaderValue = (headers: Record<string, string>, name: string): string | undefined => {
+  const targetName = name.toLowerCase();
+  const match = Object.entries(headers).find(([key]) => key.toLowerCase() === targetName);
+  return match?.[1];
+};
+
+const persistAndroidResponseCookies = (headers: Record<string, string>, data: unknown): void => {
+  const cookieValues: string[] = [];
+  const setCookieHeader = findHeaderValue(headers, "set-cookie");
+  if (setCookieHeader) cookieValues.push(...splitSetCookieHeader(setCookieHeader));
+
+  if (typeof data === "object" && data !== null && "cookie" in data) {
+    const bodyCookie = (data as { cookie?: unknown }).cookie;
+    if (typeof bodyCookie === "string" && bodyCookie.trim()) {
+      cookieValues.push(bodyCookie);
+    }
+  }
+
+  cookieValues.forEach((cookieValue) => {
+    setCookies(cookieValue.replace(/\s*HTTPOnly/gi, ""));
+  });
+};
+
 const requestByAndroidBridge = async <T = any>(config: AxiosRequestConfig): Promise<T> => {
   const bridge = getAndroidApiBridge();
   const axiosConfig = toInternalAxiosConfig(config);
@@ -224,11 +254,15 @@ const requestByAndroidBridge = async <T = any>(config: AxiosRequestConfig): Prom
   };
   const contentType =
     responsePayload.headers?.["Content-Type"] ?? responsePayload.headers?.["content-type"] ?? "";
+  const responseHeaders = responsePayload.headers ?? {};
+  const responseData = parseBridgeBody(contentType, responsePayload.body ?? "");
+  persistAndroidResponseCookies(responseHeaders, responseData);
+
   const response: AxiosResponse = {
-    data: parseBridgeBody(contentType, responsePayload.body ?? ""),
+    data: responseData,
     status: responsePayload.status,
     statusText: responsePayload.statusText,
-    headers: responsePayload.headers ?? {},
+    headers: responseHeaders,
     config: axiosConfig,
     request: undefined,
   };

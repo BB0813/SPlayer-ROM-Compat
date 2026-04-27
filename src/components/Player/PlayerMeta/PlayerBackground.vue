@@ -1,15 +1,11 @@
-<template>
-  <div :class="['background', settingStore.playerBackgroundType]">
+﻿<template>
+  <div :class="['background', effectiveBackgroundType, { 'mobile-lite': isAndroidApp }]">
     <Transition name="fade" mode="out-in">
       <!-- 背景色 -->
-      <div
-        v-if="settingStore.playerBackgroundType === 'color'"
-        :key="musicStore.songCover"
-        class="color"
-      />
+      <div v-if="effectiveBackgroundType === 'color'" :key="musicStore.songCover" class="color" />
       <!-- 背景模糊 -->
       <s-image
-        v-else-if="settingStore.playerBackgroundType === 'blur'"
+        v-else-if="effectiveBackgroundType === 'blur'"
         :src="musicStore.songCover"
         :observe-visibility="false"
         class="bg-img"
@@ -17,13 +13,13 @@
       />
       <!-- 流体效果 -->
       <BackgroundRender
-        v-else-if="settingStore.playerBackgroundType === 'animation'"
+        v-else-if="effectiveBackgroundType === 'animation'"
         :album="musicStore.songCover"
-        :fps="settingStore.playerBackgroundFps ?? 60"
+        :fps="effectiveBackgroundFps"
         :flowSpeed="flowSpeed"
         :hasLyric="musicStore.isHasLrc"
         :lowFreqVolume="lowFreqVolume"
-        :renderScale="settingStore.playerBackgroundRenderScale ?? 0.5"
+        :renderScale="effectiveRenderScale"
       />
     </Transition>
   </div>
@@ -32,11 +28,25 @@
 <script setup lang="ts">
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { usePlayerController } from "@/core/player/PlayerController";
+import { isAndroidApp } from "@/utils/env";
 
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
 const statusStore = useStatusStore();
 const player = usePlayerController();
+
+const effectiveBackgroundType = computed(() => {
+  if (isAndroidApp && settingStore.playerBackgroundType !== "none") return "color";
+  return settingStore.playerBackgroundType;
+});
+const effectiveBackgroundFps = computed(() => {
+  const fps = settingStore.playerBackgroundFps ?? 30;
+  return isAndroidApp ? Math.min(fps, 12) : fps;
+});
+const effectiveRenderScale = computed(() => {
+  const renderScale = settingStore.playerBackgroundRenderScale ?? 0.5;
+  return isAndroidApp ? Math.min(renderScale, 0.25) : renderScale;
+});
 
 // 低频音量
 const lowFreqVolume = ref(1.0);
@@ -51,7 +61,7 @@ const { pause: pauseRaf, resume: resumeRaf } = useRafFn(
   () => {
     if (
       settingStore.playerBackgroundLowFreqVolume &&
-      settingStore.playerBackgroundType === "animation" &&
+      effectiveBackgroundType.value === "animation" &&
       statusStore.playStatus
     ) {
       lowFreqVolume.value = player.getLowFrequencyVolume();
@@ -64,7 +74,7 @@ const { pause: pauseRaf, resume: resumeRaf } = useRafFn(
 watch(
   () => [
     settingStore.playerBackgroundLowFreqVolume,
-    settingStore.playerBackgroundType,
+    effectiveBackgroundType.value,
     statusStore.playStatus,
   ],
   ([enabled, bgType, playing]) => {
@@ -101,6 +111,12 @@ onBeforeUnmount(() => {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(20px);
+  }
+  &.mobile-lite {
+    &::after {
+      background-color: rgba(0, 0, 0, 0.35);
+      backdrop-filter: none;
+    }
   }
   &.blur {
     display: flex;

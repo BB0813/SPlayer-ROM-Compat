@@ -1,9 +1,11 @@
-package top.imsyy.splayer.android
+﻿package top.imsyy.splayer.android
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -56,6 +58,13 @@ class MainActivity : AppCompatActivity() {
       mediaPlaybackRequiresUserGesture = false
       mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
       defaultTextEncodingName = "utf-8"
+    }
+
+    CookieManager.getInstance().apply {
+      setAcceptCookie(true)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        setAcceptThirdPartyCookies(webView, true)
+      }
     }
 
     WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
@@ -206,3 +215,4 @@ class MainActivity : AppCompatActivity() {
     const val EXTRA_NOTIFICATION_TARGET = "splayer_notification_target"
   }
 }
+

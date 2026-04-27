@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="player-lyric">
     <!-- 歌词内容 -->
-    <AMLyric v-if="settingStore.useAMLyrics" :currentTime="playSeek" />
+    <AMLyric v-if="settingStore.useAMLyrics && !isAndroidApp" :currentTime="playSeek" />
     <DefaultLyric v-else :currentTime="playSeek" />
     <!-- 歌词菜单 -->
     <n-flex :class="['lyric-menu', { show: statusStore.playerMetaShow }]" justify="center" vertical>
@@ -93,6 +93,7 @@
 import { usePlayerController } from "@/core/player/PlayerController";
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { openSetting, openCopyLyrics } from "@/utils/modal";
+import { isAndroidApp } from "@/utils/env";
 
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
@@ -104,15 +105,41 @@ const player = usePlayerController();
  */
 const currentSongId = computed(() => musicStore.playSong?.id as number | undefined);
 
+const ANDROID_SEEK_UPDATE_INTERVAL_MS = 250;
+
 // 实时播放进度
 const playSeek = ref<number>(player.getSeek() + statusStore.getSongOffset(musicStore.playSong?.id));
+let androidSeekTimer: number | null = null;
 
-// 实时更新播放进度
-const { pause: pauseSeek, resume: resumeSeek } = useRafFn(() => {
+const updatePlaySeek = () => {
   const songId = musicStore.playSong?.id;
   const offsetTime = statusStore.getSongOffset(songId);
   playSeek.value = player.getSeek() + offsetTime;
+};
+
+// 实时更新播放进度
+const { pause: pauseSeek, resume: resumeSeek } = useRafFn(updatePlaySeek, {
+  immediate: false,
 });
+
+const resumeSeekUpdates = () => {
+  updatePlaySeek();
+  if (isAndroidApp) {
+    if (androidSeekTimer === null) {
+      androidSeekTimer = window.setInterval(updatePlaySeek, ANDROID_SEEK_UPDATE_INTERVAL_MS);
+    }
+    return;
+  }
+  resumeSeek();
+};
+
+const pauseSeekUpdates = () => {
+  if (androidSeekTimer !== null) {
+    window.clearInterval(androidSeekTimer);
+    androidSeekTimer = null;
+  }
+  pauseSeek();
+};
 
 /**
  * 当前进度偏移值
@@ -153,11 +180,11 @@ const resetOffset = () => {
 };
 
 onMounted(() => {
-  resumeSeek();
+  resumeSeekUpdates();
 });
 
 onBeforeUnmount(() => {
-  pauseSeek();
+  pauseSeekUpdates();
 });
 </script>
 

@@ -1,4 +1,4 @@
-import java.io.File
+﻿import java.io.File
 import java.util.Properties
 import org.gradle.api.GradleException
 
@@ -106,7 +106,7 @@ android {
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "top.imsyy.splayer.android"
+    applicationId = "top.imsyy.splayer.romcompat"
     minSdk = 24
     targetSdk = 36
     versionCode = 30001

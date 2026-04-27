@@ -87,6 +87,8 @@ class MediaSessionManager {
   /**
    * 鍒濆鍖栧獟浣撲細璇?   */
   public init() {
+    if (isAndroidApp) return;
+
     const settingStore = useSettingStore();
     if (!settingStore.smtcOpen) return;
 
@@ -144,6 +146,7 @@ class MediaSessionManager {
   /**
    * 鏇存柊鍏冩暟鎹?   */
   public async updateMetadata() {
+    if (isAndroidApp) return;
     if (!("mediaSession" in navigator) && !isElectron) return;
     const musicStore = useMusicStore();
     const settingStore = useSettingStore();

@@ -6,6 +6,7 @@
 
 <script setup lang="ts">
 import { usePlayerController } from "@/core/player/PlayerController";
+import { isAndroidApp } from "@/utils/env";
 
 const props = defineProps<{
   show: boolean;
@@ -24,6 +25,8 @@ const isKeepDrawing = ref<boolean>(true);
  * 绘制音乐频谱图
  */
 const drawSpectrum = () => {
+  if (isAndroidApp) return;
+
   const spectrumData = player.getSpectrumData();
 
   if (!spectrumData) return;
@@ -107,6 +110,7 @@ const { pause: pauseDraw, resume: resumeDraw } = useRafFn(
 );
 
 onMounted(() => {
+  if (isAndroidApp) return;
   isKeepDrawing.value = true;
   resumeDraw();
 });
