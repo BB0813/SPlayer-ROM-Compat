@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -191,6 +193,34 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
   @JavascriptInterface
   fun openRomSecurityCenterSettings(): Boolean {
     return launchFirstAvailable(*buildRomSecurityCenterIntents().toTypedArray())
+  }
+
+  @Suppress("DEPRECATION")
+  @JavascriptInterface
+  fun setSystemBars(configJson: String?): Boolean {
+    return try {
+      val config = configJson?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
+      val statusBarColor = parseColorOrDefault(config.optString("statusBarColor"), "#101014")
+      val navigationBarColor = parseColorOrDefault(config.optString("navigationBarColor"), "#101014")
+      val lightStatusBar = config.optBoolean("lightStatusBar", false)
+      val lightNavigationBar = config.optBoolean("lightNavigationBar", false)
+
+      activity.runOnUiThread {
+        activity.window.statusBarColor = statusBarColor
+        activity.window.navigationBarColor = navigationBarColor
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          activity.window.isNavigationBarContrastEnforced = false
+          activity.window.isStatusBarContrastEnforced = false
+        }
+        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
+          isAppearanceLightStatusBars = lightStatusBar
+          isAppearanceLightNavigationBars = lightNavigationBar
+        }
+      }
+      true
+    } catch (_: Exception) {
+      false
+    }
   }
 
   @JavascriptInterface
@@ -664,6 +694,14 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
     return listOf(Build.MANUFACTURER, Build.BRAND, Build.DISPLAY)
       .joinToString(" ") { it.orEmpty() }
       .lowercase(Locale.ROOT)
+  }
+
+  private fun parseColorOrDefault(value: String?, fallback: String): Int {
+    return try {
+      Color.parseColor(value?.takeIf { it.startsWith("#") } ?: fallback)
+    } catch (_: Exception) {
+      Color.parseColor(fallback)
+    }
   }
 
   private fun readSystemProperty(key: String): String {

@@ -46,7 +46,7 @@ object AndroidNativeAudioPlayer {
   private const val EXTRA_NOTIFICATION_SEEK_PERCENT = "top.imsyy.splayer.romcompat.extra.SEEK_PERCENT"
   private const val NOTIFICATION_SEEK_STEP_MS = 15000L
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
-  private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
+  private const val PROGRESS_EVENT_INTERVAL_MS = 3000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
   private val notificationSeekPercentStops = intArrayOf(10, 30, 50, 70, 90)
 
@@ -101,7 +101,7 @@ object AndroidNativeAudioPlayer {
         appContext?.let { updateEnhancedNotification(it) }
       }
       val currentPlayer = player ?: return
-      if (currentPlayer.isPlaying || currentPlayer.playbackState == Player.STATE_READY) {
+      if (currentPlayer.isPlaying) {
         handler.postDelayed(this, PROGRESS_EVENT_INTERVAL_MS)
       }
     }

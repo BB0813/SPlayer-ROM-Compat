@@ -197,6 +197,17 @@ export const openAndroidRomSecurityCenterSettings = (): boolean => {
   return getAndroidSystemBridge()?.openRomSecurityCenterSettings() ?? false;
 };
 
+export interface AndroidSystemBarsConfig {
+  statusBarColor: string;
+  navigationBarColor: string;
+  lightStatusBar: boolean;
+  lightNavigationBar: boolean;
+}
+
+export const syncAndroidSystemBars = (config: AndroidSystemBarsConfig): boolean => {
+  return getAndroidSystemBridge()?.setSystemBars(JSON.stringify(config)) ?? false;
+};
+
 export const getAndroidRomCompatReport = (): AndroidRomCompatReport | null => {
   const raw = getAndroidSystemBridge()?.getRomCompatReport();
   if (!raw) return null;

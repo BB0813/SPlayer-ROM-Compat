@@ -107,7 +107,7 @@ const player = usePlayerController();
 const currentSongId = computed(() => musicStore.playSong?.id as number | undefined);
 
 const androidSeekUpdateIntervalMs = computed(() =>
-  settingStore.androidPerformanceMode ? 1000 : 500,
+  settingStore.androidPerformanceMode ? 1500 : 500,
 );
 
 // 实时播放进度

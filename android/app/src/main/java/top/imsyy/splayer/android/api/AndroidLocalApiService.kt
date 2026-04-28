@@ -1,4 +1,4 @@
-﻿package top.imsyy.splayer.android.api
+package top.imsyy.splayer.android.api
 
 import android.util.Log
 import org.json.JSONArray
@@ -101,6 +101,8 @@ class AndroidLocalApiService {
         requestUrl.path == "/api/netease/song/download/url/v1" -> handleNeteaseSongUrlRequest(request, requestUrl)
         requestUrl.path == "/api/netease/lyric/new" -> handleNeteaseLyricRequest(requestUrl)
         requestUrl.path == "/api/netease/song/url" || requestUrl.path == "/api/netease/song/url/v1" -> handleNeteaseSongUrlRequest(request, requestUrl)
+        requestUrl.path == "/api/netease/comment/new" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildNeteaseCommentNewFallbackResponse)
+        requestUrl.path == "/api/netease/comment/hot" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildNeteaseCommentHotFallbackResponse)
         requestUrl.path.startsWith("/api/") -> proxyRemoteRequest(request, requestUrl)
         else -> buildJsonResponse(404, errorBody("api not found"))
       }
@@ -234,6 +236,32 @@ class AndroidLocalApiService {
       buildSearchDefaultFallbackResponse(requestUrl)
     }
   }
+
+  private fun buildNeteaseCommentNewFallbackResponse(@Suppress("UNUSED_PARAMETER") requestUrl: URL): String {
+    val data = JSONObject()
+      .put("comments", JSONArray())
+      .put("hasMore", false)
+      .put("totalCount", 0)
+
+    return buildJsonResponse(
+      200,
+      JSONObject()
+        .put("code", 200)
+        .put("data", data),
+    )
+  }
+
+  private fun buildNeteaseCommentHotFallbackResponse(@Suppress("UNUSED_PARAMETER") requestUrl: URL): String {
+    return buildJsonResponse(
+      200,
+      JSONObject()
+        .put("code", 200)
+        .put("hotComments", JSONArray())
+        .put("hasMore", false)
+        .put("total", 0),
+    )
+  }
+
   private fun handleNeteasePlaylistDetailRequest(requestUrl: URL): String {
     val playlistId = requestUrl.getQueryParameter("id")
     if (playlistId.isNullOrBlank()) {

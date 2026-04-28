@@ -16,7 +16,7 @@
     <!-- 路由 -->
     <RouterView v-slot="{ Component }">
       <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-        <KeepAlive v-if="settingStore.useKeepAlive">
+        <KeepAlive v-if="keepAliveEnabled">
           <component
             :is="Component"
             :key="route.fullPath"
@@ -38,7 +38,9 @@
 
 <script setup lang="ts">
 import { useSettingStore } from "@/stores";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 const route = useRoute();
+const { keepAliveEnabled } = useAndroidRoutePerformance();
 const router = useRouter();
 const settingStore = useSettingStore();
 

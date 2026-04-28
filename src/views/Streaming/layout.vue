@@ -101,7 +101,7 @@
     <!-- 路由 -->
     <RouterView v-if="!showEmptyState" v-slot="{ Component }">
       <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-        <KeepAlive v-if="settingStore.useKeepAlive">
+        <KeepAlive v-if="keepAliveEnabled">
           <component :is="Component" :data="listData" :loading="loading" class="router-view" />
         </KeepAlive>
         <component v-else :is="Component" :data="listData" :loading="loading" class="router-view" />
@@ -132,8 +132,10 @@ import { useMobile } from "@/composables/useMobile";
 import { renderIcon } from "@/utils/helper";
 import { usePlayerController } from "@/core/player/PlayerController";
 import { openStreamingServerConfig, openSetting } from "@/utils/modal";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const router = useRouter();
+const { keepAliveEnabled } = useAndroidRoutePerformance();
 const streamingStore = useStreamingStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();

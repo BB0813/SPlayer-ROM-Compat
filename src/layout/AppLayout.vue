@@ -4,6 +4,7 @@
     <Transition name="fade">
       <div
         v-if="
+          !isAndroidPlaybackLite &&
           (statusStore.themeBackgroundMode === 'image' ||
             statusStore.themeBackgroundMode === 'video') &&
           statusStore.backgroundImageUrl
@@ -48,6 +49,7 @@
         'show-player': musicStore.isHasPlayer && statusStore.showPlayBar,
         'show-full-player': statusStore.showFullPlayer,
         'show-mobile-tabbar': showMobileTabBar,
+        'android-playback-lite': isAndroidPlaybackLite,
       }"
       has-sider
     >
@@ -98,7 +100,7 @@
           <!-- 闁荤姳璀﹂崹鎶藉极鏉堛劊浜滈柣銏犳啞濡?-->
           <RouterView v-slot="{ Component }">
             <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-              <KeepAlive v-if="settingStore.useKeepAlive" :max="20" :exclude="['layout']">
+              <KeepAlive v-if="keepAliveEnabled" :max="20" :exclude="['layout']">
                 <component :is="Component" class="router-view" />
               </KeepAlive>
               <component v-else :is="Component" class="router-view" />
@@ -129,6 +131,7 @@ import { useBlobURLManager } from "@/core/resource/BlobURLManager";
 import { isElectron } from "@/utils/env";
 import { useMobile } from "@/composables/useMobile";
 import { useInit } from "@/composables/useInit";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const musicStore = useMusicStore();
 const statusStore = useStatusStore();
@@ -138,6 +141,7 @@ const dataStore = useDataStore();
 const blobURLManager = useBlobURLManager();
 
 const { isDesktop, isMobile } = useMobile();
+const { isAndroidPlaybackLite, keepAliveEnabled } = useAndroidRoutePerformance();
 
 const showMobileTabBar = computed(() => isMobile.value);
 const backTopBottom = computed(() => {

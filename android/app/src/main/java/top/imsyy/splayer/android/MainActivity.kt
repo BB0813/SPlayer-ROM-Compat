@@ -3,6 +3,7 @@
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
@@ -16,6 +17,7 @@ import android.webkit.MimeTypeMap
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
+import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONObject
 import top.imsyy.splayer.android.bridge.AndroidWebActionDispatcher
 import top.imsyy.splayer.android.bridge.SPlayerApiBridge
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
 
     pendingControlAction = resolveLaunchAction(intent)
+    applyInitialSystemBars()
     webView = WebView(this)
     setContentView(webView)
 
@@ -102,6 +105,21 @@ class MainActivity : AppCompatActivity() {
         }
       },
     )
+  }
+
+  @Suppress("DEPRECATION")
+  private fun applyInitialSystemBars() {
+    val color = Color.rgb(246, 246, 246)
+    window.statusBarColor = color
+    window.navigationBarColor = color
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      window.isNavigationBarContrastEnforced = false
+      window.isStatusBarContrastEnforced = false
+    }
+    WindowInsetsControllerCompat(window, window.decorView).apply {
+      isAppearanceLightStatusBars = true
+      isAppearanceLightNavigationBars = true
+    }
   }
 
   override fun onNewIntent(intent: Intent) {

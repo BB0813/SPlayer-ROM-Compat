@@ -21,7 +21,7 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   private lastTimeSyncAt = 0;
   private lastNativeGetterSyncAt = 0;
 
-  private static readonly NATIVE_GETTER_THROTTLE_MS = 1000;
+  private static readonly NATIVE_GETTER_THROTTLE_MS = 3000;
 
   public readonly capabilities: EngineCapabilities = {
     supportsRate: true,

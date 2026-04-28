@@ -129,7 +129,7 @@
 
     <RouterView v-if="!showEmptyState" v-slot="{ Component }">
       <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-        <KeepAlive v-if="settingStore.useKeepAlive">
+        <KeepAlive v-if="keepAliveEnabled">
           <component
             :is="Component"
             :data="listData"
@@ -173,8 +173,10 @@ import { fuzzySearch, renderIcon } from "@/utils/helper";
 import { openBatchList, openCreatePlaylist, openLocalMusicDirectoryModal } from "@/utils/modal";
 import { debounce } from "lodash-es";
 import type { DropdownOption, MessageReactive } from "naive-ui";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const router = useRouter();
+const { keepAliveEnabled } = useAndroidRoutePerformance();
 const localStore = useLocalStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();

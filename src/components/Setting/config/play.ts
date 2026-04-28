@@ -693,6 +693,39 @@ export const usePlaySettings = (): SettingConfig => {
         ],
       },
       {
+        title: "Android 性能与稳定性",
+        show: () => isAndroidApp,
+        tags: [{ text: "推荐", type: "success" }],
+        items: [
+          {
+            key: "androidPerformanceModeQuick",
+            label: "Android 性能模式",
+            type: "switch",
+            description: () =>
+              `${androidPerformanceSummary.value}。播放时会降低全局进度刷新、歌词逐字渲染、背景模糊和部分动画，优先保证低功耗与流畅度。`,
+            value: computed({
+              get: () => settingStore.androidPerformanceMode,
+              set: (value) => {
+                settingStore.androidPerformanceMode = value;
+              },
+            }),
+          },
+          {
+            key: "androidPerformanceDiagnosticsQuick",
+            label: "Android 性能诊断日志",
+            type: "switch",
+            description:
+              "开启后每 10 秒输出播放事件、原生 Bridge 和歌词刷新统计，用于定位真机卡顿。",
+            value: computed({
+              get: () => settingStore.androidPerformanceDiagnostics,
+              set: (value) => {
+                settingStore.androidPerformanceDiagnostics = value;
+              },
+            }),
+          },
+        ],
+      },
+      {
         title: "\u57fa\u7840\u64ad\u653e",
         items: [
           {
@@ -764,7 +797,7 @@ export const usePlaySettings = (): SettingConfig => {
       },
       {
         title: "Android 专项适配",
-        show: isAndroidApp,
+        show: () => isAndroidApp,
         items: [
           {
             key: "androidSystemSummary",

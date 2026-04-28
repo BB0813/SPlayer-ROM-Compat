@@ -144,6 +144,7 @@ import { usePlayerController } from "@/core/player/PlayerController";
 import Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import { formatTimestamp } from "@/utils/time";
+import { isAndroidApp } from "@/utils/env";
 
 const router = useRouter();
 const player = usePlayerController();
@@ -305,8 +306,12 @@ const getCommentData = async (id: number, clean: boolean = true) => {
     commentHasMore.value = result.data.hasMore;
     commentLoading.value = false;
   } catch (error) {
-    console.error("Error getting comment data:", error);
-    window.$message.error("获取评论数据失败");
+    if (!isAndroidApp) {
+      console.error("Error getting comment data:", error);
+      window.$message.error("获取评论数据失败");
+    }
+    commentLoading.value = false;
+    commentHasMore.value = false;
   }
 };
 

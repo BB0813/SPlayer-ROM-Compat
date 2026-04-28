@@ -18,7 +18,7 @@
     <!-- 路由 -->
     <RouterView v-slot="{ Component }">
       <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-        <KeepAlive v-if="settingStore.useKeepAlive">
+        <KeepAlive v-if="keepAliveEnabled">
           <component :is="Component" class="router-view" />
         </KeepAlive>
         <component v-else :is="Component" class="router-view" />
@@ -29,7 +29,9 @@
 
 <script setup lang="ts">
 import { useSettingStore } from "@/stores";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 const router = useRouter();
+const { keepAliveEnabled } = useAndroidRoutePerformance();
 const settingStore = useSettingStore();
 
 // 发现路由

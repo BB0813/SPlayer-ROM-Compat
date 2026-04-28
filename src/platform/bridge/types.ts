@@ -90,6 +90,7 @@ export interface AndroidSystemBridge {
   openAppDetailSettings(): boolean;
   openRomSecurityCenterSettings(): boolean;
   getRomCompatReport(): string;
+  setSystemBars(configJson?: string): boolean;
 }
 
 export interface AndroidBridge {

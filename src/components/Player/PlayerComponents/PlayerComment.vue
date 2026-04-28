@@ -96,6 +96,7 @@ import { formatCommentList, removeBrackets } from "@/utils/format";
 import { NScrollbar } from "naive-ui";
 import { coverLoaded } from "@/utils/helper";
 import { openExcludeComment } from "@/utils/modal";
+import { isAndroidApp } from "@/utils/env";
 
 withDefaults(
   defineProps<{
@@ -161,6 +162,15 @@ const filterComments = (comments: CommentType[] | null) => {
 const filteredCommentData = computed(() => filterComments(commentData.value));
 const filteredCommentHotData = computed(() => filterComments(commentHotData.value));
 
+const handleCommentFetchError = (error: unknown) => {
+  commentLoading.value = false;
+  commentHasMore.value = false;
+  if (!isAndroidApp) {
+    console.warn("评论数据获取失败", error);
+    window.$message.error("获取评论数据失败");
+  }
+};
+
 // 获取热门评论
 const getHotCommentData = async (id?: number) => {
   const targetId = id ?? songId.value;
@@ -224,7 +234,7 @@ const getAllComment = async (id?: number, reset?: boolean) => {
 // 加载更多
 const loadMoreComment = () => {
   commentPage.value += 1;
-  getAllComment();
+  void getAllComment().catch(handleCommentFetchError);
 };
 
 // 重置并加载评论
@@ -233,8 +243,12 @@ const resetAndFetch = (id?: number | string) => {
   commentPage.value = 1;
   commentHasMore.value = true;
   statusStore.songCommentCount = 0;
-  getHotCommentData(typeof targetId === "number" ? targetId : undefined);
-  getAllComment(typeof targetId === "number" ? targetId : undefined, true);
+  void getHotCommentData(typeof targetId === "number" ? targetId : undefined).catch(
+    handleCommentFetchError,
+  );
+  void getAllComment(typeof targetId === "number" ? targetId : undefined, true).catch(
+    handleCommentFetchError,
+  );
 };
 
 // 歌曲id变化

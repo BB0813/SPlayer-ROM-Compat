@@ -50,6 +50,7 @@ import { useElementSize } from "@vueuse/core";
 import { getComment, getHotComment } from "@/api/comment";
 import { formatCommentList } from "@/utils/format";
 import { isEmpty } from "lodash-es";
+import { isAndroidApp } from "@/utils/env";
 
 const props = withDefaults(
   defineProps<{
@@ -132,8 +133,10 @@ const getCommentData = async (clean: boolean = true) => {
     commentLoading.value = false;
   } catch (error) {
     if (currentRequestId.value !== requestId) return;
-    console.error("Error getting comment data:", error);
-    window.$message.error("获取评论数据失败");
+    if (!isAndroidApp) {
+      console.error("Error getting comment data:", error);
+      window.$message.error("获取评论数据失败");
+    }
     commentLoading.value = false;
   }
 };

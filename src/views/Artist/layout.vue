@@ -129,7 +129,7 @@
     <!-- 路由 -->
     <RouterView v-slot="{ Component }">
       <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
-        <KeepAlive v-if="settingStore.useKeepAlive">
+        <KeepAlive v-if="keepAliveEnabled">
           <component
             ref="componentRef"
             :is="Component"
@@ -162,8 +162,10 @@ import { formatArtistsList, removeBrackets } from "@/utils/format";
 import { useDataStore, useSettingStore } from "@/stores";
 import { toLikeArtist } from "@/utils/auth";
 import ArtistSongs from "./songs.vue";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const route = useRoute();
+const { keepAliveEnabled } = useAndroidRoutePerformance();
 const router = useRouter();
 const dataStore = useDataStore();
 const settingStore = useSettingStore();

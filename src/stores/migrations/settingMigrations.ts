@@ -4,7 +4,7 @@ import { defaultAMLLDbServer } from "@/utils/meta";
 import { isAndroidApp } from "@/utils/env";
 import type { SettingState } from "../setting";
 
-export const CURRENT_SETTING_SCHEMA_VERSION = 16;
+export const CURRENT_SETTING_SCHEMA_VERSION = 18;
 
 export type MigrationFunction = (state: Partial<SettingState>) => Partial<SettingState>;
 
@@ -199,5 +199,11 @@ export const settingMigrations: Record<number, MigrationFunction> = {
       androidPerformanceMode: isAndroidApp,
       androidPerformanceDiagnostics: false,
     };
+  },
+  17: () => {
+    return isAndroidApp ? { androidPerformanceMode: true } : {};
+  },
+  18: () => {
+    return isAndroidApp ? { androidPerformanceMode: true } : {};
   },
 };

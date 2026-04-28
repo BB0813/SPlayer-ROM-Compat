@@ -659,7 +659,7 @@ class PlayerController {
    */
   private getTimeUpdateThrottleWait(): number {
     const settingStore = useSettingStore();
-    if (isAndroidApp && settingStore.androidPerformanceMode) return 1000;
+    if (isAndroidApp && settingStore.androidPerformanceMode) return 3000;
     if (isAndroidApp) return 500;
     return 200;
   }
@@ -704,47 +704,52 @@ class PlayerController {
       const playTitle = `${name} - ${artist}`;
       // 注释已清理
       statusStore.playStatus = true;
-      playerIpc.sendMediaPlayState("Playing");
-      mediaSessionManager.updatePlaybackStatus(true);
+      if (!isAndroidApp) {
+        playerIpc.sendMediaPlayState("Playing");
+        mediaSessionManager.updatePlaybackStatus(true);
+        playerIpc.sendPlayStatus(true);
+        playerIpc.sendTaskbarState({ isPlaying: true });
+        playerIpc.sendTaskbarMode("normal");
+        playerIpc.sendTaskbarProgress(statusStore.progress);
+        console.log(`开始播放 [${musicStore.playSong?.id}]`, name);
+      }
       window.document.title = `${playTitle} | SPlayer-ROM-Compat`;
-      // 注释已清理
+      // 重置失败跳过计数
       if (this.retryInfo.count > 0) this.retryInfo.count = 0;
-      // 婵犵數鍋涢ˇ顓㈠礉瀹ュ绀堝ù鐓庣摠閺咁剚鎱ㄥ┑鍫濇瘞ilSkipCount 闂備焦鐪归崝宀€鈧矮鍗冲畷鎶藉传閵壯咃紴濡炪倖姊圭€氬酣鍩￠崨顔兼疁?onTimeUpdate闂備焦瀵х粙鎴︽儔婵傜鐏虫俊顖濆吹閳瑰秵绻濋棃娑欏缂佺姵甯￠幃妤呭捶椤撶偘妲愬┑锛勮檸閸ㄥ崬顭囩拠娴嬫婵☆垯璀﹂崬?
       // Last.fm Scrobbler
       lastfmScrobbler.resume();
-      // 注释已清理
-      playerIpc.sendPlayStatus(true);
-      playerIpc.sendTaskbarState({ isPlaying: true });
-      playerIpc.sendTaskbarMode("normal");
-      playerIpc.sendTaskbarProgress(statusStore.progress);
-      console.log(
-        `闂備浇娅曞Σ鎺楊敊閹邦喚绠?[${musicStore.playSong?.id}] 婵犳鍠楃换鍌炲嫉椤掆偓鐓ら柟闂寸缁犵粯銇勯幘璺烘瀾闁?`,
-        name,
-      );
     });
     // 注释已清理
     audioManager.addEventListener("pause", () => {
       statusStore.playStatus = false;
-      useAutomixManager().resetAutomixScheduling("IDLE");
-      playerIpc.sendMediaPlayState("Paused");
-      mediaSessionManager.updatePlaybackStatus(false);
+      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
+        useAutomixManager().resetAutomixScheduling("IDLE");
+      }
+      if (!isAndroidApp) {
+        playerIpc.sendMediaPlayState("Paused");
+        mediaSessionManager.updatePlaybackStatus(false);
+        playerIpc.sendPlayStatus(false);
+        playerIpc.sendTaskbarState({ isPlaying: false });
+        playerIpc.sendTaskbarMode("paused");
+        playerIpc.sendTaskbarProgress(statusStore.progress);
+        console.log("播放暂停");
+      }
       if (!isElectron) window.document.title = "SPlayer-ROM-Compat";
-      playerIpc.sendPlayStatus(false);
-      playerIpc.sendTaskbarState({ isPlaying: false });
-      playerIpc.sendTaskbarMode("paused");
-      playerIpc.sendTaskbarProgress(statusStore.progress);
       lastfmScrobbler.pause();
-      console.log("日志输出");
     });
     // 注释已清理
     audioManager.addEventListener("seeking", () => {
-      useAutomixManager().resetAutomixScheduling("MONITORING");
+      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
+        useAutomixManager().resetAutomixScheduling("MONITORING");
+      }
     });
     // 闂備礁婀遍搹搴ㄥ储娴犲妫樺ù锝堟绾惧ジ鏌熼幆褏鎽犻悘?
     audioManager.addEventListener("ended", () => {
       if (this.isTransitioning) return;
-      useAutomixManager().resetAutomixScheduling("IDLE");
-      console.log("日志输出");
+      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
+        useAutomixManager().resetAutomixScheduling("IDLE");
+      }
+      if (!isAndroidApp) console.log("播放结束");
       lastfmScrobbler.stop();
       // 注释已清理
       if (this.checkAutoClose()) return;
@@ -764,7 +769,9 @@ class PlayerController {
       const rawTime = audioManager.currentTime;
       const currentTime = Math.floor(rawTime * 1000);
       const duration = Math.floor(audioManager.duration * 1000) || statusStore.duration;
-      useAutomixManager().updateAutomixMonitoring();
+      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
+        useAutomixManager().updateAutomixMonitoring();
+      }
       // 注释已清理
       const songId = musicStore.playSong?.id;
       const offset = statusStore.getSongOffset(songId);
@@ -797,35 +804,39 @@ class PlayerController {
         this.failSkipCount = 0;
       }
       // 闂備礁鎼ú銈夋偤閵娾晛钃熷┑鐘插鐎垫煡鏌ゆ慨鎰偓妤呭春?MediaSession
-      mediaSessionManager.updateState(duration, currentTime);
-      // 注释已清理
-      playerIpc.sendLyric({
-        currentTime,
-        songId: musicStore.playSong?.id,
-        songOffset: statusStore.getSongOffset(musicStore.playSong?.id),
-      });
-      // 注释已清理
-      if (settingStore.showTaskbarProgress) {
-        playerIpc.sendTaskbarProgress(statusStore.progress);
-      } else {
-        playerIpc.sendTaskbarProgress("none");
+      if (!isAndroidApp) {
+        mediaSessionManager.updateState(duration, currentTime);
       }
-      // 注释已清理
-      playerIpc.sendTaskbarProgressData({
-        currentTime,
-        duration,
-        offset,
-      });
-      // 注释已清理
-      if (isMac) {
-        playerIpc.sendMacStatusBarProgress({
+      if (!isAndroidApp) {
+        // 注释已清理
+        playerIpc.sendLyric({
+          currentTime,
+          songId: musicStore.playSong?.id,
+          songOffset: statusStore.getSongOffset(musicStore.playSong?.id),
+        });
+        // 注释已清理
+        if (settingStore.showTaskbarProgress) {
+          playerIpc.sendTaskbarProgress(statusStore.progress);
+        } else {
+          playerIpc.sendTaskbarProgress("none");
+        }
+        // 注释已清理
+        playerIpc.sendTaskbarProgressData({
           currentTime,
           duration,
           offset,
         });
+        // 注释已清理
+        if (isMac) {
+          playerIpc.sendMacStatusBarProgress({
+            currentTime,
+            duration,
+            offset,
+          });
+        }
+        // 注释已清理
+        playerIpc.sendSocketProgress(currentTime, duration);
       }
-      // 注释已清理
-      playerIpc.sendSocketProgress(currentTime, duration);
     }, this.getTimeUpdateThrottleWait());
     audioManager.addEventListener("timeupdate", this.onTimeUpdate);
     // 闂傚倷鐒︾€笛囨偡閵娾晩鏁嬮柕鍫濇缁剁偤鏌涢弴銊ュ箺闁?
@@ -1200,7 +1211,9 @@ class PlayerController {
     const safeTime = Math.max(0, Math.min(time, this.getDuration()));
     audioManager.seek(safeTime / 1000);
     statusStore.currentTime = safeTime;
-    mediaSessionManager.updateState(this.getDuration(), safeTime, true);
+    if (!isAndroidApp) {
+      mediaSessionManager.updateState(this.getDuration(), safeTime, true);
+    }
   }
 
   /**
@@ -1366,7 +1379,9 @@ class PlayerController {
     // 注释已清理
     await dataStore.setPlayList([]);
     await dataStore.clearOriginalPlayList();
-    playerIpc.sendTaskbarProgress("none");
+    if (!isAndroidApp) {
+      playerIpc.sendTaskbarProgress("none");
+    }
   }
 
   /**
