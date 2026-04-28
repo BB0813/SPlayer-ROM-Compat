@@ -30,7 +30,7 @@ export const useAndroidRoutePerformance = () => {
     () => isAndroidPlaybackLite.value && settingStore.androidDisablePlaybackBackground,
   );
 
-  const keepAliveEnabled = computed(() => settingStore.useKeepAlive && !shouldFreezeRoutes.value);
+  const keepAliveEnabled = computed(() => settingStore.useKeepAlive);
 
   return {
     isAndroidPerformanceEnabled,

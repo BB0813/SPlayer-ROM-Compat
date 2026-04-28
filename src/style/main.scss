@@ -469,32 +469,6 @@ audio {
 }
 
 :root.android-performance-mode.android-playback-active {
-  .router-view,
-  .song-list,
-  .cover-list,
-  .setting-type {
-    contain: layout style paint;
-  }
-
-  .virtual-item,
-  .lrc-line {
-    content-visibility: auto;
-    contain-intrinsic-size: 88px 180px;
-  }
-
-  .song-card,
-  .cover-item,
-  .comment-item,
-  .setting-item,
-  .n-list-item {
-    content-visibility: auto;
-    contain-intrinsic-size: 88px 220px;
-  }
-
-  .cover-item {
-    contain-intrinsic-size: 220px 300px;
-  }
-
   #main.android-playback-lite {
     transition: none !important;
   }
