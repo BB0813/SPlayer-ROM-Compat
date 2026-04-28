@@ -1,4 +1,4 @@
-import type { VNodeChild } from "vue";
+﻿import type { VNodeChild } from "vue";
 import { computed, h, ref } from "vue";
 import { NTooltip, type SelectOption } from "naive-ui";
 import {
@@ -200,10 +200,16 @@ export const usePlaySettings = (): SettingConfig => {
     const modeText = settingStore.androidPerformanceMode
       ? "已开启 Android 性能模式"
       : "已关闭 Android 性能模式";
+    const strategyText = [
+      settingStore.androidReducePlaybackAnimations ? "降低动画" : "保留动画",
+      settingStore.androidFreezePlaybackRoutes ? "冻结页面" : "保留页面缓存",
+      settingStore.androidLowFrequencyLyrics ? "低频歌词" : "常规歌词",
+      settingStore.androidDisablePlaybackBackground ? "关闭动态背景" : "保留动态背景",
+    ].join(" / ");
     const diagnosticsText = settingStore.androidPerformanceDiagnostics
       ? "已开启诊断日志"
       : "未开启诊断日志";
-    return `${modeText} | ${diagnosticsText}`;
+    return `${modeText} | ${strategyText} | ${diagnosticsText}`;
   });
 
   const androidRomPrimaryActionLabel = computed(() => {
@@ -707,6 +713,70 @@ export const usePlaySettings = (): SettingConfig => {
               get: () => settingStore.androidPerformanceMode,
               set: (value) => {
                 settingStore.androidPerformanceMode = value;
+              },
+            }),
+          },
+          {
+            key: "androidReducePlaybackAnimations",
+            label: "播放时降低动画",
+            type: "switch",
+            show: computed(() => settingStore.androidPerformanceMode),
+            description: "播放音乐时关闭弹簧、列表位移和页面切换动画，降低 WebView 主线程压力。",
+            value: computed({
+              get: () => settingStore.androidReducePlaybackAnimations,
+              set: (value) => {
+                settingStore.androidReducePlaybackAnimations = value;
+              },
+            }),
+          },
+          {
+            key: "androidFreezePlaybackRoutes",
+            label: "播放时冻结后台页面",
+            type: "switch",
+            show: computed(() => settingStore.androidPerformanceMode),
+            description: "播放期间关闭非必要 KeepAlive，避免离开的页面继续刷新和占用内存。",
+            value: computed({
+              get: () => settingStore.androidFreezePlaybackRoutes,
+              set: (value) => {
+                settingStore.androidFreezePlaybackRoutes = value;
+              },
+            }),
+          },
+          {
+            key: "androidLowFrequencyLyrics",
+            label: "播放时降低歌词刷新率",
+            type: "switch",
+            show: computed(() => settingStore.androidPerformanceMode),
+            description: "播放页歌词改为低频更新，并禁用 Android 上较重的逐字歌词效果。",
+            value: computed({
+              get: () => settingStore.androidLowFrequencyLyrics,
+              set: (value) => {
+                settingStore.androidLowFrequencyLyrics = value;
+              },
+            }),
+          },
+          {
+            key: "androidDisablePlaybackBackground",
+            label: "播放时关闭动态背景",
+            type: "switch",
+            show: computed(() => settingStore.androidPerformanceMode),
+            description: "播放音乐时移除视频背景、大图模糊和遮罩滤镜，减少 GPU 合成压力。",
+            value: computed({
+              get: () => settingStore.androidDisablePlaybackBackground,
+              set: (value) => {
+                settingStore.androidDisablePlaybackBackground = value;
+              },
+            }),
+          },
+          {
+            key: "androidSilentCommentErrors",
+            label: "评论失败静默兜底",
+            type: "switch",
+            description: "评论代理失败时不再反复弹出错误，直接显示空评论占位。",
+            value: computed({
+              get: () => settingStore.androidSilentCommentErrors,
+              set: (value) => {
+                settingStore.androidSilentCommentErrors = value;
               },
             }),
           },

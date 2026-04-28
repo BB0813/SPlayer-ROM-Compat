@@ -90,6 +90,8 @@
             :items="virtualListItems"
             :height="`calc(100% - 40px)`"
             :padding-bottom="80"
+            :buffer-size="androidVirtualBufferSize"
+            :disable-item-transition="isAndroidPlaybackLite"
             :class="{ 'is-dragging-global': isDragging && draggable }"
             @scroll="onScroll"
           >
@@ -207,6 +209,7 @@ import { useDragSort } from "@/composables/List/useDragSort";
 import SongListMenu from "@/components/Menu/SongListMenu.vue";
 import MobileSongMenu from "@/components/Menu/MobileSongMenu.vue";
 import VirtualScroll from "@/components/UI/VirtualScroll.vue";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const props = withDefaults(
   defineProps<{
@@ -270,6 +273,8 @@ const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();
 const { isSmallScreen } = useMobile();
+const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
+const androidVirtualBufferSize = computed(() => (isAndroidPlaybackLite.value ? 2 : 5));
 
 // 列表元素
 const listRef = ref<InstanceType<typeof VirtualScroll> | null>(null);

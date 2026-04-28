@@ -420,20 +420,33 @@ audio {
   *::after {
     scroll-behavior: auto !important;
   }
+}
+
+:root.android-performance-mode.android-reduce-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 
   .slide-in-item,
+  .virtual-item,
   .n-button,
   .n-card,
   .n-list,
   .n-list-item,
   .n-scrollbar,
   .song-card,
+  .song-content,
   .cover-list,
   .song-list,
   .list-detail,
   .player-lyric {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+    transition: none !important;
+    animation: none !important;
   }
 
   .n-modal-mask,
@@ -461,6 +474,12 @@ audio {
   .cover-list,
   .setting-type {
     contain: layout style paint;
+  }
+
+  .virtual-item,
+  .lrc-line {
+    content-visibility: auto;
+    contain-intrinsic-size: 88px 180px;
   }
 
   .song-card,

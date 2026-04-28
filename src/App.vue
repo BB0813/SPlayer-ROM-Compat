@@ -76,13 +76,42 @@ if (isAndroidApp) {
       [
         settingStore.androidPerformanceMode,
         settingStore.androidPerformanceDiagnostics,
+        settingStore.androidReducePlaybackAnimations,
+        settingStore.androidFreezePlaybackRoutes,
+        settingStore.androidLowFrequencyLyrics,
+        settingStore.androidDisablePlaybackBackground,
         statusStore.playStatus,
       ] as const,
-    ([performanceMode, diagnosticsEnabled, playStatus]) => {
+    ([
+      performanceMode,
+      diagnosticsEnabled,
+      reducePlaybackAnimations,
+      freezePlaybackRoutes,
+      lowFrequencyLyrics,
+      disablePlaybackBackground,
+      playStatus,
+    ]) => {
+      const playbackPerformanceActive = performanceMode && playStatus;
       document.documentElement.classList.toggle("android-performance-mode", performanceMode);
       document.documentElement.classList.toggle(
         "android-playback-active",
-        performanceMode && playStatus,
+        playbackPerformanceActive,
+      );
+      document.documentElement.classList.toggle(
+        "android-reduce-motion",
+        playbackPerformanceActive && reducePlaybackAnimations,
+      );
+      document.documentElement.classList.toggle(
+        "android-freeze-routes",
+        playbackPerformanceActive && freezePlaybackRoutes,
+      );
+      document.documentElement.classList.toggle(
+        "android-low-frequency-lyrics",
+        playbackPerformanceActive && lowFrequencyLyrics,
+      );
+      document.documentElement.classList.toggle(
+        "android-static-background",
+        playbackPerformanceActive && disablePlaybackBackground,
       );
       setAndroidPerformanceDiagnosticsEnabled(diagnosticsEnabled);
     },
@@ -99,6 +128,10 @@ if (isAndroidApp) {
     setAndroidPerformanceDiagnosticsEnabled(false);
     document.documentElement.classList.remove("android-performance-mode");
     document.documentElement.classList.remove("android-playback-active");
+    document.documentElement.classList.remove("android-reduce-motion");
+    document.documentElement.classList.remove("android-freeze-routes");
+    document.documentElement.classList.remove("android-low-frequency-lyrics");
+    document.documentElement.classList.remove("android-static-background");
   });
 }
 </script>

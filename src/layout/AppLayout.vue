@@ -4,7 +4,7 @@
     <Transition name="fade">
       <div
         v-if="
-          !isAndroidPlaybackLite &&
+          !shouldDisableDynamicBackground &&
           (statusStore.themeBackgroundMode === 'image' ||
             statusStore.themeBackgroundMode === 'video') &&
           statusStore.backgroundImageUrl
@@ -50,6 +50,7 @@
         'show-full-player': statusStore.showFullPlayer,
         'show-mobile-tabbar': showMobileTabBar,
         'android-playback-lite': isAndroidPlaybackLite,
+        'android-reduce-motion': shouldReduceMotion,
       }"
       has-sider
     >
@@ -99,7 +100,12 @@
         >
           <!-- 闁荤姳璀﹂崹鎶藉极鏉堛劊浜滈柣銏犳啞濡?-->
           <RouterView v-slot="{ Component }">
-            <Transition :name="`router-${settingStore.routeAnimation}`" mode="out-in">
+            <Transition
+              :name="shouldReduceMotion ? undefined : `router-${settingStore.routeAnimation}`"
+              mode="out-in"
+              :css="!shouldReduceMotion"
+              :duration="shouldReduceMotion ? 0 : undefined"
+            >
               <KeepAlive v-if="keepAliveEnabled" :max="20" :exclude="['layout']">
                 <component :is="Component" class="router-view" />
               </KeepAlive>
@@ -141,7 +147,12 @@ const dataStore = useDataStore();
 const blobURLManager = useBlobURLManager();
 
 const { isDesktop, isMobile } = useMobile();
-const { isAndroidPlaybackLite, keepAliveEnabled } = useAndroidRoutePerformance();
+const {
+  isAndroidPlaybackLite,
+  shouldReduceMotion,
+  shouldDisableDynamicBackground,
+  keepAliveEnabled,
+} = useAndroidRoutePerformance();
 
 const showMobileTabBar = computed(() => isMobile.value);
 const backTopBottom = computed(() => {

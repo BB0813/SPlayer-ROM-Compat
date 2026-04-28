@@ -13,6 +13,11 @@ import { isLogin } from "./auth";
 import { getCookie, setCookies } from "./cookie";
 import { isAndroidApp, isDev } from "./env";
 
+type SPlayerAxiosRequestConfig = AxiosRequestConfig & {
+  /** 是否静默处理请求错误 */
+  silentError?: boolean;
+};
+
 const baseURL: string = (() => {
   if (isAndroidApp) return "/api/netease";
   if (isDev) return "/api/netease";
@@ -70,7 +75,7 @@ const appendQueryValue = (searchParams: URLSearchParams, key: string, value: unk
   searchParams.append(key, String(value));
 };
 
-const buildApiPath = (config: AxiosRequestConfig): string => {
+const buildApiPath = (config: SPlayerAxiosRequestConfig): string => {
   const currentBaseURL = String(config.baseURL ?? baseURL);
   const currentUrl = String(config.url ?? "");
   const normalizedBaseURL = currentBaseURL.endsWith("/")
@@ -89,8 +94,8 @@ const buildApiPath = (config: AxiosRequestConfig): string => {
   return `${url.pathname}${url.search}`;
 };
 
-const prepareRequestConfig = (config: AxiosRequestConfig): AxiosRequestConfig => {
-  const nextConfig: AxiosRequestConfig = {
+const prepareRequestConfig = (config: SPlayerAxiosRequestConfig): SPlayerAxiosRequestConfig => {
+  const nextConfig: SPlayerAxiosRequestConfig = {
     ...config,
     params: {
       ...(config.params ?? {}),
@@ -123,13 +128,17 @@ const prepareRequestConfig = (config: AxiosRequestConfig): AxiosRequestConfig =>
   return nextConfig;
 };
 
-const handleResponseError = (error: AxiosError) => {
+const handleResponseError = (error: AxiosError, silentError = false) => {
+  if (silentError) {
+    console.warn("请求失败，已按静默策略处理", error.message);
+    return;
+  }
   if (
     error.code === "ECONNABORTED" ||
     error.message.includes("timeout") ||
     error.message.includes("Network Error")
   ) {
-    window.$message?.warning("Network request timed out, please check your connection");
+    window.$message?.warning("网络请求超时，请检查网络连接");
     return;
   }
 
@@ -158,12 +167,15 @@ const handleResponseError = (error: AxiosError) => {
 server.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    handleResponseError(error);
+    handleResponseError(
+      error,
+      (error.config as SPlayerAxiosRequestConfig | undefined)?.silentError,
+    );
     return Promise.reject(error);
   },
 );
 
-const shouldUseAndroidLocalApi = (config: AxiosRequestConfig): boolean => {
+const shouldUseAndroidLocalApi = (config: SPlayerAxiosRequestConfig): boolean => {
   if (!isAndroidApp) return false;
 
   const currentBaseURL = String(config.baseURL ?? baseURL);
@@ -174,7 +186,7 @@ const shouldUseAndroidLocalApi = (config: AxiosRequestConfig): boolean => {
   return currentBaseURL.startsWith("/api");
 };
 
-const toInternalAxiosConfig = (config: AxiosRequestConfig): InternalAxiosRequestConfig => {
+const toInternalAxiosConfig = (config: SPlayerAxiosRequestConfig): InternalAxiosRequestConfig => {
   return {
     ...config,
     headers: config.headers ?? {},
@@ -219,7 +231,7 @@ const persistAndroidResponseCookies = (headers: Record<string, string>, data: un
   });
 };
 
-const requestByAndroidBridge = async <T = any>(config: AxiosRequestConfig): Promise<T> => {
+const requestByAndroidBridge = async <T = any>(config: SPlayerAxiosRequestConfig): Promise<T> => {
   const bridge = getAndroidApiBridge();
   const axiosConfig = toInternalAxiosConfig(config);
   if (!bridge) {
@@ -275,14 +287,14 @@ const requestByAndroidBridge = async <T = any>(config: AxiosRequestConfig): Prom
       response.statusText,
     );
     const error = new AxiosError(response.statusText, undefined, axiosConfig, undefined, response);
-    handleResponseError(error);
+    handleResponseError(error, config.silentError);
     throw error;
   }
 
   return response.data as T;
 };
 
-const request = async <T = any>(config: AxiosRequestConfig): Promise<T> => {
+const request = async <T = any>(config: SPlayerAxiosRequestConfig): Promise<T> => {
   const preparedConfig = prepareRequestConfig(config);
 
   if (shouldUseAndroidLocalApi(preparedConfig)) {

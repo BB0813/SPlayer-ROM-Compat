@@ -31,7 +31,9 @@
               left: 0,
               right: 0,
               transform: `translateY(${getItemTop(actualStartIndex + index)}px)`,
-              transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+              transition: props.disableItemTransition
+                ? 'none'
+                : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
             }"
           >
             <slot :item="item" :index="actualStartIndex + index" />
@@ -62,12 +64,15 @@ interface Props {
   defaultScrollIndex?: number;
   /** 获取唯一键的函数 */
   getItemKey?: (item: any, index: number) => string | number;
+  /** 是否关闭列表项位移动画 */
+  disableItemTransition?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   itemFixed: false,
   bufferSize: 5,
   paddingBottom: 0,
+  disableItemTransition: false,
   getItemKey: (item: any, index: number) => {
     return item?.key ?? item?.id ?? index;
   },

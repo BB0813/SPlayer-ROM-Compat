@@ -1,4 +1,11 @@
 import request from "@/utils/request";
+import { useSettingStore } from "@/stores";
+import { isAndroidApp } from "@/utils/env";
+
+const shouldSilenceCommentError = () => {
+  if (!isAndroidApp) return false;
+  return useSettingStore().androidSilentCommentErrors;
+};
 
 /**
  * 获取评论
@@ -20,6 +27,7 @@ export const getComment = (
   return request({
     url: "/comment/new",
     params: { id, type, pageNo, pageSize, sortType, cursor, timestamp: Date.now() },
+    silentError: shouldSilenceCommentError(),
   });
 };
 
@@ -41,6 +49,7 @@ export const getHotComment = (
   return request({
     url: "/comment/hot",
     params: { id, type, limit, offset, before, timestamp: Date.now() },
+    silentError: shouldSilenceCommentError(),
   });
 };
 

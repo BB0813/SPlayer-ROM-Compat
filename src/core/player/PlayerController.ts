@@ -655,12 +655,14 @@ class PlayerController {
     }
   }
   /**
-   * 缂傚倸鍊烽懗鍫曞窗瀹ュ洨鍗氶柟缁㈠枟椤ュ﹪鏌熼崜浣烘憘闁哄棎鍎遍湁婵犲﹤鍠氶崕搴㈢箾閸℃劕鐏紒杈ㄥ浮楠炲鈹戦崼鐔哥槥
+   * ??????????
    */
   private getTimeUpdateThrottleWait(): number {
     const settingStore = useSettingStore();
-    if (isAndroidApp && settingStore.androidPerformanceMode) return 3000;
-    if (isAndroidApp) return 500;
+    if (isAndroidApp && settingStore.androidPerformanceMode) {
+      return settingStore.androidLowFrequencyLyrics ? 5000 : 3000;
+    }
+    if (isAndroidApp) return 1000;
     return 200;
   }
 

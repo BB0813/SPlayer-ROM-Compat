@@ -57,6 +57,16 @@ export interface SettingState {
   androidPerformanceMode: boolean;
   /** Android 性能诊断日志 */
   androidPerformanceDiagnostics: boolean;
+  /** Android 播放时降低动画 */
+  androidReducePlaybackAnimations: boolean;
+  /** Android 播放时冻结后台页面 */
+  androidFreezePlaybackRoutes: boolean;
+  /** Android 播放时降低歌词刷新率 */
+  androidLowFrequencyLyrics: boolean;
+  /** Android 播放时关闭动态背景 */
+  androidDisablePlaybackBackground: boolean;
+  /** Android 评论失败静默兜底 */
+  androidSilentCommentErrors: boolean;
   /** 濠电姷鏁告慨鐑藉极閸涘﹥鍙忛柣鎴ｆ閺嬩線鏌熼梻瀵割槮缁惧墽绮换娑㈠箣濞嗗繒鍔撮梺杞扮椤戝棝濡甸崟顖氱閻犺櫣鍎ら悗楣冩⒑閸涘﹦鎳冪紒缁樺姌閻忓啴姊洪幐搴ｇ畵闁瑰啿閰ｅ鎼佸Χ婢跺鍘告繛杈剧到婢瑰﹪宕曢幋锔界厵闁圭粯甯楅崯鐐烘煙椤栨稒顥堝┑鈩冩倐婵＄柉顦撮柡澶夌矙濮婄粯绗熼埀顒€顭囪婢ф繈姊洪崫鍕櫤缂侇喗鎸搁悾鐑藉箣閿曗偓缁€瀣亜閺嶃劎銆掗柛妯圭矙濮婃椽宕烽鐐板婵犵數鍋涢敃顏堛€侀幘婢勬棃宕ㄩ鎯у箞闂備胶绮崝锔界濠婂嫭鍙忛柛灞剧◥缁诲棙銇勯幇鈺佺仾闁搞倕娲﹂妵鍕閳╁啰顦版繝娈垮枓閸嬫捇姊洪悙钘夊姕闁告挻鑹惧嵄閺夊牄鍔庣弧鈧┑鐐茬墕閻忔繈寮稿☉銏＄叆闁哄洦锚閳ь剚绻堥崹楣冩晝閸屾稑鈧鏌ｉ敐鍛板缂佷緤绠戦埞鎴炲箠闁稿﹥娲熼獮濠冩償閿濆洨鐒奸梺鍛婂姀閺傚倹绂嶅鍫熺厸闁告劑鍔嶆径鍕亜閵夈儺妲搁棁澶愭煟濞嗗苯浜鹃梺鎼炲姀濞夋盯锝炶箛鎾佹椽顢旈崟顓у晣闂備胶绮崝鏍亹閸愨晙绻嗙憸鏂款潖濞差亜宸濆┑鐘插濡插牓姊洪悷鏉挎毐闁活厼鍊搁悾鐑藉即閻愬灚娈鹃梺鎼炲労閻撳牆顭囬悢鍏尖拺闁革富鍘奸崝瀣亜閵娿儲鍣界紒顔款嚙閳藉濮€閿涘嫬骞堥梻浣筋潐瀹曟浜搁鍫濈鐎光偓閸曨剛鍘介梺鎸庢磵閸嬫捇鏌ｅΔ鈧Λ婵嬪春閻愬搫绠ｉ柨鏃傜帛閺呪晝绱掔紒銏犲籍闁衡偓闁秴鏋佸Δ锝呭暞閸婄敻鎮峰▎蹇擃仾缂佲偓閸愨斂浜滄い鎾跺仦瀹告繈鏌涢幒鎾崇闁归濮撮湁閻庯綆鍋掑鏃€绻濋悽闈涗粶婵☆偅鐟╁畷婵嬪即閵忕姷顦梺鍛婄☉閻°劑鍩涢幋锔界厵缂佸瀵ч幑锝夋煃閽樺妯€闁诡喗顨呴～婵嬫偂鎼达紕鍝楁俊鐐€х徊楣冨磿閹惰棄鐓橀柟杈鹃檮閸嬫劖绻涢崼鐔奉嚋婵絽鑻埞鎴﹀焺閸愩劎绁烽梺纭呮珪閿氶柣锝囧厴楠炲鏁冮埀顒勭嵁閵忊€茬箚妞ゆ牗绮庣敮娑㈡煟濠靛棗妲婚柍瑙勫灦楠炲﹪鏌涙繝鍐╃妤犵偛锕ュ鍕箛椤掑倸濮︽俊鐐€栫敮鎺楁晝閿曞倹鍋╅柣銏㈩暯閸嬫挾鎲撮崟顒傤槬闂侀潧鐗婇幃鍌炵嵁閸愵喖顫呴柕鍫濇閸庮亪姊洪懡銈呮瀺闁告濞婇幃?*/
   taskbarLyricUseThemeColor: boolean;
   /** 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾剧懓顪冪€ｎ亝鎹ｉ柣顓炴閵嗘帒顫濋敐鍛婵°倗濮烽崑鐐烘偋閻樻眹鈧線寮撮姀鐘栄囨煕鐏炲墽鐓瑙勬礀閳规垿顢欓惌顐簻閻ｇ兘顢楅崟顐㈠亶闁诲海鏁哥涵鍫曞磻閹捐埖鍠嗛柛鏇ㄥ墰椤︻喖顪冮妶搴′簻妞わ箓浜堕崺鈧い鎺戝濞懷囨煏閸埄鐒炬い鏇秮瀹曞ジ寮撮悙娈垮悈闂備胶绮敋闁诲繑鑹捐閹兼番鍨荤弧鈧梺姹囧灲濞佳勭閳哄懏鐓欐繛鑼额唺缁ㄧ晫绱掓潏鈺佷槐闁糕斁鍋撳銈嗗笂闂勫秵绂嶅鍕╀簻闁规壋鏅涢悞鐑樹繆閹绘帞绉洪柡灞剧洴楠炴帡骞嬮婵嗘儓婵°倗濮烽崑鐐烘晝閵忋們鈧礁鈻庨幘鏉戠檮婵犮垼娉涢ˇ顖溾偓鍨叀濮婂宕掑▎鎰偘濡炪倖娲橀悧鐘茬暦閵忋倖鍋╅悘鐐靛亾濞堜即姊洪崷顓炲妺闁规悂顥撻幑銏ゅ幢濡炴洖缍婇幃鈺侇啅椤旂厧澹夐梻浣虹帛閹稿鎯勯鐐茶摕婵炴垯鍨归悞娲煕閹邦喖浜鹃柣锝堝亹缁辨挻鎷呴崫鍕戙垺銇勯鐘插幋鐎殿喖顭烽弫宥夊礋椤忓懎濯伴梻浣告啞閹稿棝宕熼銏画闂傚倸鍊峰ù鍥ь浖閵娧呯焼濞撴埃鍋撶€规洘鍔欏畷褰掝敊閻愵剚顔曟俊鐐€栭崝褏绮婚幋鐘电焼閻庯綆鍋佹禍婊堟煙娴煎瓨娑уù婊呭仱閺屽秷顧侀柛鎾寸洴瀹曟螣娓氼垱缍庣紓鍌欑劍钃卞┑顖涙尦閹嘲鈻庤箛鎿冧患婵炲濮弲鐘差潖閾忓湱鐭欓柛鏍ゅ墲閺佹儳鈹戦悙璺虹毢闁哥姵鐗曢锝囩磼濡偐鐦堥梺鎼炲劘閸斿秴鈻嶅鍫熲拺闁告稑锕﹂惌鍡欑磼閳ь剚鎷呯化鏇熺亖闂侀潧艌閺呮粓鍩涢幒妤佺厱閻忕偟鍋撻惃鎴濐熆瑜庣粙鎴﹀Υ閹烘埈娼╂い鎾楀嫮鏉归柣搴ゎ潐濞插繘宕曢幎钘夌劦妞ゆ帒锕︾粔鐢告煕閻樻剚娈滈柟顕嗙節瀵挳鎮㈤搹璇″晭闂備胶鎳撻悺銊ф崲閸岀偞鍤嬮柛锔诲幐閸嬫挸鈻撻崹顔界亾闂佺顑嗛幐楣冨箲?*/
@@ -532,6 +542,11 @@ export const useSettingStore = defineStore("setting", {
     androidEnhancedNotificationExclusive: false,
     androidPerformanceMode: isAndroidApp,
     androidPerformanceDiagnostics: false,
+    androidReducePlaybackAnimations: isAndroidApp,
+    androidFreezePlaybackRoutes: isAndroidApp,
+    androidLowFrequencyLyrics: isAndroidApp,
+    androidDisablePlaybackBackground: isAndroidApp,
+    androidSilentCommentErrors: isAndroidApp,
     taskbarLyricUseThemeColor: false,
     checkUpdateOnStart: true,
     preventSleep: false,

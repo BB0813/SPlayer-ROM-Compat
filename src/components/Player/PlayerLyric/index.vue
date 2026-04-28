@@ -106,9 +106,10 @@ const player = usePlayerController();
  */
 const currentSongId = computed(() => musicStore.playSong?.id as number | undefined);
 
-const androidSeekUpdateIntervalMs = computed(() =>
-  settingStore.androidPerformanceMode ? 1500 : 500,
-);
+const androidSeekUpdateIntervalMs = computed(() => {
+  if (!settingStore.androidPerformanceMode) return 1000;
+  return settingStore.androidLowFrequencyLyrics ? 3000 : 1500;
+});
 
 // 实时播放进度
 const playSeek = ref<number>(player.getSeek() + statusStore.getSongOffset(musicStore.playSong?.id));
@@ -184,7 +185,7 @@ const resetOffset = () => {
 };
 
 watch(
-  () => settingStore.androidPerformanceMode,
+  () => [settingStore.androidPerformanceMode, settingStore.androidLowFrequencyLyrics] as const,
   () => {
     if (!isAndroidApp || androidSeekTimer === null) return;
     pauseSeekUpdates();
