@@ -1,9 +1,10 @@
 import { keywords, regexes } from "@/assets/data/exclude";
 import { SongUnlockServer } from "@/core/player/SongManager";
 import { defaultAMLLDbServer } from "@/utils/meta";
+import { isAndroidApp } from "@/utils/env";
 import type { SettingState } from "../setting";
 
-export const CURRENT_SETTING_SCHEMA_VERSION = 15;
+export const CURRENT_SETTING_SCHEMA_VERSION = 16;
 
 export type MigrationFunction = (state: Partial<SettingState>) => Partial<SettingState>;
 
@@ -191,6 +192,12 @@ export const settingMigrations: Record<number, MigrationFunction> = {
   15: () => {
     return {
       androidEnhancedNotificationExclusive: false,
+    };
+  },
+  16: () => {
+    return {
+      androidPerformanceMode: isAndroidApp,
+      androidPerformanceDiagnostics: false,
     };
   },
 };

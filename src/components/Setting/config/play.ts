@@ -196,6 +196,16 @@ export const usePlaySettings = (): SettingConfig => {
     return `${modeText} | ${tapText} | ${coverText} | ${subtitleText} | ${enhancedText}`;
   });
 
+  const androidPerformanceSummary = computed(() => {
+    const modeText = settingStore.androidPerformanceMode
+      ? "已开启 Android 性能模式"
+      : "已关闭 Android 性能模式";
+    const diagnosticsText = settingStore.androidPerformanceDiagnostics
+      ? "已开启诊断日志"
+      : "未开启诊断日志";
+    return `${modeText} | ${diagnosticsText}`;
+  });
+
   const androidRomPrimaryActionLabel = computed(() => {
     switch (androidRomProfile.value?.family) {
       case "hyperos":
@@ -452,6 +462,8 @@ export const usePlaySettings = (): SettingConfig => {
       `电池优化白名单：${info?.ignoringBatteryOptimizations ? "已加入" : "未加入"}`,
       `播放引擎：${settingStore.playbackEngine}`,
       `音频解码引擎：${settingStore.audioEngine}`,
+      `Android 性能模式：${settingStore.androidPerformanceMode ? "已开启" : "已关闭"}`,
+      `Android 性能诊断日志：${settingStore.androidPerformanceDiagnostics ? "已开启" : "已关闭"}`,
       `通知保留：${settingStore.androidKeepNotificationOnPause ? "是" : "否"}`,
       `通知点击行为：${settingStore.androidNotificationTapAction === "player" ? "打开播放器页" : "回到应用首页"}`,
       `通知显示封面：${settingStore.androidNotificationShowCover ? "是" : "否"}`,
@@ -767,6 +779,32 @@ export const usePlaySettings = (): SettingConfig => {
                 "当前 ROM 暂不支持直接打开应用详情设置。",
               );
             },
+          },
+          {
+            key: "androidPerformanceMode",
+            label: "Android 性能模式",
+            type: "switch",
+            description: () =>
+              `${androidPerformanceSummary.value}。开启后会降低播放页动效、歌词刷新频率和背景模糊，优先保证播放时流畅度。`,
+            value: computed({
+              get: () => settingStore.androidPerformanceMode,
+              set: (value) => {
+                settingStore.androidPerformanceMode = value;
+              },
+            }),
+          },
+          {
+            key: "androidPerformanceDiagnostics",
+            label: "Android 性能诊断日志",
+            type: "switch",
+            description:
+              "开启后每 10 秒在控制台输出播放事件、原生 Bridge 和歌词刷新统计，便于定位卡顿来源。",
+            value: computed({
+              get: () => settingStore.androidPerformanceDiagnostics,
+              set: (value) => {
+                settingStore.androidPerformanceDiagnostics = value;
+              },
+            }),
           },
           {
             key: "androidRomProfile",

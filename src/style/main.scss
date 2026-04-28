@@ -411,3 +411,18 @@ audio {
     height: 100svh;
   }
 }
+
+:root.android-performance-mode {
+  scroll-behavior: auto !important;
+
+  .n-modal-mask,
+  .n-drawer-mask,
+  .n-popover,
+  .n-popselect-menu {
+    backdrop-filter: none !important;
+  }
+
+  .n-skeleton {
+    animation: none !important;
+  }
+}

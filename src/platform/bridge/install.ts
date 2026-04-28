@@ -1,4 +1,5 @@
-﻿import {
+import { recordAndroidPerformanceEvent } from "@/platform/android/performance";
+import {
   deleteBridgeStoreKey,
   emitAndroidPlayerEvent,
   hasBridgeStoreKey,
@@ -63,6 +64,7 @@ export const installPlatformBridge = (): void => {
 
   window.__SPLAYER_ANDROID__ = {
     emitPlayerEvent: (type: string, detailJson?: string) => {
+      recordAndroidPerformanceEvent("bridge:native-event");
       let detail: AndroidPlayerEventPayload["detail"] = {};
 
       if (detailJson) {

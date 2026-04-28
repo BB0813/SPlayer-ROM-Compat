@@ -17,6 +17,7 @@ import { type DebouncedFunc, throttle } from "lodash-es";
 import { useBlobURLManager } from "../resource/BlobURLManager";
 import { useAudioManager } from "./AudioManager";
 import { useAutomixManager } from "@/core/automix/AutomixManager";
+import { recordAndroidPerformanceEvent } from "@/platform/android/performance";
 import { useLyricManager } from "./LyricManager";
 import { mediaSessionManager } from "./MediaSessionManager";
 import * as playerIpc from "./PlayerIpc";
@@ -656,6 +657,13 @@ class PlayerController {
   /**
    * 缂傚倸鍊烽懗鍫曞窗瀹ュ洨鍗氶柟缁㈠枟椤ュ﹪鏌熼崜浣烘憘闁哄棎鍎遍湁婵犲﹤鍠氶崕搴㈢箾閸℃劕鐏紒杈ㄥ浮楠炲鈹戦崼鐔哥槥
    */
+  private getTimeUpdateThrottleWait(): number {
+    const settingStore = useSettingStore();
+    if (isAndroidApp && settingStore.androidPerformanceMode) return 1000;
+    if (isAndroidApp) return 500;
+    return 200;
+  }
+
   private bindAudioEvents() {
     const dataStore = useDataStore();
     const statusStore = useStatusStore();
@@ -746,6 +754,7 @@ class PlayerController {
     // 闂佸搫顦弲婊呯矙閹寸姭鍋撶憴鍕枙鐎殿喖顕埀顒佺⊕钃遍柣鎾亾
     this.onTimeUpdate = throttle(() => {
       // 注释已清理
+      recordAndroidPerformanceEvent("player:timeupdate");
       const { enable, pointA, pointB } = statusStore.abLoop;
       if (enable && pointA !== null && pointB !== null) {
         if (audioManager.currentTime >= pointB) {
@@ -759,7 +768,16 @@ class PlayerController {
       // 注释已清理
       const songId = musicStore.playSong?.id;
       const offset = statusStore.getSongOffset(songId);
-      const useYrc = !!(settingStore.showWordLyrics && musicStore.songLyric.yrcData?.length);
+      const useLiteLyrics = !!(
+        isAndroidApp &&
+        settingStore.androidPerformanceMode &&
+        musicStore.songLyric.lrcData?.length
+      );
+      const useYrc = !!(
+        settingStore.showWordLyrics &&
+        musicStore.songLyric.yrcData?.length &&
+        !useLiteLyrics
+      );
       let rawLyrics: LyricLine[] = [];
       if (useYrc) {
         rawLyrics = toRaw(musicStore.songLyric.yrcData);
@@ -808,7 +826,7 @@ class PlayerController {
       }
       // 注释已清理
       playerIpc.sendSocketProgress(currentTime, duration);
-    }, 200);
+    }, this.getTimeUpdateThrottleWait());
     audioManager.addEventListener("timeupdate", this.onTimeUpdate);
     // 闂傚倷鐒︾€笛囨偡閵娾晩鏁嬮柕鍫濇缁剁偤鏌涢弴銊ュ箺闁?
     audioManager.addEventListener("error", (e) => {

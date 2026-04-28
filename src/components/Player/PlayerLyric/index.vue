@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="player-lyric">
     <!-- 歌词内容 -->
     <AMLyric v-if="settingStore.useAMLyrics && !isAndroidApp" :currentTime="playSeek" />
@@ -94,6 +94,7 @@ import { usePlayerController } from "@/core/player/PlayerController";
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { openSetting, openCopyLyrics } from "@/utils/modal";
 import { isAndroidApp } from "@/utils/env";
+import { recordAndroidPerformanceEvent } from "@/platform/android/performance";
 
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
@@ -105,13 +106,16 @@ const player = usePlayerController();
  */
 const currentSongId = computed(() => musicStore.playSong?.id as number | undefined);
 
-const ANDROID_SEEK_UPDATE_INTERVAL_MS = 250;
+const androidSeekUpdateIntervalMs = computed(() =>
+  settingStore.androidPerformanceMode ? 1000 : 500,
+);
 
 // 实时播放进度
 const playSeek = ref<number>(player.getSeek() + statusStore.getSongOffset(musicStore.playSong?.id));
 let androidSeekTimer: number | null = null;
 
 const updatePlaySeek = () => {
+  recordAndroidPerformanceEvent("lyric:seek-update");
   const songId = musicStore.playSong?.id;
   const offsetTime = statusStore.getSongOffset(songId);
   playSeek.value = player.getSeek() + offsetTime;
@@ -126,7 +130,7 @@ const resumeSeekUpdates = () => {
   updatePlaySeek();
   if (isAndroidApp) {
     if (androidSeekTimer === null) {
-      androidSeekTimer = window.setInterval(updatePlaySeek, ANDROID_SEEK_UPDATE_INTERVAL_MS);
+      androidSeekTimer = window.setInterval(updatePlaySeek, androidSeekUpdateIntervalMs.value);
     }
     return;
   }
@@ -178,6 +182,15 @@ const changeOffset = (delta: number) => {
 const resetOffset = () => {
   statusStore.resetSongOffset(currentSongId.value);
 };
+
+watch(
+  () => settingStore.androidPerformanceMode,
+  () => {
+    if (!isAndroidApp || androidSeekTimer === null) return;
+    pauseSeekUpdates();
+    resumeSeekUpdates();
+  },
+);
 
 onMounted(() => {
   resumeSeekUpdates();

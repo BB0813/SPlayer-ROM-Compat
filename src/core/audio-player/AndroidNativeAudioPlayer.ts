@@ -1,4 +1,4 @@
-﻿import { AUDIO_EVENTS, type AudioErrorDetail } from "./BaseAudioPlayer";
+import { AUDIO_EVENTS, type AudioErrorDetail } from "./BaseAudioPlayer";
 import type {
   EngineCapabilities,
   IPlaybackEngine,
@@ -7,6 +7,7 @@ import type {
 } from "./IPlaybackEngine";
 import { ANDROID_PLAYER_EVENT, getAndroidPlayerBridge } from "@/platform/bridge/android";
 import type { AndroidPlayerEventPayload } from "@/platform/bridge/types";
+import { recordAndroidPerformanceEvent } from "@/platform/android/performance";
 
 export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEngine {
   private _duration = 0;
@@ -33,6 +34,8 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
     const customEvent = event as CustomEvent<AndroidPlayerEventPayload>;
     const payload = customEvent.detail;
     if (!payload) return;
+
+    recordAndroidPerformanceEvent(`native:${payload.type}`);
 
     const detail = payload.detail ?? {};
     this.applyNativeSnapshot(detail);

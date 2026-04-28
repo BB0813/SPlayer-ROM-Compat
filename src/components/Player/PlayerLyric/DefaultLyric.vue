@@ -26,6 +26,7 @@
         pure: statusStore.pureLyricMode,
         'align-right': settingStore.lyricAlignRight,
         'meta-show': statusStore.playerMetaShow,
+        'android-lite': isAndroidPerformanceMode,
       },
     ]"
     @mouseleave="lrcAllLeave"
@@ -137,7 +138,7 @@ import { type LyricWord, type LyricLine } from "@applemusic-like-lyrics/lyric";
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { usePlayerController } from "@/core/player/PlayerController";
 import { getLyricLanguage } from "@/utils/format";
-import { isElectron } from "@/utils/env";
+import { isAndroidApp, isElectron } from "@/utils/env";
 import { lyricLangFontStyle } from "@/utils/lyric/lyricFontConfig";
 import { getFontSize } from "@/utils/style";
 
@@ -152,6 +153,9 @@ const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();
+const isAndroidPerformanceMode = computed(
+  () => isAndroidApp && settingStore.androidPerformanceMode,
+);
 
 const lyricScrollContainer = ref<HTMLElement | null>(null);
 
@@ -327,6 +331,10 @@ const smoothScrollTo = (container: HTMLElement, targetY: number, duration = 300)
     container.scrollTop = targetY;
     return;
   }
+  if (isAndroidPerformanceMode.value || duration <= 0) {
+    container.scrollTop = targetY;
+    return;
+  }
   const startTime = performance.now();
   /**
    * 平滑滚动动画
@@ -418,6 +426,7 @@ const getYrcVars = (wordData: LyricWord, lyricIndex: number): CssVars => {
   if (!currentLineItem || currentLineItem.type !== "lyric") return {};
 
   if (!isYrcLineOn(lyricIndex)) return {};
+  if (isAndroidPerformanceMode.value) return { "--yrc-opacity": "1" };
   // 计算进度
   const duration = wordData.endTime - wordData.startTime;
   const safeDuration = Math.max(duration, 1);
@@ -488,7 +497,7 @@ const getLyricLineClass = (item: ProcessedLyricItem, index: number) => {
 const getLyricLineStyle = (item: ProcessedLyricItem, index: number) => {
   if (item.type !== "lyric") return {};
 
-  if (!settingStore.lyricsBlur) return { filter: "blur(0)" };
+  if (isAndroidPerformanceMode.value || !settingStore.lyricsBlur) return { filter: "blur(0)" };
   // 计算模糊程度
   const activeIdx = firstActiveIndex.value;
   const isOn = isLineActive(index);
@@ -769,6 +778,32 @@ onBeforeUnmount(() => {
         transform 0.35s ease,
         opacity 0.35s ease;
       pointer-events: none;
+    }
+  }
+  &.android-lite {
+    .count-down {
+      animation: none !important;
+    }
+    .lrc-line {
+      will-change: auto;
+      transition: opacity 0.2s ease;
+      &::before {
+        transition: none;
+      }
+    }
+    .tran,
+    .roma {
+      transition: none;
+    }
+    .lrc-line.is-yrc.on {
+      .content-text {
+        .yrc-word {
+          will-change: auto;
+          mask-image: none;
+          -webkit-mask-image: none;
+          -webkit-mask-position-x: initial;
+        }
+      }
     }
   }
   @media (hover: hover) and (pointer: fine) {
