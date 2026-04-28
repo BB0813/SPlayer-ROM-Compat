@@ -45,8 +45,9 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "android:prepareWeb": "vite build --config vite.android.config.ts",
-    "android:api:server": "tsx scripts/android-api-server.ts"
+    "android:prepareWeb": "pnpm android:syncIcons && vite build --config vite.android.config.ts",
+    "android:api:server": "tsx scripts/android-api-server.ts",
+    "android:syncIcons": "tsx scripts/android-sync-icons.ts"
   },
   "dependencies": {
     "@applemusic-like-lyrics/core": "^0.3.2",
