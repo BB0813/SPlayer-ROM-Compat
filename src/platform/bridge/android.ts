@@ -208,6 +208,28 @@ export const syncAndroidSystemBars = (config: AndroidSystemBarsConfig): boolean 
   return getAndroidSystemBridge()?.setSystemBars(JSON.stringify(config)) ?? false;
 };
 
+export const getAndroidNativeDiagnosticsReport = (): string | null => {
+  return getAndroidSystemBridge()?.getDiagnosticsReport() ?? null;
+};
+
+export const clearAndroidNativeDiagnosticsReport = (): boolean => {
+  return getAndroidSystemBridge()?.clearDiagnosticsReport() ?? false;
+};
+
+export const recordAndroidNativeDiagnosticEvent = (
+  source: string,
+  message: string,
+  detail?: Record<string, unknown>,
+): boolean => {
+  return (
+    getAndroidSystemBridge()?.recordDiagnosticEvent(
+      source,
+      message,
+      detail ? JSON.stringify(detail) : undefined,
+    ) ?? false
+  );
+};
+
 export const getAndroidRomCompatReport = (): AndroidRomCompatReport | null => {
   const raw = getAndroidSystemBridge()?.getRomCompatReport();
   if (!raw) return null;

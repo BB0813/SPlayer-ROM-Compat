@@ -19,6 +19,10 @@ import {
   syncAndroidNotificationConfig,
 } from "@/platform/bridge/android";
 import { scanAndSyncAndroidMediaLibrary } from "@/platform/android/local-media";
+import {
+  buildAndroidPerformanceDiagnosticsReport,
+  clearAndroidPerformanceDiagnostics,
+} from "@/platform/android/performance";
 import type { AndroidRomCompatAction } from "@/platform/bridge/types";
 import { syncAndroidNowPlayingFromStores } from "@/platform/android/nowPlaying";
 import { resolveAndroidRomProfile } from "@/platform/android/romProfile";
@@ -488,6 +492,47 @@ export const usePlaySettings = (): SettingConfig => {
 
     await copyData(lines.join("\n"), "已复制 Android 诊断摘要。");
   };
+
+  const copyAndroidPlaybackDiagnosticsReport = async () => {
+    await loadAndroidMediaSummary();
+
+    const report = await buildAndroidPerformanceDiagnosticsReport({
+      system: androidSystemInfo.value,
+      romProfile: androidRomProfile.value,
+      romCompatReport: androidRomCompatReport.value,
+      summaries: {
+        system: androidSystemSummary.value,
+        notification: androidNotificationControlSummary.value,
+        performance: androidPerformanceSummary.value,
+        rom: androidRomSummary.value,
+      },
+      settings: {
+        playbackEngine: settingStore.playbackEngine,
+        audioEngine: settingStore.audioEngine,
+        androidPerformanceMode: settingStore.androidPerformanceMode,
+        androidReducePlaybackAnimations: settingStore.androidReducePlaybackAnimations,
+        androidFreezePlaybackRoutes: settingStore.androidFreezePlaybackRoutes,
+        androidLowFrequencyLyrics: settingStore.androidLowFrequencyLyrics,
+        androidDisablePlaybackBackground: settingStore.androidDisablePlaybackBackground,
+        androidPerformanceDiagnostics: settingStore.androidPerformanceDiagnostics,
+        androidEnhancedNotificationEnabled: settingStore.androidEnhancedNotificationEnabled,
+        androidEnhancedNotificationExclusive: settingStore.androidEnhancedNotificationExclusive,
+      },
+      media: {
+        audioPermissionGranted: androidAudioPermissionGranted.value,
+        notificationPermissionGranted: androidNotificationPermissionGranted.value,
+        mediaTrackCount: androidMediaTrackCount.value,
+        mediaLastScanAt: androidMediaLastScanAt.value,
+      },
+    });
+
+    await copyData(report, "已复制 Android 播放诊断报告。");
+  };
+
+  const clearAndroidPlaybackDiagnosticsReport = () => {
+    clearAndroidPerformanceDiagnostics();
+    window.$message.success("已清空 Android 诊断缓存。");
+  };
   const handleAndroidMediaScan = async () => {
     if (!checkAndroidAudioPermission()) {
       requestAndroidMediaPermission();
@@ -792,6 +837,24 @@ export const usePlaySettings = (): SettingConfig => {
                 settingStore.androidPerformanceDiagnostics = value;
               },
             }),
+          },
+          {
+            key: "androidPlaybackDiagnosticsReport",
+            label: "Android 播放诊断报告",
+            type: "button",
+            buttonLabel: "复制报告",
+            description:
+              "复制完整诊断报告，包含帧率采样、长任务、Web 错误、原生播放器事件、WebView 渲染进程异常和 ROM 信息。",
+            action: () => {
+              void copyAndroidPlaybackDiagnosticsReport();
+            },
+            extraButton: {
+              label: "清空缓存",
+              type: "primary",
+              secondary: true,
+              strong: true,
+              action: clearAndroidPlaybackDiagnosticsReport,
+            },
           },
         ],
       },

@@ -224,6 +224,33 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
   }
 
   @JavascriptInterface
+  fun getDiagnosticsReport(): String {
+    return AndroidDiagnosticsStore.buildReport(activity.applicationContext)
+  }
+
+  @JavascriptInterface
+  fun clearDiagnosticsReport(): Boolean {
+    return AndroidDiagnosticsStore.clear(activity.applicationContext)
+  }
+
+  @JavascriptInterface
+  fun recordDiagnosticEvent(source: String, message: String, detailJson: String?): Boolean {
+    val detail = try {
+      detailJson?.takeIf { it.isNotBlank() }?.let(::JSONObject)
+    } catch (_: Exception) {
+      JSONObject().put("raw", detailJson)
+    }
+
+    AndroidDiagnosticsStore.record(
+      activity.applicationContext,
+      source.take(80),
+      message.take(240),
+      detail,
+    )
+    return true
+  }
+
+  @JavascriptInterface
   fun getRomCompatReport(): String {
     val actions =
       JSONObject()

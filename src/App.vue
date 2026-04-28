@@ -7,7 +7,10 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, watch } from "vue";
-import { setAndroidPerformanceDiagnosticsEnabled } from "@/platform/android/performance";
+import {
+  initializeAndroidPerformanceDiagnostics,
+  setAndroidPerformanceDiagnosticsEnabled,
+} from "@/platform/android/performance";
 import { syncAndroidSystemBars } from "@/platform/bridge/android";
 import { useSettingStore, useStatusStore } from "@/stores";
 import { isAndroidApp } from "@/utils/env";
@@ -70,6 +73,7 @@ const scheduleSystemBarsSync = () => {
 
 if (isAndroidApp) {
   document.documentElement.classList.add("android-app");
+  initializeAndroidPerformanceDiagnostics();
 
   watch(
     () =>

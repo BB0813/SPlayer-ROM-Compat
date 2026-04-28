@@ -91,6 +91,9 @@ export interface AndroidSystemBridge {
   openRomSecurityCenterSettings(): boolean;
   getRomCompatReport(): string;
   setSystemBars(configJson?: string): boolean;
+  getDiagnosticsReport(): string;
+  clearDiagnosticsReport(): boolean;
+  recordDiagnosticEvent(source: string, message: string, detailJson?: string): boolean;
 }
 
 export interface AndroidBridge {

@@ -6,9 +6,11 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -19,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONObject
+import top.imsyy.splayer.android.bridge.AndroidDiagnosticsStore
 import top.imsyy.splayer.android.bridge.AndroidWebActionDispatcher
 import top.imsyy.splayer.android.bridge.SPlayerApiBridge
 import top.imsyy.splayer.android.bridge.SPlayerMediaBridge
@@ -30,11 +33,14 @@ import top.imsyy.splayer.android.player.AndroidNativeAudioPlayer
 class MainActivity : AppCompatActivity() {
   private lateinit var webView: WebView
   private var pendingControlAction: String? = null
+  private var webViewDestroyedByRenderProcess = false
 
   @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
+    AndroidDiagnosticsStore.install(applicationContext)
+    AndroidDiagnosticsStore.record(applicationContext, "activity:lifecycle", "MainActivity 创建")
     pendingControlAction = resolveLaunchAction(intent)
     applyInitialSystemBars()
     webView = WebView(this)
@@ -71,7 +77,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
-    webView.webChromeClient = WebChromeClient()
+    webView.webChromeClient =
+      object : WebChromeClient() {
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+          if (consoleMessage != null && shouldRecordConsoleMessage(consoleMessage)) {
+            AndroidDiagnosticsStore.record(
+              applicationContext,
+              "webview:console",
+              consoleMessage.message().take(240),
+              JSONObject()
+                .put("level", consoleMessage.messageLevel().name)
+                .put("source", consoleMessage.sourceId())
+                .put("line", consoleMessage.lineNumber()),
+            )
+          }
+          return super.onConsoleMessage(consoleMessage)
+        }
+      }
     webView.webViewClient =
       object : WebViewClient() {
         override fun shouldInterceptRequest(
@@ -83,7 +105,28 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
           super.onPageFinished(view, url)
+          AndroidDiagnosticsStore.record(
+            applicationContext,
+            "webview:lifecycle",
+            "页面加载完成",
+            JSONObject().put("url", url ?: ""),
+          )
           flushPendingControlAction()
+        }
+
+        override fun onRenderProcessGone(
+          view: WebView,
+          detail: RenderProcessGoneDetail,
+        ): Boolean {
+          AndroidDiagnosticsStore.recordRenderProcessGone(
+            applicationContext,
+            detail.didCrash(),
+            detail.rendererPriorityAtExit(),
+          )
+          webViewDestroyedByRenderProcess = true
+          view.destroy()
+          finish()
+          return true
         }
       }
     webView.addJavascriptInterface(SPlayerStoreBridge(this), "splayerAndroidStore")
@@ -129,16 +172,45 @@ class MainActivity : AppCompatActivity() {
     flushPendingControlAction()
   }
 
+  override fun onTrimMemory(level: Int) {
+    super.onTrimMemory(level)
+    if (level >= LOW_MEMORY_TRIM_LEVEL) {
+      AndroidDiagnosticsStore.record(
+        applicationContext,
+        "activity:memory",
+        "系统通知应用内存紧张",
+        JSONObject().put("level", level),
+      )
+    }
+  }
+
+  override fun onLowMemory() {
+    AndroidDiagnosticsStore.record(applicationContext, "activity:memory", "系统触发低内存回调")
+    super.onLowMemory()
+  }
+
   override fun onDestroy() {
-    webView.removeJavascriptInterface("splayerAndroidStore")
-    webView.removeJavascriptInterface("splayerAndroidApi")
-    webView.removeJavascriptInterface("splayerAndroidPlayer")
-    webView.removeJavascriptInterface("splayerAndroidSystem")
-    webView.removeJavascriptInterface("splayerAndroidMedia")
+    AndroidDiagnosticsStore.record(applicationContext, "activity:lifecycle", "MainActivity 销毁")
+    if (!webViewDestroyedByRenderProcess) {
+      webView.removeJavascriptInterface("splayerAndroidStore")
+      webView.removeJavascriptInterface("splayerAndroidApi")
+      webView.removeJavascriptInterface("splayerAndroidPlayer")
+      webView.removeJavascriptInterface("splayerAndroidSystem")
+      webView.removeJavascriptInterface("splayerAndroidMedia")
+      webView.destroy()
+    }
     AndroidWebActionDispatcher.detach()
     AndroidNativeAudioPlayer.detachEventEmitter()
-    webView.destroy()
     super.onDestroy()
+  }
+
+
+  private fun shouldRecordConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+    val level = consoleMessage.messageLevel()
+    if (level == ConsoleMessage.MessageLevel.ERROR || level == ConsoleMessage.MessageLevel.WARNING) {
+      return true
+    }
+    return consoleMessage.message().contains("SPlayer Android", ignoreCase = true)
   }
 
   private fun resolveWebUrl(rawUrl: String): String {
@@ -163,6 +235,12 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun emitControlAction(action: String) {
+    AndroidDiagnosticsStore.record(
+      applicationContext,
+      "android:control",
+      "发送控制动作到 WebView",
+      JSONObject().put("action", action),
+    )
     val script =
       "window.dispatchEvent(new CustomEvent('splayer:android-control', { detail: { action: ${JSONObject.quote(action)} } }))"
 
@@ -172,6 +250,16 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun emitPlayerEvent(type: String, detailJson: String) {
+    if (type != "progress") {
+      AndroidDiagnosticsStore.record(
+        applicationContext,
+        "android:player",
+        "发送原生播放器事件",
+        JSONObject()
+          .put("type", type)
+          .put("detail", detailJson.take(600)),
+      )
+    }
     val script =
       "window.__SPLAYER_ANDROID__?.emitPlayerEvent(${JSONObject.quote(type)}, ${JSONObject.quote(detailJson)})"
 
@@ -228,6 +316,7 @@ class MainActivity : AppCompatActivity() {
   }
 
   companion object {
+    private const val LOW_MEMORY_TRIM_LEVEL = 10
     private const val ASSET_PREFIX = "file:///android_asset/"
     private const val ASSET_LOADER_PREFIX = "https://appassets.androidplatform.net/assets/"
     const val EXTRA_NOTIFICATION_TARGET = "splayer_notification_target"
