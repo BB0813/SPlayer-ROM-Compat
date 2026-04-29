@@ -16,6 +16,7 @@ import {
   requestAndroidAudioPermission,
   requestAndroidIgnoreBatteryOptimizations,
   requestAndroidNotificationPermission,
+  saveAndroidTextFile,
   syncAndroidNotificationConfig,
 } from "@/platform/bridge/android";
 import { scanAndSyncAndroidMediaLibrary } from "@/platform/android/local-media";
@@ -206,7 +207,7 @@ export const usePlaySettings = (): SettingConfig => {
       : "已关闭 Android 性能模式";
     const strategyText = [
       settingStore.androidReducePlaybackAnimations ? "降低动画" : "保留动画",
-      settingStore.androidFreezePlaybackRoutes ? "冻结页面" : "保留页面缓存",
+      "页面冻结已停用",
       settingStore.androidLowFrequencyLyrics ? "低频歌词" : "常规歌词",
       settingStore.androidDisablePlaybackBackground ? "关闭动态背景" : "保留动态背景",
     ].join(" / ");
@@ -496,10 +497,10 @@ export const usePlaySettings = (): SettingConfig => {
     await copyData(lines.join("\n"), "已复制 Android 诊断摘要。");
   };
 
-  const copyAndroidPlaybackDiagnosticsReport = async () => {
+  const buildAndroidPlaybackDiagnosticsReportPayload = async () => {
     await loadAndroidMediaSummary();
 
-    const report = await buildAndroidPerformanceDiagnosticsReport({
+    return buildAndroidPerformanceDiagnosticsReport({
       system: androidSystemInfo.value,
       romProfile: androidRomProfile.value,
       romCompatReport: androidRomCompatReport.value,
@@ -514,7 +515,7 @@ export const usePlaySettings = (): SettingConfig => {
         audioEngine: settingStore.audioEngine,
         androidPerformanceMode: settingStore.androidPerformanceMode,
         androidReducePlaybackAnimations: settingStore.androidReducePlaybackAnimations,
-        androidFreezePlaybackRoutes: settingStore.androidFreezePlaybackRoutes,
+        androidFreezePlaybackRoutes: false,
         androidLowFrequencyLyrics: settingStore.androidLowFrequencyLyrics,
         androidDisablePlaybackBackground: settingStore.androidDisablePlaybackBackground,
         androidPerformanceDiagnostics: settingStore.androidPerformanceDiagnostics,
@@ -528,8 +529,40 @@ export const usePlaySettings = (): SettingConfig => {
         mediaLastScanAt: androidMediaLastScanAt.value,
       },
     });
+  };
 
-    await copyData(report, "已复制 Android 播放诊断报告。");
+  const buildAndroidDiagnosticsFileName = () => {
+    const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+    return `SPlayer-ROM-Compat-Android-Diagnostics-${timestamp}.txt`;
+  };
+
+  const downloadTextFile = (fileName: string, content: string) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const exportAndroidPlaybackDiagnosticsReport = async () => {
+    const report = await buildAndroidPlaybackDiagnosticsReportPayload();
+    const fileName = buildAndroidDiagnosticsFileName();
+
+    if (isAndroidApp) {
+      const savedUri = saveAndroidTextFile(fileName, report);
+      if (savedUri) {
+        window.$message.success(`已导出诊断报告：下载/SPlayer-ROM-Compat/${fileName}`);
+        return;
+      }
+    }
+
+    downloadTextFile(fileName, report);
+    window.$message.success(`已导出诊断报告：${fileName}`);
   };
 
   const clearAndroidPlaybackDiagnosticsReport = () => {
@@ -781,13 +814,12 @@ export const usePlaySettings = (): SettingConfig => {
             key: "androidFreezePlaybackRoutes",
             label: "播放时冻结后台页面",
             type: "switch",
-            show: computed(() => settingStore.androidPerformanceMode),
-            description:
-              "实验项，默认关闭；开启后会冻结部分动态内容，若播放后进入页面出现空白或崩坏请保持关闭。",
+            show: computed(() => false),
+            description: "该实验项已停用，避免部分 Android 16 / ColorOS 设备播放后页面崩坏。",
             value: computed({
-              get: () => settingStore.androidFreezePlaybackRoutes,
-              set: (value) => {
-                settingStore.androidFreezePlaybackRoutes = value;
+              get: () => false,
+              set: () => {
+                settingStore.androidFreezePlaybackRoutes = false;
               },
             }),
           },
@@ -846,11 +878,11 @@ export const usePlaySettings = (): SettingConfig => {
             key: "androidPlaybackDiagnosticsReport",
             label: "Android 播放诊断报告",
             type: "button",
-            buttonLabel: "复制报告",
+            buttonLabel: "导出 TXT",
             description:
-              "复制完整诊断报告，包含帧率采样、长任务、Web 错误、原生播放器事件、WebView 渲染进程异常和 ROM 信息。",
+              "导出完整诊断报告 TXT 文件，包含帧率采样、长任务、Web 错误、原生播放器事件、WebView 渲染进程异常和 ROM 信息。",
             action: () => {
-              void copyAndroidPlaybackDiagnosticsReport();
+              void exportAndroidPlaybackDiagnosticsReport();
             },
             extraButton: {
               label: "清空缓存",

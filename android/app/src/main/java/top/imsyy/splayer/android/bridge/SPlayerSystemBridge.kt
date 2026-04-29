@@ -2,13 +2,16 @@ package top.imsyy.splayer.android.bridge
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
+import android.provider.MediaStore
 import android.webkit.JavascriptInterface
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -17,7 +20,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 class SPlayerSystemBridge(private val activity: AppCompatActivity) {
@@ -226,6 +231,46 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
   @JavascriptInterface
   fun getDiagnosticsReport(): String {
     return AndroidDiagnosticsStore.buildReport(activity.applicationContext)
+  }
+
+
+  @JavascriptInterface
+  fun saveTextFile(fileName: String, content: String): String {
+    val safeFileName = sanitizeFileName(fileName).ifBlank { "SPlayer-ROM-Compat-diagnostics.txt" }
+    return try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val values =
+          ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, safeFileName)
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(
+              MediaStore.Downloads.RELATIVE_PATH,
+              "${Environment.DIRECTORY_DOWNLOADS}/SPlayer-ROM-Compat",
+            )
+          }
+        val uri =
+          activity.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return ""
+        activity.contentResolver.openOutputStream(uri)?.use { output ->
+          output.write(content.toByteArray(StandardCharsets.UTF_8))
+        } ?: return ""
+        uri.toString()
+      } else {
+        val baseDir = activity.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: activity.filesDir
+        val outputDir = File(baseDir, "SPlayer-ROM-Compat").apply { mkdirs() }
+        val file = File(outputDir, safeFileName)
+        file.writeText(content, Charsets.UTF_8)
+        file.absolutePath
+      }
+    } catch (error: Exception) {
+      AndroidDiagnosticsStore.record(
+        activity.applicationContext,
+        "native:diagnostics",
+        "导出诊断报告失败",
+        JSONObject().put("message", error.message ?: error.javaClass.simpleName),
+      )
+      ""
+    }
   }
 
   @JavascriptInterface
@@ -699,6 +744,12 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
       }
     }
     return false
+  }
+
+
+  private fun sanitizeFileName(fileName: String): String {
+    val sanitized = fileName.replace(Regex("[\\/:*?\"<>|]"), "_").trim()
+    return sanitized.take(120)
   }
 
   private fun launch(intent: Intent): Boolean {

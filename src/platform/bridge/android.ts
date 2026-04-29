@@ -225,6 +225,10 @@ export const clearAndroidNativeDiagnosticsReport = (): boolean => {
   return getAndroidSystemBridge()?.clearDiagnosticsReport() ?? false;
 };
 
+export const saveAndroidTextFile = (fileName: string, content: string): string | null => {
+  return getAndroidSystemBridge()?.saveTextFile(fileName, content) || null;
+};
+
 export const recordAndroidNativeDiagnosticEvent = (
   source: string,
   message: string,

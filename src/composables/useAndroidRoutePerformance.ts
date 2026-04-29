@@ -21,12 +21,11 @@ export const useAndroidRoutePerformance = () => {
       !statusStore.showFullPlayer,
   );
 
-  const shouldFreezeRoutes = computed(
-    () =>
-      isAndroidPlaybackLite.value &&
-      settingStore.androidFreezePlaybackRoutes &&
-      !statusStore.showFullPlayer,
-  );
+  const shouldFreezeRoutes = computed(() => {
+    void isAndroidPlaybackLite.value;
+    void statusStore.showFullPlayer;
+    return false;
+  });
 
   const shouldStabilizeDynamicContent = computed(() => shouldFreezeRoutes.value);
 

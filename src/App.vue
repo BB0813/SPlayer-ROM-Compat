@@ -115,10 +115,10 @@ if (isAndroidApp) {
         "android-reduce-motion",
         allowRoutePerformanceReduction && reducePlaybackAnimations,
       );
-      document.documentElement.classList.toggle(
-        "android-freeze-routes",
-        allowRoutePerformanceReduction && freezePlaybackRoutes,
-      );
+      if (freezePlaybackRoutes) {
+        settingStore.androidFreezePlaybackRoutes = false;
+      }
+      document.documentElement.classList.toggle("android-freeze-routes", false);
       document.documentElement.classList.toggle(
         "android-low-frequency-lyrics",
         playbackPerformanceActive && lowFrequencyLyrics,

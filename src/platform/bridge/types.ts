@@ -94,6 +94,7 @@ export interface AndroidSystemBridge {
   getRomCompatReport(): string;
   setSystemBars(configJson?: string): boolean;
   getDiagnosticsReport(): string;
+  saveTextFile(fileName: string, content: string): string;
   clearDiagnosticsReport(): boolean;
   recordDiagnosticEvent(source: string, message: string, detailJson?: string): boolean;
 }

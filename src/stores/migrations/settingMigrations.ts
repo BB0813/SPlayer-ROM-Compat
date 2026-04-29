@@ -4,7 +4,7 @@ import { defaultAMLLDbServer } from "@/utils/meta";
 import { isAndroidApp } from "@/utils/env";
 import type { SettingState } from "../setting";
 
-export const CURRENT_SETTING_SCHEMA_VERSION = 22;
+export const CURRENT_SETTING_SCHEMA_VERSION = 23;
 
 export type MigrationFunction = (state: Partial<SettingState>) => Partial<SettingState>;
 
@@ -232,6 +232,11 @@ export const settingMigrations: Record<number, MigrationFunction> = {
     };
   },
   22: () => {
+    return {
+      androidFreezePlaybackRoutes: false,
+    };
+  },
+  23: () => {
     return {
       androidFreezePlaybackRoutes: false,
     };
