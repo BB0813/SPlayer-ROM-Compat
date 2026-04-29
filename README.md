@@ -63,13 +63,13 @@
 
 本地构建后的 Release APK 位于：
 
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.1-arm64-v8a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.1-armeabi-v7a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.1-x86_64-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-arm64-v8a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-armeabi-v7a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-x86_64-release.apk`
 
 ---
 
-## v3.0.0-rc.1 更新
+## v3.0.0-rc.3-Beta8 更新
 
 - 修复 HarmonyOS Connect / 原生音频控制卡片切歌时可能触发的前台服务超时闪退。
 - 调整播放桥接顺序：先完成播放器准备与播放，再按需启动前台服务。
@@ -141,17 +141,17 @@ pnpm build
 
 Android 自动打包使用 `.github/workflows/android-release.yml`，桌面端 macOS / Windows / Linux 的历史 workflow 已改为仅手动触发，发布 `v*` 标签时不会再自动构建桌面端包。当前 Android Release 采用单个 Ubuntu Job 执行 `pnpm android:apk:all`，只安装一次依赖、只准备一次 Web 资源，并一次性产出三 ABI APK，避免矩阵构建重复耗时。
 
-| 触发方式   | 操作                                             | 结果                                                                    |
-| ---------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| Tag 发布   | 推送 `v3.0.0-rc.1`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
-| 手动构建   | `Actions` → `Android Release` → `Run workflow`   | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
-| 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`      | 仅在明确需要桌面端包时手动执行                                          |
+| 触发方式   | 操作                                                   | 结果                                                                    |
+| ---------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Tag 发布   | 推送 `v3.0.0-rc.3-Beta8`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
+| 手动构建   | `Actions` → `Android Release` → `Run workflow`         | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
+| 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`            | 仅在明确需要桌面端包时手动执行                                          |
 
 Android Release 会生成以下独立 APK：
 
-- `SPlayer-ROM-Compat-v3.0.0-rc.1-arm64-v8a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.1-armeabi-v7a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.1-x86_64-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-arm64-v8a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-armeabi-v7a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-x86_64-release.apk`
 
 CI 中可以直接看 job 与步骤名称确认是否为 Android 分架构构建：
 

@@ -1,6 +1,7 @@
 import type {
   AndroidBridge,
   AndroidMediaTrack,
+  AndroidNativePlayerPageState,
   AndroidPlayerEventPayload,
   AndroidRomCompatReport,
   AndroidSystemInfo,
@@ -195,6 +196,14 @@ export const openAndroidAppDetailSettings = (): boolean => {
 
 export const openAndroidRomSecurityCenterSettings = (): boolean => {
   return getAndroidSystemBridge()?.openRomSecurityCenterSettings() ?? false;
+};
+
+export const syncAndroidNativePlayerState = (state: AndroidNativePlayerPageState): boolean => {
+  return getAndroidPlayerBridge()?.updateNativePlayerState?.(JSON.stringify(state)) ?? false;
+};
+
+export const setAndroidNativePlayerVisible = (visible: boolean): boolean => {
+  return getAndroidPlayerBridge()?.setNativePlayerVisible?.(visible) ?? false;
 };
 
 export interface AndroidSystemBarsConfig {

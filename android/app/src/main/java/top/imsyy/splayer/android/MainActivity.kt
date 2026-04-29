@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -15,6 +16,10 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.webkit.MimeTypeMap
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -29,9 +34,12 @@ import top.imsyy.splayer.android.bridge.SPlayerPlayerBridge
 import top.imsyy.splayer.android.bridge.SPlayerStoreBridge
 import top.imsyy.splayer.android.bridge.SPlayerSystemBridge
 import top.imsyy.splayer.android.player.AndroidNativeAudioPlayer
+import top.imsyy.splayer.android.player.NativePlayerPageView
 
 class MainActivity : AppCompatActivity() {
+  private lateinit var rootView: FrameLayout
   private lateinit var webView: WebView
+  private lateinit var nativePlayerPageView: NativePlayerPageView
   private var pendingControlAction: String? = null
   private var webViewDestroyedByRenderProcess = false
 
@@ -43,8 +51,24 @@ class MainActivity : AppCompatActivity() {
     AndroidDiagnosticsStore.record(applicationContext, "activity:lifecycle", "MainActivity 创建")
     pendingControlAction = resolveLaunchAction(intent)
     applyInitialSystemBars()
+    rootView = FrameLayout(this)
     webView = WebView(this)
-    setContentView(webView)
+    nativePlayerPageView = NativePlayerPageView(this)
+    rootView.addView(
+      webView,
+      FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.MATCH_PARENT,
+      ),
+    )
+    rootView.addView(
+      nativePlayerPageView,
+      FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.MATCH_PARENT,
+      ),
+    )
+    setContentView(rootView)
 
     AndroidNativeAudioPlayer.ensureInitialized(applicationContext)
     AndroidNativeAudioPlayer.attachEventEmitter(::emitPlayerEvent)
@@ -123,15 +147,13 @@ class MainActivity : AppCompatActivity() {
             detail.didCrash(),
             detail.rendererPriorityAtExit(),
           )
-          webViewDestroyedByRenderProcess = true
-          view.destroy()
-          finish()
+          showWebViewRecovery(detail.didCrash(), detail.rendererPriorityAtExit())
           return true
         }
       }
     webView.addJavascriptInterface(SPlayerStoreBridge(this), "splayerAndroidStore")
     webView.addJavascriptInterface(SPlayerApiBridge(this), "splayerAndroidApi")
-    webView.addJavascriptInterface(SPlayerPlayerBridge(this), "splayerAndroidPlayer")
+    webView.addJavascriptInterface(SPlayerPlayerBridge(this, nativePlayerPageView), "splayerAndroidPlayer")
     webView.addJavascriptInterface(SPlayerSystemBridge(this), "splayerAndroidSystem")
     webView.addJavascriptInterface(SPlayerMediaBridge(this), "splayerAndroidMedia")
     webView.loadUrl(resolveWebUrl(BuildConfig.SPLAYER_WEB_URL))
@@ -140,7 +162,12 @@ class MainActivity : AppCompatActivity() {
       this,
       object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-          if (webView.canGoBack()) {
+          if (webViewDestroyedByRenderProcess) {
+            finish()
+          } else if (nativePlayerPageView.isPlayerVisible()) {
+            nativePlayerPageView.setPlayerVisible(false)
+            emitControlAction("closePlayer")
+          } else if (webView.canGoBack()) {
             webView.goBack()
           } else {
             finish()
@@ -204,6 +231,76 @@ class MainActivity : AppCompatActivity() {
     super.onDestroy()
   }
 
+
+
+  private fun showWebViewRecovery(didCrash: Boolean, rendererPriority: Int) {
+    webViewDestroyedByRenderProcess = true
+    if (::nativePlayerPageView.isInitialized) {
+      nativePlayerPageView.setPlayerVisible(false)
+    }
+    runCatching {
+      webView.stopLoading()
+      webView.destroy()
+    }
+
+    val root =
+      LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        setPadding(56, 56, 56, 56)
+        setBackgroundColor(Color.rgb(18, 18, 18))
+      }
+
+    val title =
+      TextView(this).apply {
+        text = "?????????"
+        textSize = 22f
+        setTextColor(Color.WHITE)
+        gravity = Gravity.CENTER
+      }
+
+    val message =
+      TextView(this).apply {
+        text =
+          if (didCrash) {
+            "WebView ????????????????? ROM WebView ??????????????????"
+          } else {
+            "????? WebView ?????????????????????????????????"
+          }
+        textSize = 15f
+        setTextColor(Color.rgb(220, 220, 220))
+        gravity = Gravity.CENTER
+        setPadding(0, 24, 0, 24)
+      }
+
+    val detail =
+      TextView(this).apply {
+        text = "??????$rendererPriority"
+        textSize = 13f
+        setTextColor(Color.rgb(160, 160, 160))
+        gravity = Gravity.CENTER
+        setPadding(0, 0, 0, 32)
+      }
+
+    val restartButton =
+      Button(this).apply {
+        text = "????"
+        setOnClickListener { recreate() }
+      }
+
+    val closeButton =
+      Button(this).apply {
+        text = "????"
+        setOnClickListener { finish() }
+      }
+
+    root.addView(title)
+    root.addView(message)
+    root.addView(detail)
+    root.addView(restartButton)
+    root.addView(closeButton)
+    setContentView(root)
+  }
 
   private fun shouldRecordConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
     val level = consoleMessage.messageLevel()

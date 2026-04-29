@@ -192,6 +192,9 @@ const initEventListener = () => {
       case "openPlayer":
         statusStore.showFullPlayer = true;
         break;
+      case "closePlayer":
+        statusStore.showFullPlayer = false;
+        break;
       default:
         break;
     }

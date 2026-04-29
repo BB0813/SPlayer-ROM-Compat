@@ -7,9 +7,13 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import java.util.concurrent.CountDownLatch
 import top.imsyy.splayer.android.player.AndroidNativeAudioPlayer
+import top.imsyy.splayer.android.player.NativePlayerPageView
 import top.imsyy.splayer.android.player.PlaybackService
 
-class SPlayerPlayerBridge(private val context: Context) {
+class SPlayerPlayerBridge(
+  private val context: Context,
+  private val nativePlayerPageView: NativePlayerPageView? = null,
+) {
   companion object {
     private const val TAG = "SPlayerBridge"
   }
@@ -141,6 +145,20 @@ class SPlayerPlayerBridge(private val context: Context) {
         PlaybackService.start(context.applicationContext, false)
       }
       updated
+    }
+  }
+
+  @JavascriptInterface
+  fun updateNativePlayerState(stateJson: String?): Boolean {
+    return runOnMainThread {
+      nativePlayerPageView?.updateState(stateJson) ?: false
+    }
+  }
+
+  @JavascriptInterface
+  fun setNativePlayerVisible(visible: Boolean): Boolean {
+    return runOnMainThread {
+      nativePlayerPageView?.setPlayerVisible(visible) ?: false
     }
   }
 

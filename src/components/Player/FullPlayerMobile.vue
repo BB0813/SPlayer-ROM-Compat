@@ -241,9 +241,8 @@ const contentTransform = computed(() => {
 <style lang="scss" scoped>
 .full-player-mobile {
   width: 100%;
-  height: 100%;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 100dvh;
+  min-height: 100svh;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -307,25 +306,24 @@ const contentTransform = computed(() => {
         margin-top: 60px;
         margin-bottom: 20px;
         :deep(.player-cover) {
-          width: min(100%, 45vh);
-          // height: min(85vw, 45vh);
+          width: min(78vw, 42svh, 360px);
           &.record {
-            width: 40vh;
+            width: min(72vw, 38svh, 340px);
             .cover-img {
-              width: 40vh;
-              height: 40vh;
-              min-width: 40vh;
+              width: min(72vw, 38svh, 340px);
+              height: min(72vw, 38svh, 340px);
+              min-width: min(72vw, 38svh, 340px);
             }
             .pointer {
-              width: 10vh;
-              top: -9.5vh;
+              width: min(18vw, 9.5svh, 84px);
+              top: max(-86px, -9svh);
             }
             @media (max-width: 512px) {
-              width: 36vh;
+              width: min(76vw, 36svh, 320px);
               .cover-img {
-                width: 36vh;
-                height: 36vh;
-                min-width: 36vh;
+                width: min(76vw, 36svh, 320px);
+                height: min(76vw, 36svh, 320px);
+                min-width: min(76vw, 36svh, 320px);
               }
             }
           }
@@ -549,6 +547,56 @@ const contentTransform = computed(() => {
         width: 16px;
         border-radius: 4px;
         opacity: 0.8;
+      }
+    }
+  }
+}
+
+@media (max-height: 700px) {
+  .full-player-mobile {
+    .mobile-content {
+      .info-page {
+        .cover-section {
+          margin-top: 34px;
+          margin-bottom: 10px;
+        }
+
+        .info-group {
+          .song-info-bar {
+            margin-bottom: 10px;
+          }
+
+          .progress-section {
+            margin-bottom: 16px;
+          }
+
+          .control-section {
+            margin-bottom: 14px;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-height: 620px) {
+  .full-player-mobile {
+    .mobile-content {
+      .info-page {
+        .cover-section {
+          margin-top: 24px;
+          margin-bottom: 8px;
+
+          :deep(.player-cover.record) {
+            width: min(68vw, 32svh, 280px);
+
+            .cover-img {
+              width: min(68vw, 32svh, 280px);
+              height: min(68vw, 32svh, 280px);
+              min-width: min(68vw, 32svh, 280px);
+            }
+          }
+        }
       }
     }
   }

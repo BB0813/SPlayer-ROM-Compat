@@ -788,8 +788,6 @@ onBeforeUnmount(() => {
       animation: none !important;
     }
     .lrc-line {
-      content-visibility: auto;
-      contain-intrinsic-size: 64px 128px;
       will-change: auto;
       transition: opacity 0.2s ease;
       &::before {

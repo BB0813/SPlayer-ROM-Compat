@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition :name="settingStore.playerExpandAnimation" mode="out-in">
       <div
-        v-if="statusStore.showFullPlayer"
+        v-if="statusStore.showFullPlayer && !useAndroidNativePlayerPage"
         :style="{
           cursor: statusStore.playerMetaShow || showComment ? 'auto' : 'none',
           '--lyric-blend-mode': settingStore.lyricsBlendMode,
@@ -95,11 +95,15 @@
 <script setup lang="ts">
 import { useMobile } from "@/composables/useMobile";
 import { useStatusStore, useMusicStore, useSettingStore } from "@/stores";
-import { isElectron } from "@/utils/env";
+import { isAndroidApp, isElectron } from "@/utils/env";
 
 const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
+
+const useAndroidNativePlayerPage = computed(
+  () => isAndroidApp && settingStore.androidNativePlayerPageEnabled,
+);
 
 const { isTablet } = useMobile();
 

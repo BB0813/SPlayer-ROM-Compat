@@ -213,7 +213,10 @@ export const usePlaySettings = (): SettingConfig => {
     const diagnosticsText = settingStore.androidPerformanceDiagnostics
       ? "已开启诊断日志"
       : "未开启诊断日志";
-    return `${modeText} | ${strategyText} | ${diagnosticsText}`;
+    const nativePageText = settingStore.androidNativePlayerPageEnabled
+      ? "原生播放页预览开启"
+      : "原生播放页预览关闭";
+    return `${modeText} | ${strategyText} | ${diagnosticsText} | ${nativePageText}`;
   });
 
   const androidRomPrimaryActionLabel = computed(() => {
@@ -969,6 +972,19 @@ export const usePlaySettings = (): SettingConfig => {
               get: () => settingStore.androidPerformanceDiagnostics,
               set: (value) => {
                 settingStore.androidPerformanceDiagnostics = value;
+              },
+            }),
+          },
+          {
+            key: "androidNativePlayerPageEnabled",
+            label: "原生播放页预览",
+            type: "switch",
+            description:
+              "开启后 Android 全屏播放页由原生层接管，Web 全屏播放页不再重复渲染；当前为 Beta8 预览，用于验证原生歌词页迁移方向。",
+            value: computed({
+              get: () => settingStore.androidNativePlayerPageEnabled,
+              set: (value) => {
+                settingStore.androidNativePlayerPageEnabled = value;
               },
             }),
           },

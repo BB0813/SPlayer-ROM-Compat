@@ -12,10 +12,15 @@ import {
   setAndroidPerformanceDiagnosticsEnabled,
 } from "@/platform/android/performance";
 import { syncAndroidSystemBars } from "@/platform/bridge/android";
-import { useSettingStore, useStatusStore } from "@/stores";
+import {
+  setAndroidNativePlayerPageVisible,
+  syncAndroidNativePlayerPageFromStores,
+} from "@/platform/android/nativePlayerPage";
+import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { isAndroidApp } from "@/utils/env";
 
 const isDesktopLyric = location.hash.includes("desktop-lyric");
+const musicStore = useMusicStore();
 const settingStore = useSettingStore();
 const statusStore = useStatusStore();
 
@@ -84,7 +89,9 @@ if (isAndroidApp) {
         settingStore.androidFreezePlaybackRoutes,
         settingStore.androidLowFrequencyLyrics,
         settingStore.androidDisablePlaybackBackground,
+        settingStore.androidNativePlayerPageEnabled,
         statusStore.playStatus,
+        statusStore.showFullPlayer,
       ] as const,
     ([
       performanceMode,
@@ -93,9 +100,12 @@ if (isAndroidApp) {
       freezePlaybackRoutes,
       lowFrequencyLyrics,
       disablePlaybackBackground,
+      nativePlayerPageEnabled,
       playStatus,
+      showFullPlayer,
     ]) => {
       const playbackPerformanceActive = performanceMode && playStatus;
+      const allowRoutePerformanceReduction = playbackPerformanceActive && !showFullPlayer;
       document.documentElement.classList.toggle("android-performance-mode", performanceMode);
       document.documentElement.classList.toggle(
         "android-playback-active",
@@ -103,11 +113,11 @@ if (isAndroidApp) {
       );
       document.documentElement.classList.toggle(
         "android-reduce-motion",
-        playbackPerformanceActive && reducePlaybackAnimations,
+        allowRoutePerformanceReduction && reducePlaybackAnimations,
       );
       document.documentElement.classList.toggle(
         "android-freeze-routes",
-        playbackPerformanceActive && freezePlaybackRoutes,
+        allowRoutePerformanceReduction && freezePlaybackRoutes,
       );
       document.documentElement.classList.toggle(
         "android-low-frequency-lyrics",
@@ -115,7 +125,11 @@ if (isAndroidApp) {
       );
       document.documentElement.classList.toggle(
         "android-static-background",
-        playbackPerformanceActive && disablePlaybackBackground,
+        allowRoutePerformanceReduction && disablePlaybackBackground,
+      );
+      document.documentElement.classList.toggle(
+        "android-native-player-page",
+        nativePlayerPageEnabled,
       );
       setAndroidPerformanceDiagnosticsEnabled(diagnosticsEnabled);
     },
@@ -128,6 +142,31 @@ if (isAndroidApp) {
     { deep: true, immediate: true },
   );
 
+  watch(
+    () => [statusStore.showFullPlayer, settingStore.androidNativePlayerPageEnabled] as const,
+    ([visible, nativePlayerPageEnabled]) => {
+      setAndroidNativePlayerPageVisible(visible && nativePlayerPageEnabled);
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () =>
+      [
+        musicStore.playSong?.id,
+        musicStore.playSong?.cover,
+        statusStore.showFullPlayer,
+        statusStore.playStatus,
+        statusStore.playLoading,
+        statusStore.lyricIndex,
+        settingStore.androidNativePlayerPageEnabled,
+      ] as const,
+    () => {
+      syncAndroidNativePlayerPageFromStores();
+    },
+    { immediate: true },
+  );
+
   onBeforeUnmount(() => {
     setAndroidPerformanceDiagnosticsEnabled(false);
     document.documentElement.classList.remove("android-performance-mode");
@@ -136,6 +175,7 @@ if (isAndroidApp) {
     document.documentElement.classList.remove("android-freeze-routes");
     document.documentElement.classList.remove("android-low-frequency-lyrics");
     document.documentElement.classList.remove("android-static-background");
+    document.documentElement.classList.remove("android-native-player-page");
   });
 }
 </script>

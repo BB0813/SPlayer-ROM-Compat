@@ -127,6 +127,10 @@
           :disabled="isDisabled"
           :title="title"
           v-bind="item.componentProps"
+          @pointerdown.stop
+          @touchstart.stop
+          @touchmove.stop
+          @click.stop
         />
 
         <!-- Button -->
@@ -432,9 +436,10 @@ const activeActions = computed(() => {
   .set.n-slider {
     flex: 1 0 100%;
     width: calc(100% - 8px);
-    min-height: 46px;
+    min-height: 52px;
     margin: 4px 4px 18px;
-    padding: 10px 4px 18px;
+    padding: 14px 4px 20px;
+    touch-action: pan-x;
   }
 
   .setting-item-wrapper :deep(.n-slider .n-slider-mark) {
@@ -451,8 +456,13 @@ const activeActions = computed(() => {
     height: 22px;
   }
 
+  .setting-item-wrapper :deep(.n-slider) {
+    touch-action: pan-x;
+  }
+
   .setting-item-wrapper :deep(.n-slider .n-slider-rail) {
-    touch-action: none;
+    min-height: 24px;
+    touch-action: pan-x;
   }
 }
 </style>

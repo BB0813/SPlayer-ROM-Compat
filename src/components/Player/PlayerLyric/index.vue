@@ -1,7 +1,7 @@
 <template>
   <div class="player-lyric">
     <!-- 歌词内容 -->
-    <AMLyric v-if="settingStore.useAMLyrics && !isAndroidApp" :currentTime="playSeek" />
+    <AMLyric v-if="shouldUseAMLyrics" :currentTime="playSeek" />
     <DefaultLyric v-else :currentTime="playSeek" />
     <!-- 歌词菜单 -->
     <n-flex :class="['lyric-menu', { show: statusStore.playerMetaShow }]" justify="center" vertical>
@@ -106,9 +106,17 @@ const player = usePlayerController();
  */
 const currentSongId = computed(() => musicStore.playSong?.id as number | undefined);
 
+const shouldUseAMLyrics = computed(
+  () => settingStore.useAMLyrics && (!isAndroidApp || !settingStore.androidLowFrequencyLyrics),
+);
+
+const shouldUseAndroidSmoothLyrics = computed(
+  () => isAndroidApp && statusStore.showFullPlayer && !settingStore.androidLowFrequencyLyrics,
+);
+
 const androidSeekUpdateIntervalMs = computed(() => {
   if (!settingStore.androidPerformanceMode) return 1000;
-  return settingStore.androidLowFrequencyLyrics ? 3000 : 1500;
+  return settingStore.androidLowFrequencyLyrics ? 3000 : 1000;
 });
 
 // 实时播放进度
@@ -129,7 +137,7 @@ const { pause: pauseSeek, resume: resumeSeek } = useRafFn(updatePlaySeek, {
 
 const resumeSeekUpdates = () => {
   updatePlaySeek();
-  if (isAndroidApp) {
+  if (isAndroidApp && !shouldUseAndroidSmoothLyrics.value) {
     if (androidSeekTimer === null) {
       androidSeekTimer = window.setInterval(updatePlaySeek, androidSeekUpdateIntervalMs.value);
     }
@@ -185,9 +193,14 @@ const resetOffset = () => {
 };
 
 watch(
-  () => [settingStore.androidPerformanceMode, settingStore.androidLowFrequencyLyrics] as const,
+  () =>
+    [
+      settingStore.androidPerformanceMode,
+      settingStore.androidLowFrequencyLyrics,
+      statusStore.showFullPlayer,
+    ] as const,
   () => {
-    if (!isAndroidApp || androidSeekTimer === null) return;
+    if (!isAndroidApp) return;
     pauseSeekUpdates();
     resumeSeekUpdates();
   },

@@ -499,6 +499,7 @@ onMounted(() => {
     }
     .set-right {
       width: 100%;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       .mobile-title {
@@ -679,6 +680,13 @@ onMounted(() => {
 
     .n-card__content {
       overflow: hidden;
+    }
+  }
+
+  @supports (height: 100svh) {
+    @media (max-width: 768px) {
+      height: 100svh;
+      max-height: 100svh;
     }
   }
 

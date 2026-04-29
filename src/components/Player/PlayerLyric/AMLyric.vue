@@ -30,11 +30,11 @@
         :lyricLines="amLyricsData"
         :currentTime="currentTime"
         :playing="statusStore.playStatus"
-        :enableSpring="settingStore.useAMSpring"
-        :enableScale="settingStore.useAMSpring"
+        :enableSpring="amSpringEnabled"
+        :enableScale="amSpringEnabled"
         :alignPosition="settingStore.lyricsScrollOffset"
         :alignAnchor="settingStore.lyricsScrollOffset > 0.4 ? 'center' : 'top'"
-        :enableBlur="settingStore.lyricsBlur"
+        :enableBlur="amBlurEnabled"
         :hidePassedLines="settingStore.hidePassedLines"
         :wordFadeWidth="settingStore.wordFadeWidth"
         :style="{
@@ -63,6 +63,7 @@ import { usePlayerController } from "@/core/player/PlayerController";
 import { cloneDeep } from "lodash-es";
 import { lyricLangFontStyle } from "@/utils/lyric/lyricFontConfig";
 import { getFontSize } from "@/utils/style";
+import { isAndroidApp } from "@/utils/env";
 
 defineProps({
   currentTime: {
@@ -77,6 +78,12 @@ const settingStore = useSettingStore();
 const player = usePlayerController();
 
 const lyricPlayerRef = ref<LyricPlayerRef | null>(null);
+const amSpringEnabled = computed(
+  () => settingStore.useAMSpring && !(isAndroidApp && settingStore.androidReducePlaybackAnimations),
+);
+const amBlurEnabled = computed(
+  () => settingStore.lyricsBlur && !(isAndroidApp && settingStore.androidDisablePlaybackBackground),
+);
 
 // 当前歌词
 const amLyricsData = computed(() => {

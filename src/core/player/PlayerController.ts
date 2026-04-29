@@ -659,8 +659,12 @@ class PlayerController {
    */
   private getTimeUpdateThrottleWait(): number {
     const settingStore = useSettingStore();
-    if (isAndroidApp && settingStore.androidPerformanceMode) {
-      return settingStore.androidLowFrequencyLyrics ? 5000 : 3000;
+    if (
+      isAndroidApp &&
+      settingStore.androidPerformanceMode &&
+      settingStore.androidLowFrequencyLyrics
+    ) {
+      return 5000;
     }
     if (isAndroidApp) return 1000;
     return 200;
@@ -780,6 +784,7 @@ class PlayerController {
       const useLiteLyrics = !!(
         isAndroidApp &&
         settingStore.androidPerformanceMode &&
+        settingStore.androidLowFrequencyLyrics &&
         musicStore.songLyric.lrcData?.length
       );
       const useYrc = !!(

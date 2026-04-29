@@ -15,11 +15,17 @@ export const useAndroidRoutePerformance = () => {
   );
 
   const shouldReduceMotion = computed(
-    () => isAndroidPlaybackLite.value && settingStore.androidReducePlaybackAnimations,
+    () =>
+      isAndroidPlaybackLite.value &&
+      settingStore.androidReducePlaybackAnimations &&
+      !statusStore.showFullPlayer,
   );
 
   const shouldFreezeRoutes = computed(
-    () => isAndroidPlaybackLite.value && settingStore.androidFreezePlaybackRoutes,
+    () =>
+      isAndroidPlaybackLite.value &&
+      settingStore.androidFreezePlaybackRoutes &&
+      !statusStore.showFullPlayer,
   );
 
   const shouldStabilizeDynamicContent = computed(() => shouldFreezeRoutes.value);

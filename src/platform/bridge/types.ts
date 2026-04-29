@@ -27,6 +27,8 @@ export interface AndroidPlayerBridge {
   getErrorCode(): number;
   setNotificationConfig(configJson?: string): boolean;
   updateMetadata(metadataJson?: string): boolean;
+  updateNativePlayerState?(stateJson?: string): boolean;
+  setNativePlayerVisible?(visible: boolean): boolean;
 }
 
 export interface AndroidMediaTrack {
@@ -102,6 +104,44 @@ export interface AndroidBridge {
   player: AndroidPlayerBridge;
   media?: AndroidMediaBridge;
   system?: AndroidSystemBridge;
+}
+
+export interface AndroidNativePlayerLyricWord {
+  startTime: number;
+  endTime?: number;
+  word: string;
+}
+
+export interface AndroidNativePlayerLyricLine {
+  startTime: number;
+  endTime?: number;
+  text: string;
+  translatedText?: string;
+  romanText?: string;
+  words?: AndroidNativePlayerLyricWord[];
+}
+
+export interface AndroidNativePlayerPageState {
+  visible: boolean;
+  playing: boolean;
+  loading: boolean;
+  currentTime: number;
+  duration: number;
+  progress: number;
+  themeColor: string;
+  song: {
+    id?: number | string;
+    name: string;
+    artist: string;
+    album: string;
+    cover: string;
+    type?: string;
+  };
+  lyric: {
+    index: number;
+    offset: number;
+    lines: AndroidNativePlayerLyricLine[];
+  };
 }
 
 export interface AndroidSystemInfo {
