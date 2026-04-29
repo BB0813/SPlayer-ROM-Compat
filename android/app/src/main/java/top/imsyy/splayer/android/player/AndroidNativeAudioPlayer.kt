@@ -47,9 +47,10 @@ object AndroidNativeAudioPlayer {
   private const val EXTRA_NOTIFICATION_SEEK_PERCENT = "top.imsyy.splayer.romcompat.extra.SEEK_PERCENT"
   private const val NOTIFICATION_SEEK_STEP_MS = 15000L
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
-  private const val PROGRESS_EVENT_INTERVAL_MS = 5000L
+  private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
-  private const val ENDED_EVENT_DEDUP_MS = 1500L
+  private const val ENDED_EVENT_DELAY_MS = 250L
+  private const val ENDED_EVENT_DEDUP_MS = 3000L
   private val notificationSeekPercentStops = intArrayOf(10, 30, 50, 70, 90)
 
   enum class NotificationAction {
@@ -97,17 +98,17 @@ object AndroidNativeAudioPlayer {
   private var lastMediaMetadataLyricUpdateAt: Long = 0L
   private var lastEndedSrc: String = ""
   private var lastEndedAt: Long = 0L
+  private var pendingEndedTask: Runnable? = null
 
   private val progressTask = object : Runnable {
     override fun run() {
+      val currentPlayer = player ?: return
+      if (!currentPlayer.isPlaying) return
       emit("timeupdate", snapshot())
       if (enhancedNotificationEnabled) {
         appContext?.let { updateEnhancedNotification(it) }
       }
-      val currentPlayer = player ?: return
-      if (currentPlayer.isPlaying) {
-        handler.postDelayed(this, PROGRESS_EVENT_INTERVAL_MS)
-      }
+      handler.postDelayed(this, PROGRESS_EVENT_INTERVAL_MS)
     }
   }
 
@@ -155,9 +156,7 @@ object AndroidNativeAudioPlayer {
             Player.STATE_READY -> emit("canplay", snapshot())
             Player.STATE_ENDED -> {
               stopProgressLoop()
-              if (shouldEmitEnded()) {
-                emit("ended", snapshot())
-              }
+              scheduleEndedEvent()
             }
           }
           appContext?.let { updateEnhancedNotification(it, true) }
@@ -266,6 +265,7 @@ object AndroidNativeAudioPlayer {
     errorCode = 0
     lastEndedSrc = ""
     lastEndedAt = 0L
+    cancelPendingEndedEvent()
 
     applyMetadataFromJson(options)
     lastMediaMetadataKey = ""
@@ -323,6 +323,7 @@ object AndroidNativeAudioPlayer {
     lastMediaMetadataLyricUpdateAt = 0L
     lastEndedSrc = ""
     lastEndedAt = 0L
+    cancelPendingEndedEvent()
     stopProgressLoop()
     appContext?.let { cancelEnhancedNotification(it) }
     emit("emptied", snapshot())
@@ -780,13 +781,35 @@ object AndroidNativeAudioPlayer {
     currentArtworkUri = ""
     enhancedNotificationShown = false
     errorCode = 0
+    cancelPendingEndedEvent()
   }
 
+  private fun scheduleEndedEvent() {
+    val expectedSrc = currentSrc
+    if (expectedSrc.isBlank()) return
+    cancelPendingEndedEvent()
+    val task = Runnable {
+      pendingEndedTask = null
+      val currentPlayer = player ?: return@Runnable
+      if (expectedSrc != currentSrc) return@Runnable
+      if (currentPlayer.playbackState != Player.STATE_ENDED) return@Runnable
+      if (shouldEmitEnded(expectedSrc)) {
+        emit("ended", snapshot())
+      }
+    }
+    pendingEndedTask = task
+    handler.postDelayed(task, ENDED_EVENT_DELAY_MS)
+  }
 
-  private fun shouldEmitEnded(): Boolean {
+  private fun cancelPendingEndedEvent() {
+    pendingEndedTask?.let { handler.removeCallbacks(it) }
+    pendingEndedTask = null
+  }
+
+  private fun shouldEmitEnded(src: String = currentSrc): Boolean {
     val now = SystemClock.elapsedRealtime()
-    val src = currentSrc
-    if (src.isNotBlank() && src == lastEndedSrc && now - lastEndedAt < ENDED_EVENT_DEDUP_MS) {
+    if (src.isBlank()) return false
+    if (src == lastEndedSrc && now - lastEndedAt < ENDED_EVENT_DEDUP_MS) {
       return false
     }
     lastEndedSrc = src

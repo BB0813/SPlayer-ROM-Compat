@@ -253,7 +253,7 @@ class MainActivity : AppCompatActivity() {
 
     val title =
       TextView(this).apply {
-        text = "?????????"
+        text = "播放页面已恢复"
         textSize = 22f
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
@@ -263,9 +263,9 @@ class MainActivity : AppCompatActivity() {
       TextView(this).apply {
         text =
           if (didCrash) {
-            "WebView ????????????????? ROM WebView ??????????????????"
+            "WebView 渲染进程已崩溃，可能与 ROM WebView 或内存压力有关。"
           } else {
-            "????? WebView ?????????????????????????????????"
+            "系统回收了 WebView 渲染进程，已停止向旧页面发送播放器事件。"
           }
         textSize = 15f
         setTextColor(Color.rgb(220, 220, 220))
@@ -275,7 +275,7 @@ class MainActivity : AppCompatActivity() {
 
     val detail =
       TextView(this).apply {
-        text = "??????$rendererPriority"
+        text = "渲染优先级：$rendererPriority"
         textSize = 13f
         setTextColor(Color.rgb(160, 160, 160))
         gravity = Gravity.CENTER
@@ -284,13 +284,13 @@ class MainActivity : AppCompatActivity() {
 
     val restartButton =
       Button(this).apply {
-        text = "????"
+        text = "重新打开"
         setOnClickListener { recreate() }
       }
 
     val closeButton =
       Button(this).apply {
-        text = "????"
+        text = "关闭应用"
         setOnClickListener { finish() }
       }
 
@@ -348,20 +348,27 @@ class MainActivity : AppCompatActivity() {
 
   private fun emitPlayerEvent(type: String, detailJson: String) {
     if (type != "progress") {
-      AndroidDiagnosticsStore.record(
-        applicationContext,
-        "android:player",
-        "发送原生播放器事件",
-        JSONObject()
-          .put("type", type)
-          .put("detail", detailJson.take(600)),
-      )
+      runCatching {
+        AndroidDiagnosticsStore.record(
+          applicationContext,
+          "android:player",
+          "发送原生播放器事件",
+          JSONObject()
+            .put("type", type)
+            .put("detail", detailJson.take(600)),
+        )
+      }
     }
+    if (!::webView.isInitialized || webViewDestroyedByRenderProcess) return
     val script =
       "window.__SPLAYER_ANDROID__?.emitPlayerEvent(${JSONObject.quote(type)}, ${JSONObject.quote(detailJson)})"
 
-    webView.post {
-      webView.evaluateJavascript(script, null)
+    runCatching {
+      webView.post {
+        if (!webViewDestroyedByRenderProcess) {
+          runCatching { webView.evaluateJavascript(script, null) }
+        }
+      }
     }
   }
 

@@ -24,7 +24,7 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   private lastEndedSrc = "";
 
   private static readonly NATIVE_GETTER_THROTTLE_MS = 3000;
-  private static readonly ENDED_EVENT_DEDUP_MS = 1500;
+  private static readonly ENDED_EVENT_DEDUP_MS = 3000;
 
   public readonly capabilities: EngineCapabilities = {
     supportsRate: true,
@@ -138,8 +138,8 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   private shouldDispatchEnded(): boolean {
     const now = performance.now();
     const src = this._src;
+    if (!src) return false;
     if (
-      src &&
       src === this.lastEndedSrc &&
       now - this.lastEndedEventAt < AndroidNativeAudioPlayer.ENDED_EVENT_DEDUP_MS
     ) {

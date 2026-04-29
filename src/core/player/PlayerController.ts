@@ -40,6 +40,8 @@ class PlayerController {
   private failSkipCount = 0;
   /** 防止播放结束重复触发切歌 */
   private isHandlingPlaybackEnded = false;
+  /** 记录 Android 最近一次结束事件 */
+  private lastPlaybackEndedAt = 0;
   /** 闂備礁鎼€氱兘宕规导鏉戠畾濞达絽澹婂浼存煥濠靛棙鍣洪棅顒夊墴瀵爼鍩￠崒婊庣伇濡?Automix 闂佸搫顦弲娑樏洪敃鈧湁?*/
   public isTransitioning = false;
   /** 闂佽崵濮甸崝妤呭窗閺囥垺鍎楁俊銈呭暟娑撳秹鏌ㄥ☉妯侯仾闁稿﹦鍋ら弻鐔虹磼閵忕姴绠洪梺鍝勫€风粈浣界亽闂佺偨鍎辩壕顓犳兜閳ь剟姊洪悜鈺傛珖妞ゎ厼鐗撳畷锝堫樄闁诡垰鍟村畷鐔碱敍濡も偓娴滈箖鏌￠崟顐ょ閻?*/
@@ -656,18 +658,8 @@ class PlayerController {
       console.error("操作失败", error);
     }
   }
-  /**
-   * ??????????
-   */
+  /** 刷新播放进度 */
   private getTimeUpdateThrottleWait(): number {
-    const settingStore = useSettingStore();
-    if (
-      isAndroidApp &&
-      settingStore.androidPerformanceMode &&
-      settingStore.androidLowFrequencyLyrics
-    ) {
-      return 5000;
-    }
     if (isAndroidApp) return 1000;
     return 200;
   }
@@ -848,8 +840,13 @@ class PlayerController {
 
   /** 处理播放结束后的自动切歌 */
   private async handlePlaybackEnded() {
+    const now = Date.now();
     if (this.isTransitioning || this.isHandlingPlaybackEnded) return;
+    if (isAndroidApp && now - this.lastPlaybackEndedAt < 3000) return;
+    this.lastPlaybackEndedAt = now;
     this.isHandlingPlaybackEnded = true;
+    const dataStore = useDataStore();
+    const statusStore = useStatusStore();
     const settingStore = useSettingStore();
     try {
       if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
@@ -858,15 +855,25 @@ class PlayerController {
       if (!isAndroidApp) console.log("播放结束");
       lastfmScrobbler.stop();
       if (this.checkAutoClose()) return;
+      if (isAndroidApp) {
+        statusStore.playLoading = true;
+        if (!statusStore.personalFmMode && dataStore.playList.length === 0) {
+          statusStore.playLoading = false;
+          statusStore.playStatus = false;
+          return;
+        }
+        await sleep(120);
+      }
       await this.nextOrPrev("next", true, true);
     } catch (error) {
+      statusStore.playLoading = false;
       console.error("处理播放结束失败", error);
     } finally {
       window.setTimeout(
         () => {
           this.isHandlingPlaybackEnded = false;
         },
-        isAndroidApp ? 1200 : 0,
+        isAndroidApp ? 1800 : 0,
       );
     }
   }
@@ -1156,7 +1163,6 @@ class PlayerController {
     const audioManager = useAudioManager();
     // 注释已清理
     statusStore.playLoading = true;
-    audioManager.stop();
     // 缂傚倷绀侀ˇ顔碱渻閹烘嚩褎绻呴崠?
     if (statusStore.personalFmMode) {
       await songManager.initPersonalFM(true);
@@ -1166,7 +1172,10 @@ class PlayerController {
     // 注释已清理
     const playListLength = dataStore.playList.length;
     if (playListLength === 0) {
-      window.$message.error("操作失败");
+      audioManager.stop();
+      statusStore.playLoading = false;
+      statusStore.playStatus = false;
+      window.$message.error("播放列表为空");
       return;
     }
     // 闂備礁鎲￠〃鍡椕哄Ο濂借櫣绮欏▎鎯ф濡炪倕绻愬Λ妤冪不?
@@ -1194,6 +1203,7 @@ class PlayerController {
     if (attempts >= maxAttempts) {
       window.$message.warning("请检查当前操作");
       audioManager.stop();
+      statusStore.playLoading = false;
       statusStore.playStatus = false;
       return;
     }
