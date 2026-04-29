@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -48,6 +49,7 @@ object AndroidNativeAudioPlayer {
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
   private const val PROGRESS_EVENT_INTERVAL_MS = 5000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
+  private const val ENDED_EVENT_DEDUP_MS = 1500L
   private val notificationSeekPercentStops = intArrayOf(10, 30, 50, 70, 90)
 
   enum class NotificationAction {
@@ -93,6 +95,8 @@ object AndroidNativeAudioPlayer {
   private var currentArtworkUri: String = ""
   private var lastMediaMetadataKey: String = ""
   private var lastMediaMetadataLyricUpdateAt: Long = 0L
+  private var lastEndedSrc: String = ""
+  private var lastEndedAt: Long = 0L
 
   private val progressTask = object : Runnable {
     override fun run() {
@@ -151,7 +155,9 @@ object AndroidNativeAudioPlayer {
             Player.STATE_READY -> emit("canplay", snapshot())
             Player.STATE_ENDED -> {
               stopProgressLoop()
-              emit("ended", snapshot())
+              if (shouldEmitEnded()) {
+                emit("ended", snapshot())
+              }
             }
           }
           appContext?.let { updateEnhancedNotification(it, true) }
@@ -258,6 +264,8 @@ object AndroidNativeAudioPlayer {
     val options = optionsJson?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
     currentSrc = normalizedUrl
     errorCode = 0
+    lastEndedSrc = ""
+    lastEndedAt = 0L
 
     applyMetadataFromJson(options)
     lastMediaMetadataKey = ""
@@ -313,6 +321,8 @@ object AndroidNativeAudioPlayer {
     currentArtworkUri = ""
     lastMediaMetadataKey = ""
     lastMediaMetadataLyricUpdateAt = 0L
+    lastEndedSrc = ""
+    lastEndedAt = 0L
     stopProgressLoop()
     appContext?.let { cancelEnhancedNotification(it) }
     emit("emptied", snapshot())
@@ -770,6 +780,18 @@ object AndroidNativeAudioPlayer {
     currentArtworkUri = ""
     enhancedNotificationShown = false
     errorCode = 0
+  }
+
+
+  private fun shouldEmitEnded(): Boolean {
+    val now = SystemClock.elapsedRealtime()
+    val src = currentSrc
+    if (src.isNotBlank() && src == lastEndedSrc && now - lastEndedAt < ENDED_EVENT_DEDUP_MS) {
+      return false
+    }
+    lastEndedSrc = src
+    lastEndedAt = now
+    return true
   }
 
   private fun snapshot(): JSONObject {

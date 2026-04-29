@@ -782,7 +782,8 @@ export const usePlaySettings = (): SettingConfig => {
             label: "播放时冻结后台页面",
             type: "switch",
             show: computed(() => settingStore.androidPerformanceMode),
-            description: "播放期间关闭非必要 KeepAlive，避免离开的页面继续刷新和占用内存。",
+            description:
+              "实验项，默认关闭；开启后会冻结部分动态内容，若播放后进入页面出现空白或崩坏请保持关闭。",
             value: computed({
               get: () => settingStore.androidFreezePlaybackRoutes,
               set: (value) => {

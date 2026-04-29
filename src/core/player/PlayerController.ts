@@ -38,6 +38,8 @@ class PlayerController {
   public currentRequestToken = 0;
   /** 闂佸搫顦弲婵嬪磻閻斿吋鍋ㄩ柤濮愬€栧畷澶愭倵閸︻厼啸缂佺姵鐗犻幃瑙勬媴閹绘帒鈷夐梺?*/
   private failSkipCount = 0;
+  /** 防止播放结束重复触发切歌 */
+  private isHandlingPlaybackEnded = false;
   /** 闂備礁鎼€氱兘宕规导鏉戠畾濞达絽澹婂浼存煥濠靛棙鍣洪棅顒夊墴瀵爼鍩￠崒婊庣伇濡?Automix 闂佸搫顦弲娑樏洪敃鈧湁?*/
   public isTransitioning = false;
   /** 闂佽崵濮甸崝妤呭窗閺囥垺鍎楁俊銈呭暟娑撳秹鏌ㄥ☉妯侯仾闁稿﹦鍋ら弻鐔虹磼閵忕姴绠洪梺鍝勫€风粈浣界亽闂佺偨鍎辩壕顓犳兜閳ь剟姊洪悜鈺傛珖妞ゎ厼鐗撳畷锝堫樄闁诡垰鍟村畷鐔碱敍濡も偓娴滈箖鏌￠崟顐ょ閻?*/
@@ -751,16 +753,7 @@ class PlayerController {
     });
     // 闂備礁婀遍搹搴ㄥ储娴犲妫樺ù锝堟绾惧ジ鏌熼幆褏鎽犻悘?
     audioManager.addEventListener("ended", () => {
-      if (this.isTransitioning) return;
-      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
-        useAutomixManager().resetAutomixScheduling("IDLE");
-      }
-      if (!isAndroidApp) console.log("播放结束");
-      lastfmScrobbler.stop();
-      // 注释已清理
-      if (this.checkAutoClose()) return;
-      // 注释已清理
-      this.nextOrPrev("next", true, true);
+      void this.handlePlaybackEnded();
     });
     // 闂佸搫顦弲婊呯矙閹寸姭鍋撶憴鍕枙鐎殿喖顕埀顒佺⊕钃遍柣鎾亾
     this.onTimeUpdate = throttle(() => {
@@ -853,10 +846,31 @@ class PlayerController {
     });
   }
 
-  /**
-   * 缂傚倸鍊烽懗鍫曞窗瀹ュ洨鍗氶柟缁㈠枟閻撱儲绻涢崱妯轰刊闁搞倖鐗曢…璺ㄦ崉閸濆嫷浼€闂佽鍠栭敃锔惧垝閻㈢鍐€妞ゆ劧绲鹃?
-   * @param errCode 闂傚倷鐒︾€笛囨偡閵娾晩鏁嬮柕鍫濐槹閸?   * @param currentSeek 闁荤喐绮庢晶妤呭箰閸涘﹥娅犻柣妯款嚙缁犵粯銇勯幘璺烘瀾闁哄鎳撻湁闁挎繂鎳愯倴闂?(闂備焦妞垮鍧楀礉鐎ｎ剝濮虫い鎺戝缁犳帡鏌曡箛鏇烆€屾俊?
-   */
+  /** 处理播放结束后的自动切歌 */
+  private async handlePlaybackEnded() {
+    if (this.isTransitioning || this.isHandlingPlaybackEnded) return;
+    this.isHandlingPlaybackEnded = true;
+    const settingStore = useSettingStore();
+    try {
+      if (!(isAndroidApp && settingStore.androidPerformanceMode)) {
+        useAutomixManager().resetAutomixScheduling("IDLE");
+      }
+      if (!isAndroidApp) console.log("播放结束");
+      lastfmScrobbler.stop();
+      if (this.checkAutoClose()) return;
+      await this.nextOrPrev("next", true, true);
+    } catch (error) {
+      console.error("处理播放结束失败", error);
+    } finally {
+      window.setTimeout(
+        () => {
+          this.isHandlingPlaybackEnded = false;
+        },
+        isAndroidApp ? 1200 : 0,
+      );
+    }
+  }
+
   private normalizePlaybackError(detail?: AudioErrorDetail) {
     const errorCode = typeof detail?.errorCode === "number" ? detail.errorCode : undefined;
     const errorCodeName =

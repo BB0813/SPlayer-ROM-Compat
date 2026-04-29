@@ -274,7 +274,7 @@ const settingStore = useSettingStore();
 const player = usePlayerController();
 const { isSmallScreen } = useMobile();
 const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
-const androidVirtualBufferSize = computed(() => (isAndroidPlaybackLite.value ? 2 : 5));
+const androidVirtualBufferSize = computed(() => 5);
 
 // 列表元素
 const listRef = ref<InstanceType<typeof VirtualScroll> | null>(null);

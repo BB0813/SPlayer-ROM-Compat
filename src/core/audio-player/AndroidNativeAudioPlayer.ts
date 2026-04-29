@@ -20,8 +20,11 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
   private isInitialized = false;
   private lastTimeSyncAt = 0;
   private lastNativeGetterSyncAt = 0;
+  private lastEndedEventAt = 0;
+  private lastEndedSrc = "";
 
   private static readonly NATIVE_GETTER_THROTTLE_MS = 3000;
+  private static readonly ENDED_EVENT_DEDUP_MS = 1500;
 
   public readonly capabilities: EngineCapabilities = {
     supportsRate: true,
@@ -62,12 +65,27 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
       case AUDIO_EVENTS.TIME_UPDATE:
         this.dispatchEvent(new Event(AUDIO_EVENTS.TIME_UPDATE));
         break;
+      case AUDIO_EVENTS.ENDED:
+        if (!this.shouldDispatchEnded()) break;
+        this._paused = true;
+        if (this._duration > 0) this._currentTime = Math.max(this._currentTime, this._duration);
+        this.lastTimeSyncAt = performance.now();
+        this.dispatchEvent(new Event(AUDIO_EVENTS.ENDED));
+        break;
+      case AUDIO_EVENTS.EMPTIED:
+        this._src = "";
+        this._currentTime = 0;
+        this._duration = 0;
+        this._paused = true;
+        this.lastTimeSyncAt = 0;
+        this.lastEndedEventAt = 0;
+        this.lastEndedSrc = "";
+        this.dispatchEvent(new Event(AUDIO_EVENTS.EMPTIED));
+        break;
       case AUDIO_EVENTS.SEEKING:
       case AUDIO_EVENTS.SEEKED:
       case AUDIO_EVENTS.WAITING:
-      case AUDIO_EVENTS.ENDED:
       case AUDIO_EVENTS.VOLUME_CHANGE:
-      case AUDIO_EVENTS.EMPTIED:
         this.dispatchEvent(new Event(payload.type));
         break;
       case AUDIO_EVENTS.ERROR: {
@@ -110,9 +128,26 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
     if (detail.rate !== undefined) {
       this._rate = Number(detail.rate);
     }
-    if (detail.src !== undefined) {
-      this._src = String(detail.src || this._src);
+    if (typeof detail.src === "string") {
+      this._src = detail.src;
+    } else if (detail.src !== undefined && detail.src !== null) {
+      this._src = String(detail.src);
     }
+  }
+
+  private shouldDispatchEnded(): boolean {
+    const now = performance.now();
+    const src = this._src;
+    if (
+      src &&
+      src === this.lastEndedSrc &&
+      now - this.lastEndedEventAt < AndroidNativeAudioPlayer.ENDED_EVENT_DEDUP_MS
+    ) {
+      return false;
+    }
+    this.lastEndedSrc = src;
+    this.lastEndedEventAt = now;
+    return true;
   }
 
   private getEstimatedCurrentTime(): number {
@@ -157,6 +192,8 @@ export class AndroidNativeAudioPlayer extends EventTarget implements IPlaybackEn
       this._duration = 0;
       this._paused = options?.autoPlay === false;
       this.lastTimeSyncAt = performance.now();
+      this.lastEndedEventAt = 0;
+      this.lastEndedSrc = "";
       player.play(url, JSON.stringify(options ?? {}));
       return;
     }

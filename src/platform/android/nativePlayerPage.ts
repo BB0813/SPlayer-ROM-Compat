@@ -26,8 +26,17 @@ type NativeLyricLineSource = {
   words?: NativeLyricWordSource[];
 };
 
-const normalizeLyricLines = (lines: NativeLyricLineSource[]): AndroidNativePlayerLyricLine[] => {
-  return lines.map((line) => ({
+const NATIVE_LYRIC_CONTEXT_RADIUS = 3;
+
+const normalizeLyricLines = (
+  lines: NativeLyricLineSource[],
+  currentIndex: number,
+): AndroidNativePlayerLyricLine[] => {
+  const safeIndex = Math.max(0, currentIndex);
+  const startIndex = Math.max(0, safeIndex - NATIVE_LYRIC_CONTEXT_RADIUS);
+  const endIndex = Math.min(lines.length, safeIndex + NATIVE_LYRIC_CONTEXT_RADIUS + 1);
+
+  return lines.slice(startIndex, endIndex).map((line) => ({
     startTime: Number(line.startTime ?? 0),
     endTime: line.endTime === undefined ? undefined : Number(line.endTime),
     text:
@@ -40,11 +49,6 @@ const normalizeLyricLines = (lines: NativeLyricLineSource[]): AndroidNativePlaye
       "",
     translatedText: line.translatedLyric || undefined,
     romanText: line.romanLyric || undefined,
-    words: line.words?.map((word) => ({
-      startTime: Number(word.startTime ?? line.startTime ?? 0),
-      endTime: word.endTime === undefined ? undefined : Number(word.endTime),
-      word: word.word || "",
-    })),
   }));
 };
 
@@ -55,6 +59,7 @@ export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageStat
   const settingStore = useSettingStore();
   const statusStore = useStatusStore();
   if (!settingStore.androidNativePlayerPageEnabled) return null;
+  if (!statusStore.showFullPlayer) return null;
   if (!musicStore.isHasPlayer) return null;
 
   const currentSong = getPlaySongData() || musicStore.playSong;
@@ -77,6 +82,9 @@ export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageStat
       ? musicStore.songLyric.yrcData
       : musicStore.songLyric.lrcData;
 
+  const lyricIndex = Math.max(0, statusStore.lyricIndex);
+  const lyricStartIndex = Math.max(0, lyricIndex - NATIVE_LYRIC_CONTEXT_RADIUS);
+
   return {
     visible: statusStore.showFullPlayer,
     playing: statusStore.playStatus,
@@ -94,9 +102,9 @@ export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageStat
       type: currentSong.type,
     },
     lyric: {
-      index: statusStore.lyricIndex,
+      index: lyricIndex - lyricStartIndex,
       offset: statusStore.getSongOffset(musicStore.playSong?.id),
-      lines: normalizeLyricLines((lyricLines || []) as NativeLyricLineSource[]),
+      lines: normalizeLyricLines((lyricLines || []) as NativeLyricLineSource[], lyricIndex),
     },
   };
 };

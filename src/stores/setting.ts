@@ -545,7 +545,7 @@ export const useSettingStore = defineStore("setting", {
     androidPerformanceMode: isAndroidApp,
     androidPerformanceDiagnostics: false,
     androidReducePlaybackAnimations: false,
-    androidFreezePlaybackRoutes: isAndroidApp,
+    androidFreezePlaybackRoutes: false,
     androidLowFrequencyLyrics: false,
     androidDisablePlaybackBackground: false,
     androidSilentCommentErrors: isAndroidApp,
