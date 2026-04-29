@@ -37,6 +37,7 @@ data class EnhancedNotificationState(
   val seekForwardIntent: PendingIntent,
   val nextIntent: PendingIntent,
   val seekToPercentIntents: List<PendingIntent>,
+  val useMediaCategory: Boolean,
 )
 
 object AndroidEnhancedNotificationManager {
@@ -106,12 +107,19 @@ object AndroidEnhancedNotificationManager {
       .setCustomContentView(buildRemoteViews(context, state, false))
       .setCustomBigContentView(buildRemoteViews(context, state, true))
       .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-      .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+      .setCategory(
+        if (state.useMediaCategory) {
+          NotificationCompat.CATEGORY_TRANSPORT
+        } else {
+          NotificationCompat.CATEGORY_STATUS
+        },
+      )
+      .setLocalOnly(!state.useMediaCategory)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setOnlyAlertOnce(true)
       .setSilent(true)
-      .setOngoing(state.isPlaying)
+      .setOngoing(state.isPlaying && state.useMediaCategory)
       .setShowWhen(false)
       .build()
 

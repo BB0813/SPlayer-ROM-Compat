@@ -2,7 +2,7 @@ import { mediaSessionManager } from "@/core/player/MediaSessionManager";
 import { usePlayerController } from "@/core/player/PlayerController";
 import { useDownloadManager } from "@/core/resource/DownloadManager";
 import { syncAndroidNowPlayingFromStores } from "@/platform/android/nowPlaying";
-import { syncAndroidNotificationConfig } from "@/platform/bridge/android";
+import { getAndroidPlayerBridge, syncAndroidNotificationConfig } from "@/platform/bridge/android";
 import {
   useDataStore,
   useMusicStore,
@@ -13,6 +13,7 @@ import {
 import { TASKBAR_IPC_CHANNELS } from "@/types/shared";
 import { isAndroidApp, isElectron, isMac } from "@/utils/env";
 import { printVersion } from "@/utils/log";
+import { calculateProgress } from "@/utils/time";
 import { openUserAgreement } from "@/utils/modal";
 import { useEventListener } from "@vueuse/core";
 import { debounce } from "lodash-es";
@@ -108,10 +109,13 @@ export const useInit = () => {
       );
     }
 
-    player.playSong({
-      autoPlay: settingStore.autoPlay,
-      seek: settingStore.memoryLastSeek ? statusStore.currentTime : 0,
-    });
+    const restoredAndroidNativePlayback = restoreAndroidNativePlaybackState();
+    if (!restoredAndroidNativePlayback) {
+      player.playSong({
+        autoPlay: settingStore.autoPlay,
+        seek: settingStore.memoryLastSeek ? statusStore.currentTime : 0,
+      });
+    }
     player.playModeSyncIpc();
 
     if (statusStore.autoClose.enable) {
@@ -164,6 +168,29 @@ export const useInit = () => {
       }
     }
   });
+};
+
+const restoreAndroidNativePlaybackState = (): boolean => {
+  if (!isAndroidApp) return false;
+  const nativePlayer = getAndroidPlayerBridge();
+  if (!nativePlayer) return false;
+  const nativeSrc = nativePlayer.getSrc() || "";
+  if (!nativeSrc) return false;
+
+  const statusStore = useStatusStore();
+  const duration = Number(nativePlayer.getDuration());
+  const currentTime = Number(nativePlayer.getCurrentTime());
+  const paused = nativePlayer.isPaused();
+
+  statusStore.currentTime = Number.isFinite(currentTime) ? currentTime : 0;
+  if (Number.isFinite(duration) && duration > 0) {
+    statusStore.duration = duration;
+    statusStore.progress = calculateProgress(statusStore.currentTime, duration);
+  }
+  statusStore.playStatus = !paused;
+  statusStore.playLoading = false;
+  syncAndroidNowPlayingFromStores();
+  return true;
 };
 
 const initEventListener = () => {

@@ -235,6 +235,12 @@ class PlayerController {
   /**
    * 闂備礁鎲＄敮妤冩崲閸岀儑缍栭柟鐗堟緲缁€宀勬煛瀹擃喖妫楅悵顖炴⒑閸︻叀妾搁柛妯圭矙瀵剚鎷呴崜鍙夋〃闁诲繒鍋熼崑鎾绘煥?
    * @param options 闂傚倷鐒﹀妯肩矓閸洘鍋?   * @param options.autoPlay 闂備礁鎼€氱兘宕规导鏉戠畾濞撴埃鍋撻柟铏洴椤㈡棃宕熼宥嗩殜閺岀喓绱掗姀鐘茬闂?   * @param options.seek 闂備礁鎲＄敮妤冩崲閸岀儑缍栭柟鐗堟緲缁犵粯銇勯幘璺烘瀾闁哄缍婂鍫曞煛閸屾壕妲堥柣搴ゎ潐婵炲﹪寮澶婇唶闁绘洑绀佸▓銈囩磽娴ｅ壊妲归悽顖ｄ簽濡?   */
+  private shouldKeepAndroidNativeSessionDuringTransition(
+    audioManager: ReturnType<typeof useAudioManager>,
+  ): boolean {
+    return isAndroidApp && audioManager.engineType === "android-native" && !!audioManager.src;
+  }
+
   public async playSong(
     options: {
       autoPlay?: boolean;
@@ -273,7 +279,10 @@ class PlayerController {
     try {
       // 缂傚倷鐒﹂弻銊╊敄閸涱厾鏆ら柛鈩冪☉绾剧粯绻濇繝鍌氼伌闁告挸澧介幉鎼佹偋閸喎纰嶆繝鈷€鍛枅妤犵偞锕㈤、姗€鎮㈤崨濠冪番 (闂傚倸鍊哥€氥劑宕愬┑鍡╃劷妞ゅ繐鐗嗛崣?Crossfade)
       statusStore.playLoading = true;
-      if (!options.crossfade) {
+      if (
+        !options.crossfade &&
+        !this.shouldKeepAndroidNativeSessionDuringTransition(audioManager)
+      ) {
         audioManager.stop();
       }
       // 缂傚倷鐒﹂弻銊╊敄閸涱厾鏆ら柛鈩冪☉閸楁娊鎮楀☉娅虫垿鎮￠埀?UI闂備焦瀵х粙鎴︽偋婵犲洦鍋ら柡鍥ュ灩閸楁娊妫呴顐㈠箳缂佽妫濋弻鐔碱敇瑜嶉悘娑㈡煃瑜滈崗娑氱矆娓氣偓閹啫鈹戠€ｎ偒妫冨銈庡亽閸忔﹢宕戦幘瀛樺闁革富鍘介幉娆撴煟閻樺弶鎼愮紒澶婄埣閹椽骞嬮敂鑺ユ珫婵犮垼鍩栫粙鎾剁矆婢舵劖鐓涢柛鎰典簻閳诲牊绻涢幘鍐差暢缂侇喖鐏氬鍕節閸曨収鈧偓缂傚倸鍊搁崯顖炲垂閸︻厼鍨濋柛鎾茬劍鐎氭岸姊洪崹顕呭剳婵犫偓?
@@ -1460,7 +1469,9 @@ class PlayerController {
       // 注释已清理
       if (index >= playList.length) return;
       // 注释已清理
-      audioManager.stop();
+      if (!this.shouldKeepAndroidNativeSessionDuringTransition(audioManager)) {
+        audioManager.stop();
+      }
       // 注释已清理
       if (statusStore.playIndex === index) {
         if (play) await this.play();

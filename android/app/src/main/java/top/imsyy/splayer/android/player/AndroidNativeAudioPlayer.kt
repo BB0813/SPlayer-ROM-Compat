@@ -162,7 +162,7 @@ object AndroidNativeAudioPlayer {
               scheduleEndedEvent()
             }
           }
-          appContext?.let { updateEnhancedNotification(it, true) }
+          appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -174,7 +174,7 @@ object AndroidNativeAudioPlayer {
           } else {
             stopProgressLoop()
           }
-          appContext?.let { updateEnhancedNotification(it, true) }
+          appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -506,6 +506,7 @@ object AndroidNativeAudioPlayer {
           notificationSeekPercentStops.map { percent ->
             buildNotificationSeekPercentPendingIntent(appContext, percent)
           },
+        useMediaCategory = enhancedNotificationExclusive,
       ),
       force,
     )

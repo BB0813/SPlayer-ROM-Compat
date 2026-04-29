@@ -109,8 +109,8 @@ android {
     applicationId = "top.imsyy.splayer.romcompat"
     minSdk = 24
     targetSdk = 36
-    versionCode = 30312
-    versionName = "3.0.0-rc.3-Beta12"
+    versionCode = 30313
+    versionName = "3.0.0-rc.3-Beta13"
     buildConfigField("String", "SPLAYER_WEB_URL", "\"${webUrl.get()}\"")
     buildConfigField("String", "SPLAYER_REMOTE_API_ROOT", "\"$remoteApiRoot\"")
   }
