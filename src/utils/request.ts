@@ -10,7 +10,7 @@ import axiosRetry from "axios-retry";
 import { getAndroidApiBridge } from "@/platform/bridge/android";
 import { useSettingStore } from "@/stores";
 import { isLogin } from "./auth";
-import { getCookie, setCookies } from "./cookie";
+import { buildCookieHeader, getCookie, setCookies } from "./cookie";
 import { isAndroidApp, isDev } from "./env";
 
 type SPlayerAxiosRequestConfig = AxiosRequestConfig & {
@@ -106,7 +106,8 @@ const prepareRequestConfig = (config: SPlayerAxiosRequestConfig): SPlayerAxiosRe
   if (!nextConfig.params) nextConfig.params = {};
 
   if (!nextConfig.params.noCookie && (isLogin() || getCookie("MUSIC_U") !== null)) {
-    nextConfig.params.cookie = `MUSIC_U=${getCookie("MUSIC_U")};os=pc;`;
+    const cookieHeader = buildCookieHeader();
+    if (cookieHeader) nextConfig.params.cookie = cookieHeader;
   }
 
   if (settingStore.useRealIP) {

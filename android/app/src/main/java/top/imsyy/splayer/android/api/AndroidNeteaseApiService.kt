@@ -32,7 +32,10 @@ object AndroidNeteaseApiService {
     "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)"
   private val RANDOM = SecureRandom()
   private val BASE62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray()
+  private val COOKIE_ATTRIBUTE_NAMES = setOf("domain", "expires", "httponly", "max-age", "path", "samesite", "secure")
   private val HANDLED_PATHS = setOf(
+    "/api/netease/login",
+    "/api/netease/login/email",
     "/api/netease/login/qr/key",
     "/api/netease/login/qr/create",
     "/api/netease/login/qr/check",
@@ -42,6 +45,8 @@ object AndroidNeteaseApiService {
     "/api/netease/login/status",
     "/api/netease/login/refresh",
     "/api/netease/logout",
+    "/api/netease/register/anonimous",
+    "/api/netease/register/anonymous",
     "/api/netease/user/account",
     "/api/netease/user/detail",
     "/api/netease/user/subcount",
@@ -65,6 +70,8 @@ object AndroidNeteaseApiService {
   fun handle(request: JSONObject, requestUrl: URL): String {
     return try {
       when (requestUrl.path) {
+        "/api/netease/login" -> handleLogin(request, requestUrl)
+        "/api/netease/login/email" -> handleLoginEmail(request, requestUrl)
         "/api/netease/login/qr/key" -> handleQrKey(request, requestUrl)
         "/api/netease/login/qr/create" -> handleQrCreate(requestUrl)
         "/api/netease/login/qr/check" -> handleQrCheck(request, requestUrl)
@@ -74,6 +81,7 @@ object AndroidNeteaseApiService {
         "/api/netease/login/status" -> handleLoginStatus(request, requestUrl)
         "/api/netease/login/refresh" -> handleLoginRefresh(request, requestUrl)
         "/api/netease/logout" -> handleLogout(request, requestUrl)
+        "/api/netease/register/anonimous", "/api/netease/register/anonymous" -> handleAnonymousRegister(request, requestUrl)
         "/api/netease/user/account" -> handleUserAccount(request, requestUrl)
         "/api/netease/user/detail" -> handleUserDetail(request, requestUrl)
         "/api/netease/user/subcount" -> handleUserSubcount(request, requestUrl)
@@ -155,19 +163,50 @@ object AndroidNeteaseApiService {
     )
   }
 
+  private fun handleLogin(request: JSONObject, requestUrl: URL): String {
+    val account = requestUrl.queryValue("email")
+      ?: requestUrl.queryValue("username")
+      ?: requestUrl.queryValue("phone")
+      ?: ""
+    return when {
+      account.contains("@") -> handleLoginEmail(request, requestUrl)
+      account.isNotBlank() -> handleLoginCellphone(request, requestUrl)
+      else -> buildJsonResponse(400, errorBody("\u7f3a\u5c11\u767b\u5f55\u8d26\u53f7"))
+    }
+  }
+
   private fun handleLoginCellphone(request: JSONObject, requestUrl: URL): String {
-    val captcha = requestUrl.queryValue("captcha") ?: ""
+    val loginData = JSONObject()
+      .put("type", "1")
+      .put("https", "true")
+      .put("phone", requestUrl.queryValue("phone") ?: requestUrl.queryValue("username") ?: "")
+      .put("countrycode", requestUrl.queryValue("countrycode") ?: requestUrl.queryValue("ctcode") ?: "86")
+      .put("remember", "true")
+    appendLoginCredential(loginData, requestUrl)
+
     val response = requestNetease(
       request,
       requestUrl,
       "/api/w/login/cellphone",
-      JSONObject()
-        .put("type", "1")
-        .put("https", "true")
-        .put("phone", requestUrl.queryValue("phone") ?: "")
-        .put("countrycode", requestUrl.queryValue("countrycode") ?: requestUrl.queryValue("ctcode") ?: "86")
-        .put("captcha", captcha)
-        .put("remember", "true"),
+      loginData,
+      CryptoMode.WEAPI,
+    )
+    val body = parseJsonObject(normalizeAvatarKey(response.body))
+    putCookieText(body, response.cookies)
+    return buildRawJsonResponse(200, body.toString(), response.cookies)
+  }
+
+  private fun handleLoginEmail(request: JSONObject, requestUrl: URL): String {
+    val loginData = JSONObject()
+      .put("username", requestUrl.queryValue("email") ?: requestUrl.queryValue("username") ?: "")
+      .put("rememberLogin", "true")
+    appendLoginCredential(loginData, requestUrl)
+
+    val response = requestNetease(
+      request,
+      requestUrl,
+      "/api/w/login",
+      loginData,
       CryptoMode.WEAPI,
     )
     val body = parseJsonObject(normalizeAvatarKey(response.body))
@@ -207,6 +246,10 @@ object AndroidNeteaseApiService {
 
   private fun handleLogout(request: JSONObject, requestUrl: URL): String {
     return proxyBody(request, requestUrl, "/api/logout", JSONObject(), CryptoMode.EAPI)
+  }
+
+  private fun handleAnonymousRegister(request: JSONObject, requestUrl: URL): String {
+    return proxyBody(request, requestUrl, "/api/register/anonimous", JSONObject(), CryptoMode.WEAPI)
   }
 
   private fun handleUserAccount(request: JSONObject, requestUrl: URL): String {
@@ -251,6 +294,18 @@ object AndroidNeteaseApiService {
       JSONObject().put("uid", requestUrl.queryValue("uid") ?: "0"),
       CryptoMode.EAPI,
     )
+  }
+
+  private fun appendLoginCredential(data: JSONObject, requestUrl: URL) {
+    val captcha = requestUrl.queryValue("captcha") ?: ""
+    val md5Password = requestUrl.queryValue("md5_password") ?: ""
+    val password = requestUrl.queryValue("password") ?: ""
+
+    when {
+      captcha.isNotBlank() -> data.put("captcha", captcha)
+      md5Password.isNotBlank() -> data.put("md5_password", md5Password)
+      password.isNotBlank() -> data.put("password", password)
+    }
   }
 
   private fun proxyBody(
@@ -442,7 +497,7 @@ object AndroidNeteaseApiService {
 
   private fun putCookieText(body: JSONObject, cookies: List<String>) {
     if (cookies.isNotEmpty()) {
-      body.put("cookie", cookies.joinToString(";"))
+      body.put("cookie", cookies.joinToString("; ") { cookie -> cookie.trim().trimEnd(';') })
     }
   }
 
@@ -461,7 +516,9 @@ object AndroidNeteaseApiService {
       if (separatorIndex <= 0) return@forEach
       val key = item.substring(0, separatorIndex).trim()
       val value = item.substring(separatorIndex + 1).trim()
-      if (key.isNotBlank() && value.isNotBlank()) target[key] = value
+      if (key.isNotBlank() && value.isNotBlank() && !COOKIE_ATTRIBUTE_NAMES.contains(key.lowercase(Locale.ROOT))) {
+        target[key] = value
+      }
     }
   }
 
@@ -475,9 +532,10 @@ object AndroidNeteaseApiService {
   }
 
   private fun cookieMapToHeader(cookies: Map<String, String>): String {
-    return cookies.entries.joinToString("; ") { (key, value) ->
-      "${formEncode(key)}=${formEncode(value)}"
-    }
+    return cookies.entries
+      .filter { (key, value) -> key.isNotBlank() && value.isNotBlank() }
+      .filter { (key, _) -> !COOKIE_ATTRIBUTE_NAMES.contains(key.lowercase(Locale.ROOT)) }
+      .joinToString("; ") { (key, value) -> "${key.trim()}=${value.trim()}" }
   }
 
   private fun formEncode(value: String): String {

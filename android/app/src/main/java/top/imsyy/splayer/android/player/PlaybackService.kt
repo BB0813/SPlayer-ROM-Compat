@@ -45,6 +45,9 @@ class PlaybackService : MediaSessionService() {
     if (intent?.getBooleanExtra(EXTRA_START_FOREGROUND_REQUIRED, false) == true) {
       startForegroundNotificationImmediately()
     }
+    if (intent?.getBooleanExtra(EXTRA_REFRESH_NATIVE_NOTIFICATION, false) == true) {
+      refreshNativeNotificationImmediately()
+    }
     if (AndroidNativeAudioPlayer.handleNotificationAction(intent)) {
       AndroidNativeAudioPlayer.updateEnhancedNotification(applicationContext, true)
       return START_STICKY
@@ -156,6 +159,13 @@ class PlaybackService : MediaSessionService() {
     onUpdateNotification(session, true)
   }
 
+  private fun refreshNativeNotificationImmediately() {
+    if (!AndroidNativeAudioPlayer.shouldUseNativeMediaNotification()) return
+    val session = AndroidNativeAudioPlayer.getMediaSession() ?: return
+    lastNativeNotificationUpdateAt = 0L
+    onUpdateNotification(session, AndroidNativeAudioPlayer.shouldStartForegroundService())
+  }
+
   private fun shouldSkipNativeNotificationUpdate(
     session: MediaSession,
     startInForegroundRequired: Boolean,
@@ -222,12 +232,19 @@ class PlaybackService : MediaSessionService() {
     private const val NATIVE_NOTIFICATION_UPDATE_MIN_INTERVAL_MS = 1000L
     private const val EXTRA_START_FOREGROUND_REQUIRED =
       "top.imsyy.splayer.romcompat.extra.START_FOREGROUND_REQUIRED"
+    private const val EXTRA_REFRESH_NATIVE_NOTIFICATION =
+      "top.imsyy.splayer.romcompat.extra.REFRESH_NATIVE_NOTIFICATION"
 
-    fun start(context: Context, foregroundRequired: Boolean = false) {
+    fun start(
+      context: Context,
+      foregroundRequired: Boolean = false,
+      refreshNativeNotification: Boolean = false,
+    ) {
       val appContext = context.applicationContext
       val intent =
         Intent(appContext, PlaybackService::class.java).apply {
           putExtra(EXTRA_START_FOREGROUND_REQUIRED, foregroundRequired)
+          putExtra(EXTRA_REFRESH_NATIVE_NOTIFICATION, refreshNativeNotification)
         }
       try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && foregroundRequired) {
@@ -240,6 +257,15 @@ class PlaybackService : MediaSessionService() {
       } catch (error: Exception) {
         Log.w(TAG, "start service failed foreground=$foregroundRequired message=${error.message ?: ""}")
       }
+    }
+
+    fun refreshNativeNotification(context: Context, foregroundRequired: Boolean = false) {
+      if (!AndroidNativeAudioPlayer.shouldUseNativeMediaNotification()) return
+      start(
+        context,
+        foregroundRequired = foregroundRequired,
+        refreshNativeNotification = true,
+      )
     }
 
     fun stop(context: Context) {

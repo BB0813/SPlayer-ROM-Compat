@@ -30,6 +30,7 @@ import { resolveAndroidRomProfile } from "@/platform/android/romProfile";
 import { useSettingStore } from "@/stores";
 import type { SettingConfig } from "@/types/settings";
 import { copyData } from "@/utils/helper";
+import { collectCookieSnapshot } from "@/utils/cookie";
 import { checkIsolationSupport, isAndroidApp, isElectron } from "@/utils/env";
 import { uniqBy } from "lodash-es";
 
@@ -499,6 +500,7 @@ export const usePlaySettings = (): SettingConfig => {
 
   const buildAndroidPlaybackDiagnosticsReportPayload = async () => {
     await loadAndroidMediaSummary();
+    const cookieSnapshot = collectCookieSnapshot();
 
     return buildAndroidPerformanceDiagnosticsReport({
       system: androidSystemInfo.value,
@@ -527,6 +529,12 @@ export const usePlaySettings = (): SettingConfig => {
         notificationPermissionGranted: androidNotificationPermissionGranted.value,
         mediaTrackCount: androidMediaTrackCount.value,
         mediaLastScanAt: androidMediaLastScanAt.value,
+      },
+      login: {
+        hasMusicU: Boolean(cookieSnapshot.MUSIC_U),
+        hasMusicA: Boolean(cookieSnapshot.MUSIC_A),
+        hasCsrf: Boolean(cookieSnapshot.__csrf),
+        cookieKeys: Object.keys(cookieSnapshot).sort(),
       },
     });
   };

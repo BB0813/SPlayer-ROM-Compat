@@ -30,6 +30,7 @@ class SPlayerPlayerBridge(
         PlaybackService.start(
           context.applicationContext,
           AndroidNativeAudioPlayer.shouldStartForegroundService(),
+          refreshNativeNotification = true,
         )
       }
       played
@@ -46,6 +47,7 @@ class SPlayerPlayerBridge(
         PlaybackService.start(
           context.applicationContext,
           AndroidNativeAudioPlayer.shouldStartForegroundService(),
+          refreshNativeNotification = true,
         )
       }
       resumed
@@ -58,7 +60,7 @@ class SPlayerPlayerBridge(
     return runOnMainThread {
       val paused = AndroidNativeAudioPlayer.pause(optionsJson)
       if (AndroidNativeAudioPlayer.hasPlaybackSource()) {
-        PlaybackService.start(context.applicationContext, false)
+        PlaybackService.start(context.applicationContext, false, refreshNativeNotification = true)
       }
       paused
     }
@@ -130,7 +132,7 @@ class SPlayerPlayerBridge(
     return runOnMainThread {
       val applied = AndroidNativeAudioPlayer.setNotificationConfig(context.applicationContext, configJson)
       if (AndroidNativeAudioPlayer.hasPlaybackSource()) {
-        PlaybackService.start(context.applicationContext, false)
+        PlaybackService.start(context.applicationContext, false, refreshNativeNotification = true)
       }
       applied
     }
@@ -142,7 +144,7 @@ class SPlayerPlayerBridge(
     return runOnMainThread {
       val updated = AndroidNativeAudioPlayer.updateMetadata(metadataJson)
       if (AndroidNativeAudioPlayer.hasPlaybackSource()) {
-        PlaybackService.start(context.applicationContext, false)
+        PlaybackService.start(context.applicationContext, false, refreshNativeNotification = true)
       }
       updated
     }

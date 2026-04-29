@@ -20,6 +20,8 @@ import { onMounted, watch } from "vue";
 
 const FINAL_FOCUS_DELAY_MS = 500;
 const ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS = 15000;
+const ANDROID_MEMORY_PRESSURE_TIP_INTERVAL_MS = 60 * 1000;
+let lastAndroidMemoryPressureTipAt = 0;
 
 export const useInit = () => {
   const dataStore = useDataStore();
@@ -171,6 +173,7 @@ const initEventListener = () => {
 
     const player = usePlayerController();
     const statusStore = useStatusStore();
+    const settingStore = useSettingStore();
     const action = (event as CustomEvent<{ action?: string }>).detail?.action;
 
     switch (action) {
@@ -195,6 +198,21 @@ const initEventListener = () => {
       case "closePlayer":
         statusStore.showFullPlayer = false;
         break;
+      case "enableAndroidConservativeMode": {
+        settingStore.androidPerformanceMode = true;
+        settingStore.androidReducePlaybackAnimations = true;
+        settingStore.androidLowFrequencyLyrics = true;
+        settingStore.androidDisablePlaybackBackground = true;
+        settingStore.androidFreezePlaybackRoutes = false;
+        const now = Date.now();
+        if (now - lastAndroidMemoryPressureTipAt > ANDROID_MEMORY_PRESSURE_TIP_INTERVAL_MS) {
+          lastAndroidMemoryPressureTipAt = now;
+          window.$message?.warning("检测到系统内存压力，已切换 Android 保守模式", {
+            duration: 2500,
+          });
+        }
+        break;
+      }
       default:
         break;
     }

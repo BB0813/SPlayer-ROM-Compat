@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import android.webkit.MimeTypeMap
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -42,6 +43,7 @@ class MainActivity : AppCompatActivity() {
   private lateinit var nativePlayerPageView: NativePlayerPageView
   private var pendingControlAction: String? = null
   private var webViewDestroyedByRenderProcess = false
+  private var webPageReady = false
 
   @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,6 +137,8 @@ class MainActivity : AppCompatActivity() {
             "页面加载完成",
             JSONObject().put("url", url ?: ""),
           )
+          webPageReady = true
+          AndroidWebActionDispatcher.flushPending()
           flushPendingControlAction()
         }
 
@@ -208,11 +212,13 @@ class MainActivity : AppCompatActivity() {
         "系统通知应用内存紧张",
         JSONObject().put("level", level),
       )
+      emitControlAction("enableAndroidConservativeMode")
     }
   }
 
   override fun onLowMemory() {
     AndroidDiagnosticsStore.record(applicationContext, "activity:memory", "系统触发低内存回调")
+    emitControlAction("enableAndroidConservativeMode")
     super.onLowMemory()
   }
 
@@ -235,6 +241,7 @@ class MainActivity : AppCompatActivity() {
 
   private fun showWebViewRecovery(didCrash: Boolean, rendererPriority: Int) {
     webViewDestroyedByRenderProcess = true
+    webPageReady = false
     if (::nativePlayerPageView.isInitialized) {
       nativePlayerPageView.setPlayerVisible(false)
     }
@@ -288,6 +295,21 @@ class MainActivity : AppCompatActivity() {
         setOnClickListener { recreate() }
       }
 
+    val exportButton =
+      Button(this).apply {
+        text = "导出诊断报告"
+        setOnClickListener {
+          val fileName = "SPlayer-ROM-Compat-Android-Recovery-${System.currentTimeMillis()}.txt"
+          val report = AndroidDiagnosticsStore.buildReport(applicationContext)
+          val savedUri = SPlayerSystemBridge(this@MainActivity).saveTextFile(fileName, report)
+          Toast.makeText(
+            this@MainActivity,
+            if (savedUri.isNotBlank()) "诊断报告已导出到下载目录" else "诊断报告导出失败",
+            Toast.LENGTH_LONG,
+          ).show()
+        }
+      }
+
     val closeButton =
       Button(this).apply {
         text = "关闭应用"
@@ -298,7 +320,9 @@ class MainActivity : AppCompatActivity() {
     root.addView(message)
     root.addView(detail)
     root.addView(restartButton)
+    root.addView(exportButton)
     root.addView(closeButton)
+
     setContentView(root)
   }
 
@@ -327,11 +351,25 @@ class MainActivity : AppCompatActivity() {
 
   private fun flushPendingControlAction() {
     val action = pendingControlAction ?: return
-    pendingControlAction = null
-    emitControlAction(action)
+    if (emitControlAction(action)) {
+      pendingControlAction = null
+    }
   }
 
-  private fun emitControlAction(action: String) {
+  private fun emitControlAction(action: String): Boolean {
+    if (!::webView.isInitialized || webViewDestroyedByRenderProcess || !webPageReady) {
+      AndroidDiagnosticsStore.record(
+        applicationContext,
+        "android:control",
+        "控制动作等待 WebView 就绪",
+        JSONObject()
+          .put("action", action)
+          .put("webViewReady", ::webView.isInitialized)
+          .put("pageReady", webPageReady)
+          .put("rendererGone", webViewDestroyedByRenderProcess),
+      )
+      return false
+    }
     AndroidDiagnosticsStore.record(
       applicationContext,
       "android:control",
@@ -341,9 +379,13 @@ class MainActivity : AppCompatActivity() {
     val script =
       "window.dispatchEvent(new CustomEvent('splayer:android-control', { detail: { action: ${JSONObject.quote(action)} } }))"
 
-    webView.post {
-      webView.evaluateJavascript(script, null)
-    }
+    return runCatching {
+      webView.post {
+        if (!webViewDestroyedByRenderProcess) {
+          runCatching { webView.evaluateJavascript(script, null) }
+        }
+      }
+    }.isSuccess
   }
 
   private fun emitPlayerEvent(type: String, detailJson: String) {

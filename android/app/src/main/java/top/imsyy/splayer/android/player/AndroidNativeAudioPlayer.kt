@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.KeyEvent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -16,6 +17,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -47,6 +49,7 @@ object AndroidNativeAudioPlayer {
   private const val EXTRA_NOTIFICATION_SEEK_PERCENT = "top.imsyy.splayer.romcompat.extra.SEEK_PERCENT"
   private const val NOTIFICATION_SEEK_STEP_MS = 15000L
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
+  private const val NOTIFICATION_ACTION_SECOND_REFRESH_DELAY_MS = 900L
   private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
   private const val ENDED_EVENT_DELAY_MS = 250L
@@ -210,6 +213,10 @@ object AndroidNativeAudioPlayer {
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
                   .buildUpon()
                   .add(Player.COMMAND_PLAY_PAUSE)
+                  .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                  .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                  .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                  .add(Player.COMMAND_SEEK_TO_NEXT)
                   .build()
               return MediaSession.ConnectionResult.accept(sessionCommands, playerCommands)
             }
@@ -238,6 +245,50 @@ object AndroidNativeAudioPlayer {
                     SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED),
                   )
               }
+
+            @Suppress("DEPRECATION")
+            @UnstableApi
+            override fun onMediaButtonEvent(
+              session: MediaSession,
+              controllerInfo: MediaSession.ControllerInfo,
+              intent: Intent,
+            ): Boolean {
+              val keyEvent = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
+              if (keyEvent.action != KeyEvent.ACTION_DOWN || keyEvent.repeatCount > 0) return true
+
+              return when (keyEvent.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS ->
+                  dispatchTransportAction(ACTION_PREVIOUS, "mediaButton:previous")
+                KeyEvent.KEYCODE_MEDIA_NEXT ->
+                  dispatchTransportAction(ACTION_NEXT, "mediaButton:next")
+                KeyEvent.KEYCODE_MEDIA_PLAY -> handlePlayPauseNotificationAction(true)
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> handlePlayPauseNotificationAction(false)
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_HEADSETHOOK -> handlePlayPauseNotificationAction(isPaused())
+                else -> false
+              }
+            }
+
+            @Suppress("DEPRECATION")
+            override fun onPlayerCommandRequest(
+              session: MediaSession,
+              controller: MediaSession.ControllerInfo,
+              playerCommand: Int,
+            ): Int {
+              return when (playerCommand) {
+                Player.COMMAND_SEEK_TO_PREVIOUS,
+                Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
+                  dispatchTransportAction(ACTION_PREVIOUS, "playerCommand:$playerCommand")
+                  SessionResult.RESULT_SUCCESS
+                }
+                Player.COMMAND_SEEK_TO_NEXT,
+                Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
+                  dispatchTransportAction(ACTION_NEXT, "playerCommand:$playerCommand")
+                  SessionResult.RESULT_SUCCESS
+                }
+                else -> SessionResult.RESULT_SUCCESS
+              }
+            }
           },
         )
         .build()
@@ -289,7 +340,7 @@ object AndroidNativeAudioPlayer {
     }
 
     currentPlayer.playWhenReady = options.optBoolean("autoPlay", true)
-    appContext?.let { updateEnhancedNotification(it, true) }
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
     return true
   }
 
@@ -297,14 +348,14 @@ object AndroidNativeAudioPlayer {
     Log.d(TAG, "resume options=${optionsJson ?: ""}")
     ensureInitialized(requireContext())
     player?.play()
-    appContext?.let { updateEnhancedNotification(it, true) }
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
     return true
   }
 
   fun pause(optionsJson: String?): Boolean {
     Log.d(TAG, "pause options=${optionsJson ?: ""}")
     player?.pause()
-    appContext?.let { updateEnhancedNotification(it, true) }
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
     return true
   }
 
@@ -335,7 +386,7 @@ object AndroidNativeAudioPlayer {
     emit("seeking", snapshot())
     currentPlayer.seekTo((time * 1000).toLong())
     emit("seeked", snapshot())
-    appContext?.let { updateEnhancedNotification(it, true) }
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
     return true
   }
 
@@ -541,7 +592,7 @@ object AndroidNativeAudioPlayer {
     val currentPlayer = player
     val dispatched = AndroidWebActionDispatcher.dispatch(if (shouldPlay) "play" else "pause")
     if (currentPlayer == null || currentSrc.isBlank()) {
-      appContext?.let { refreshEnhancedNotificationSoon(it) }
+      appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
       return dispatched
     }
 
@@ -550,7 +601,7 @@ object AndroidNativeAudioPlayer {
     } else {
       currentPlayer.pause()
     }
-    appContext?.let { refreshEnhancedNotificationSoon(it) }
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
     return true
   }
 
@@ -588,7 +639,7 @@ object AndroidNativeAudioPlayer {
 
       mediaSession?.setSessionActivity(buildSessionActivity(context.applicationContext))
       updateCurrentMediaItemMetadata(force = true)
-      updateEnhancedNotification(context.applicationContext, true)
+      refreshPlaybackNotifications(context.applicationContext, forceEnhanced = true, forceNative = true)
       saved
     } catch (_: Exception) {
       false
@@ -865,7 +916,29 @@ object AndroidNativeAudioPlayer {
 
   private fun dispatchTransportAction(action: String, label: String): Boolean {
     Log.d(TAG, "notificationAction action=$label dispatch=$action")
-    return AndroidWebActionDispatcher.dispatch(action)
+    val dispatched = AndroidWebActionDispatcher.dispatch(action)
+    appContext?.let { refreshPlaybackNotifications(it, forceEnhanced = true, forceNative = true) }
+    return dispatched
+  }
+
+  private fun refreshPlaybackNotifications(
+    context: Context,
+    forceEnhanced: Boolean = false,
+    forceNative: Boolean = false,
+  ) {
+    val appContext = context.applicationContext
+    if (forceEnhanced) {
+      refreshEnhancedNotificationSoon(appContext)
+    } else {
+      updateEnhancedNotification(appContext)
+    }
+    if (forceNative && shouldUseNativeMediaNotification()) {
+      PlaybackService.refreshNativeNotification(appContext, shouldStartForegroundService())
+      handler.postDelayed(
+        { PlaybackService.refreshNativeNotification(appContext, shouldStartForegroundService()) },
+        NOTIFICATION_ACTION_SECOND_REFRESH_DELAY_MS,
+      )
+    }
   }
 
   private fun buildMediaButtons(): ImmutableList<CommandButton> {

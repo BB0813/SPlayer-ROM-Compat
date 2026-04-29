@@ -10,6 +10,16 @@ const COOKIE_ATTRIBUTE_NAMES = new Set([
   "secure",
 ]);
 
+const COOKIE_SNAPSHOT_KEYS = [
+  "MUSIC_U",
+  "MUSIC_A",
+  "__csrf",
+  "NMTID",
+  "__remember_me",
+  "NTES_P_UTID",
+  "WEVNSM",
+];
+
 // 获取 Cookie
 export const getCookie = (key: string) => {
   return Cookies.get(key) ?? localStorage.getItem(`cookie-${key}`);
@@ -54,4 +64,49 @@ export const setCookies = (cookieValue: string) => {
     document.cookie = `${name}=${value}; ${expires}; path=/`;
     localStorage.setItem(`cookie-${name}`, value);
   });
+};
+
+// 收集登录 Cookie 快照
+export const collectCookieSnapshot = () => {
+  const cookieMap: Record<string, string> = {};
+
+  if (typeof document !== "undefined" && document.cookie) {
+    document.cookie.split(";").forEach((cookieItem) => {
+      const [rawName, ...rawValue] = cookieItem.split("=");
+      const name = rawName?.trim();
+      const value = rawValue.join("=").trim();
+      if (!name || !value || COOKIE_ATTRIBUTE_NAMES.has(name.toLowerCase())) return;
+      cookieMap[name] = value;
+    });
+  }
+
+  if (typeof localStorage !== "undefined") {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith("cookie-")) continue;
+      const cookieName = key.replace(/^cookie-/, "");
+      const cookieValue = localStorage.getItem(key);
+      if (cookieName && cookieValue && !COOKIE_ATTRIBUTE_NAMES.has(cookieName.toLowerCase())) {
+        cookieMap[cookieName] = cookieValue;
+      }
+    }
+  }
+
+  COOKIE_SNAPSHOT_KEYS.forEach((key) => {
+    const value = getCookie(key);
+    if (value) cookieMap[key] = value;
+  });
+
+  return cookieMap;
+};
+
+// 生成接口请求 Cookie 头
+export const buildCookieHeader = () => {
+  const cookieMap = collectCookieSnapshot();
+  if (!cookieMap.os) cookieMap.os = "pc";
+
+  return Object.entries(cookieMap)
+    .filter(([key, value]) => key && value)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(";");
 };
