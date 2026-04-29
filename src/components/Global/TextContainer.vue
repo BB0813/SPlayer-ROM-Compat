@@ -1,10 +1,14 @@
 <template>
-  <div ref="textContainerRef" class="text-container">
+  <div
+    ref="textContainerRef"
+    class="text-container"
+    :class="{ 'scroll-disabled': !isScrollEnabled }"
+  >
     <div ref="scrollWrapperRef" class="scroll-wrapper">
       <div ref="textRef" class="text">
         <slot>{{ text }}</slot>
       </div>
-      <div v-if="isTextOverflowing" class="text clone">
+      <div v-if="isScrollEnabled" class="text clone">
         <slot>{{ text }}</slot>
       </div>
     </div>
@@ -12,6 +16,8 @@
 </template>
 
 <script lang="ts" setup>
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
+
 const props = defineProps<{
   text?: string;
   // 滚动速度 (px/frame)
@@ -33,6 +39,11 @@ const isTextOverflowing = ref(false);
 
 const { width: textContainerWidth } = useElementSize(textContainerRef);
 const { width: textWidth } = useElementSize(textRef);
+const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
+
+const isScrollEnabled = computed(() => {
+  return isTextOverflowing.value && !shouldStabilizeDynamicContent.value;
+});
 
 // 检查文本是否超出宽度
 const checkTextWidth = () => {
@@ -50,7 +61,7 @@ const checkTextWidth = () => {
 
 // 更新滚动状态
 const updateScroll = () => {
-  if (isTextOverflowing.value) {
+  if (isScrollEnabled.value) {
     startScrolling();
   } else {
     stopScrolling();
@@ -64,6 +75,7 @@ let scrollTimeoutId: ReturnType<typeof setTimeout> | null = null;
 const startScrolling = () => {
   stopScrolling();
   if (!textRef.value || !textContainerRef.value || !scrollWrapperRef.value) return;
+  if (!isScrollEnabled.value) return;
   const scrollSpeed = props.speed || 0.5;
 
   let currentPos = 0;
@@ -106,7 +118,7 @@ watch(
   },
 );
 
-watch(isTextOverflowing, () => {
+watch(isScrollEnabled, () => {
   updateScroll();
 });
 
@@ -125,6 +137,11 @@ onUnmounted(() => {
   display: block;
   overflow: hidden;
   width: 100%;
+  &.scroll-disabled {
+    .scroll-wrapper {
+      will-change: auto;
+    }
+  }
   .scroll-wrapper {
     position: relative;
     display: flex;

@@ -519,7 +519,10 @@ object AndroidNativeAudioPlayer {
       ACTION_NOTIFICATION_SEEK_FORWARD -> seekByMs(NOTIFICATION_SEEK_STEP_MS)
       ACTION_NOTIFICATION_SEEK_TO_PERCENT ->
         seekToPercent(intent.getIntExtra(EXTRA_NOTIFICATION_SEEK_PERCENT, 0))
-      else -> false.also { Log.d(TAG, "notificationAction ignored action=${action ?: ""}") }
+      else -> {
+        if (!action.isNullOrBlank()) Log.d(TAG, "notificationAction ignored action=$action")
+        false
+      }
     }
   }
 

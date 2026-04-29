@@ -316,6 +316,7 @@ const handleSongPlay = (song: SongType) => {
 // 列表状态
 const scrollTop = ref<number>(0);
 const scrollIndex = ref<number>(0);
+let lastAndroidScrollStateUpdate = 0;
 
 // 悬浮工具
 const floatToolShow = ref<boolean>(true);
@@ -457,18 +458,27 @@ const hasPlaySong = computed(() => {
 const { height: songListHeight, stop: stopCalcHeight } = useElementSize(songListRef);
 
 // 列表滚动
-const onScroll = (e: Event) => {
-  emit("scroll", e);
-  const target = e.target as HTMLElement;
+const onScroll = (event: Event) => {
+  const target = event.target as HTMLElement;
   const top = target.scrollTop;
-  scrollTop.value = top;
-  scrollIndex.value = Math.floor(top / 90);
+  const now = performance.now();
+  const shouldUpdateState =
+    !isAndroidPlaybackLite.value ||
+    now - lastAndroidScrollStateUpdate > 120 ||
+    top <= 100 ||
+    scrollTop.value <= 100;
 
-  // 触底检测
+  if (shouldUpdateState) {
+    lastAndroidScrollStateUpdate = now;
+    emit("scroll", event);
+    scrollTop.value = top;
+    scrollIndex.value = Math.floor(top / 90);
+  }
+
   const scrollHeight = target.scrollHeight;
   const clientHeight = target.clientHeight;
   if (scrollHeight - top - clientHeight < 100 && !props.loading && props.loadMore) {
-    emit("reachBottom", e);
+    emit("reachBottom", event);
   }
 };
 

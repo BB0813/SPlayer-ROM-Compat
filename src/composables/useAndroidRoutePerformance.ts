@@ -22,6 +22,8 @@ export const useAndroidRoutePerformance = () => {
     () => isAndroidPlaybackLite.value && settingStore.androidFreezePlaybackRoutes,
   );
 
+  const shouldStabilizeDynamicContent = computed(() => shouldFreezeRoutes.value);
+
   const shouldUseLowFrequencyLyrics = computed(
     () => isAndroidPlaybackLite.value && settingStore.androidLowFrequencyLyrics,
   );
@@ -37,6 +39,7 @@ export const useAndroidRoutePerformance = () => {
     isAndroidPlaybackLite,
     shouldReduceMotion,
     shouldFreezeRoutes,
+    shouldStabilizeDynamicContent,
     shouldUseLowFrequencyLyrics,
     shouldDisableDynamicBackground,
     keepAliveEnabled,

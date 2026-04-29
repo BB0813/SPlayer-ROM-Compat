@@ -1,4 +1,4 @@
-* {
+﻿* {
   margin: 0;
   padding: 0;
   user-select: none;
@@ -471,5 +471,42 @@ audio {
 :root.android-performance-mode.android-playback-active {
   #main.android-playback-lite {
     transition: none !important;
+  }
+}
+
+:root.android-performance-mode.android-freeze-routes {
+  .song-data-card,
+  .cover-list .cover-item,
+  .artist-list .artist-item,
+  .song-list .virtual-list-wrapper,
+  .song-list .song-node .song-card {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .song-data-card:hover,
+  .cover-list .cover-item:hover,
+  .artist-list .artist-item:hover {
+    box-shadow: none !important;
+  }
+
+  .song-data-card:hover img,
+  .cover-list .cover-item:hover .cover-img,
+  .artist-list .artist-item:hover .cover-img,
+  .artist-list .artist-item:hover img {
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .cover-list .description,
+  .artist-list .cover-shadow,
+  .cover-list .play,
+  .artist-list .n-icon {
+    transition: none !important;
+  }
+
+  .cover-list .play {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }

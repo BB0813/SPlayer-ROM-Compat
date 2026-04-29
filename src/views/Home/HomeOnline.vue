@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-online">
     <div v-if="isLogin()" class="main-rec">
       <div class="main-rec-grid">
@@ -40,14 +40,15 @@
       <ArtistList
         v-if="item.type === 'artist'"
         :data="item.list"
-        :loading="true"
+        :loading="recListLoading"
         :hiddenCover="settingStore.hiddenCovers.home"
       />
       <CoverList
         v-else
         :data="item.list"
         :type="item.type"
-        :loading="true"
+        :loading="recListLoading"
+        :loading-num="coverLoadingNum"
         :hiddenCover="settingStore.hiddenCovers.home"
       />
     </div>
@@ -64,6 +65,7 @@ import { radioRecommend } from "@/api/radio";
 import { getCacheData } from "@/utils/cache";
 import { formatArtistsList, formatCoverList } from "@/utils/format";
 import { sleep } from "@/utils/helper";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { isLogin } from "@/utils/auth";
 import SvgIcon from "@/components/Global/SvgIcon.vue";
 
@@ -95,6 +97,7 @@ const router = useRouter();
 const dataStore = useDataStore();
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
+const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
 
 // 日推标题
 const dailySongsTitle = computed(() => {
@@ -159,11 +162,23 @@ const sortedRecData = computed(() => {
   return sections;
 });
 
+const recListLoading = computed(() => isLoadingRecData.value || !hasRecData.value);
+const coverLoadingNum = computed(() => (shouldStabilizeDynamicContent.value ? 9 : undefined));
+const isLoadingRecData = ref(false);
+const hasRecData = computed(() => {
+  return Object.values(recData.value).some((item) => item.list.length > 0);
+});
+
 // 获取全部推荐
-const getAllRecData = async () => {
+const getAllRecData = async (force = false) => {
+  if (isLoadingRecData.value) return;
+  if (!force && shouldStabilizeDynamicContent.value && hasRecData.value) return;
+
+  isLoadingRecData.value = true;
+
   try {
     // 延时
-    await sleep(300);
+    await sleep(shouldStabilizeDynamicContent.value ? 800 : 300);
 
     try {
       const playlistRes = await getCacheData(
@@ -225,13 +240,17 @@ const getAllRecData = async () => {
   } catch (error) {
     window.$message.error("个性化推荐获取出错");
     console.error("Error getting personalized data:", error);
+  } finally {
+    isLoadingRecData.value = false;
   }
 };
 
-onActivated(getAllRecData);
+onActivated(() => {
+  void getAllRecData();
+});
 
 onMounted(() => {
-  getAllRecData();
+  void getAllRecData(true);
 });
 </script>
 

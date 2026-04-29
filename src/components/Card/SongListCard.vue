@@ -1,4 +1,4 @@
-<!-- 歌曲列表卡片 -->
+﻿<!-- 歌曲列表卡片 -->
 <template>
   <n-card :style="{ height: `${height}px` || 'auto' }" :class="['song-data-card', size]">
     <n-flex v-if="size === 'normal'" align="center" justify="space-between" class="title">
@@ -15,7 +15,7 @@
             </div>
           </template>
         </n-image>
-        <TransitionGroup v-else tag="div" name="fade" class="cover-list">
+        <component :is="coverListComponent" v-else tag="div" name="fade" class="cover-list">
           <n-image
             v-for="item in songList"
             :key="item.id"
@@ -30,7 +30,7 @@
               </div>
             </template>
           </n-image>
-        </TransitionGroup>
+        </component>
         <!-- 播放 -->
         <SvgIcon :size="36" name="Play" class="play" />
       </div>
@@ -53,9 +53,11 @@
 
 <script lang="ts" setup>
 import type { SongType } from "@/types/main";
+import type { VNodeChild } from "vue";
+import { TransitionGroup } from "vue";
 import { coverLoaded } from "@/utils/helper";
 import { sampleSize } from "lodash-es";
-import { VNodeChild } from "vue";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 
 const props = defineProps<{
   size: "normal" | "small";
@@ -68,8 +70,36 @@ const props = defineProps<{
   hiddenCover?: boolean;
 }>();
 
-// 列表前三首
-const songList = computed(() => sampleSize(props.data, 3));
+const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
+
+const stableSongList = shallowRef<SongType[]>([]);
+
+const syncStableSongList = () => {
+  stableSongList.value = props.data?.slice(0, 3) ?? [];
+};
+
+watch(
+  () => props.data,
+  () => {
+    if (!shouldStabilizeDynamicContent.value || stableSongList.value.length === 0) {
+      syncStableSongList();
+    }
+  },
+  { immediate: true },
+);
+
+watch(shouldStabilizeDynamicContent, (isStabilized) => {
+  if (isStabilized) syncStableSongList();
+});
+
+const songList = computed(() => {
+  if (shouldStabilizeDynamicContent.value) return stableSongList.value;
+  return sampleSize(props.data, 3);
+});
+
+const coverListComponent = computed(() => {
+  return shouldStabilizeDynamicContent.value ? "div" : TransitionGroup;
+});
 </script>
 
 <style lang="scss" scoped>
