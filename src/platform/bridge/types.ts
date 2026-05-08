@@ -73,12 +73,20 @@ export interface AndroidRomCompatReport {
   actions: Record<AndroidRomCompatAction, boolean>;
 }
 
+export interface AndroidDisplayMetrics {
+  widthPixels: number;
+  heightPixels: number;
+  density: number;
+  densityDpi: number;
+  fontScale: number;
+}
 export interface AndroidSystemBridge {
   getVersion(): string;
   getBrand(): string;
   getManufacturer(): string;
   getModel(): string;
   getRomName(): string;
+  getDisplayMetrics(): string;
   isIgnoringBatteryOptimizations(): boolean;
   areNotificationsEnabled(): boolean;
   requestNotificationPermission(): boolean;

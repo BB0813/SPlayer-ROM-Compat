@@ -1,5 +1,6 @@
 import type {
   AndroidBridge,
+  AndroidDisplayMetrics,
   AndroidMediaTrack,
   AndroidNativePlayerPageState,
   AndroidPlayerEventPayload,
@@ -126,6 +127,16 @@ export const scanAndroidMediaStore = async (): Promise<AndroidMediaTrack[]> => {
   }
 };
 
+export const getAndroidDisplayMetrics = (): AndroidDisplayMetrics | null => {
+  const raw = getAndroidSystemBridge()?.getDisplayMetrics();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AndroidDisplayMetrics;
+  } catch {
+    return null;
+  }
+};
 export const getAndroidSystemInfo = (): AndroidSystemInfo | null => {
   const system = getAndroidSystemBridge();
   if (!system) return null;
