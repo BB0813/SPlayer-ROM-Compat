@@ -1,9 +1,16 @@
 <template>
-  <Transition name="fade" mode="out-in">
-    <div v-if="data.length > 0" :class="['cover-list', type]">
+  <Transition
+    :name="isAndroidPlaybackLite ? undefined : 'fade'"
+    mode="out-in"
+    :css="!isAndroidPlaybackLite"
+  >
+    <div
+      v-if="renderedData.length > 0"
+      :class="['cover-list', type, { 'android-playback-lite': isAndroidPlaybackLite }]"
+    >
       <div class="cover-grid">
         <div
-          v-for="(item, index) in data"
+          v-for="(item, index) in renderedData"
           :key="index"
           :class="['cover-item', { 'no-cover': hiddenCover }]"
           @click="goDetail(item)"
@@ -102,7 +109,10 @@
       <!-- 右键菜单 -->
       <CoverMenu ref="coverMenuRef" @toPlay="playList" />
     </div>
-    <div v-else-if="loading" :class="['cover-list', 'loading', type]">
+    <div
+      v-else-if="loading"
+      :class="['cover-list', 'loading', type, { 'android-playback-lite': isAndroidPlaybackLite }]"
+    >
       <div class="cover-grid">
         <div
           v-for="item in loadingNum || 50"
@@ -134,6 +144,7 @@ import { songDetail } from "@/api/song";
 import { playlistAllSongs } from "@/api/playlist";
 import { radioAllProgram } from "@/api/radio";
 import { usePlayerController } from "@/core/player/PlayerController";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { formatTimestamp } from "@/utils/time";
 import CoverMenu from "@/components/Menu/CoverMenu.vue";
 
@@ -148,6 +159,10 @@ const props = defineProps<{
   /** 是否为流媒体数据 */
   isStreaming?: boolean;
   hiddenCover?: boolean;
+  /** 最大渲染数量 */
+  maxItems?: number;
+  /** 是否关闭播放态高亮 */
+  disableDynamicPlayState?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -161,13 +176,20 @@ const statusStore = useStatusStore();
 const localStore = useLocalStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();
+const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
+
+const renderedData = computed(() => {
+  const maxItems = Number(props.maxItems);
+  if (!Number.isFinite(maxItems) || maxItems <= 0) return props.data;
+  return props.data.slice(0, maxItems);
+});
 
 // 右键菜单
 const coverMenuRef = ref<InstanceType<typeof CoverMenu> | null>(null);
 
 // 是否处于当前播放列表
 const isPlaying = (id: number | string) =>
-  musicStore.playPlaylistId === id && statusStore.playStatus;
+  !props.disableDynamicPlayState && musicStore.playPlaylistId === id && statusStore.playStatus;
 
 // 查看详情
 const goDetail = (item: CoverType) => {
@@ -264,12 +286,18 @@ const getListData = async (id: number | string): Promise<SongType[]> => {
     min-width: 0;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
+
     @media (max-width: 600px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+      justify-content: stretch;
+      gap: 12px;
+    }
+    @media (max-width: 430px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(10px, 3vw, 14px);
     }
     @media (max-width: 340px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
   }
   .cover-item {
@@ -493,65 +521,9 @@ const getListData = async (id: number | string): Promise<SongType[]> => {
   margin-top: 60px;
 }
 
-:global(:root.android-app.android-compact-ui) .cover-list {
-  padding: max(14px, calc(20px * var(--android-ui-scale, 1)))
-    max(2px, calc(4px * var(--android-ui-scale, 1)));
-
-  .cover-grid {
-    grid-template-columns: repeat(
-      auto-fill,
-      minmax(clamp(104px, calc(160px * var(--android-ui-scale, 1)), 160px), 1fr)
-    );
-    gap: clamp(8px, calc(16px * var(--android-ui-scale, 1)), 18px);
-  }
-
-  .cover-item {
-    border-radius: max(12px, calc(16px * var(--android-ui-scale, 1)));
-
-    .cover-data {
-      padding: max(8px, calc(12px * var(--android-ui-scale, 1)));
-
-      .name {
-        font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
-      }
-
-      .tip,
-      .meta,
-      .artists {
-        font-size: max(12px, calc(13px * var(--android-ui-scale, 1)));
-      }
-    }
-
-    .cover {
-      .play {
-        --n-width: max(36px, calc(42px * var(--android-ui-scale, 1)));
-        --n-height: max(36px, calc(42px * var(--android-ui-scale, 1)));
-      }
-    }
-  }
-}
-
 @media (max-width: 600px) {
-  :global(:root.android-app.android-compact-ui) .cover-list {
-    padding-right: 0;
-    padding-left: 0;
-
-    .cover-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: clamp(6px, calc(10px * var(--android-ui-scale, 1)), 12px);
-    }
-
-    .cover-item {
-      overflow: hidden;
-    }
-  }
 }
 
-@media (max-width: 340px) {
-  :global(:root.android-app.android-compact-ui) .cover-list {
-    .cover-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
+@media (max-width: 380px) {
 }
 </style>

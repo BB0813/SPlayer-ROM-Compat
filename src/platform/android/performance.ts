@@ -8,6 +8,8 @@ import { isAndroidApp } from "@/utils/env";
 const FLUSH_INTERVAL_MS = 10000;
 const MAX_EVENTS = 240;
 const LONG_TASK_THRESHOLD_MS = 120;
+const LAYOUT_OVERFLOW_THRESHOLD_PX = 2;
+const LAYOUT_PROBE_MIN_INTERVAL_MS = 1200;
 
 interface AndroidDiagnosticEvent {
   time: string;
@@ -20,6 +22,33 @@ interface AndroidDiagnosticsSnapshotExtra {
   [key: string]: unknown;
 }
 
+interface AndroidLayoutProbeEntry {
+  selector: string;
+  scrollWidth: number;
+  clientWidth: number;
+  scrollLeft: number;
+  overflowX: string;
+  width: number;
+  left: number;
+  right: number;
+  delta: number;
+}
+
+interface AndroidLayoutSnapshot {
+  reason: string;
+  capturedAt: string;
+  viewportWidth: number;
+  viewportHeight: number;
+  documentScrollWidth: number;
+  documentClientWidth: number;
+  bodyScrollWidth: number;
+  bodyClientWidth: number;
+  rootScrollLeft: number;
+  bodyScrollLeft: number;
+  hasOverflow: boolean;
+  overflowing: AndroidLayoutProbeEntry[];
+}
+
 const counters = new Map<string, number>();
 const events: AndroidDiagnosticEvent[] = [];
 let diagnosticsEnabled = false;
@@ -29,6 +58,7 @@ let longTaskObserver: PerformanceObserver | null = null;
 let frameSamplerId: number | null = null;
 let frameSamplerStartedAt = 0;
 let frameSamplerCount = 0;
+let lastLayoutProbeAt = 0;
 
 const now = () => new Date().toISOString();
 
@@ -50,6 +80,26 @@ const appendAndroidDiagnosticEvent = (
   }
 };
 
+const layoutProbeSelectors = [
+  "html",
+  "body",
+  "#app",
+  "#app-layout",
+  "#main",
+  "#main-layout",
+  "#main-content",
+  "#main-content .n-layout-scroll-container",
+  ".router-view",
+  ".home",
+  ".home-online",
+  ".list-detail",
+  ".song-list",
+  ".setting",
+  ".main-setting",
+  ".main-player",
+  ".mobile-tabbar",
+];
+
 const normalizeUnknown = (value: unknown): Record<string, unknown> => {
   if (value instanceof Error) {
     return {
@@ -62,6 +112,95 @@ const normalizeUnknown = (value: unknown): Record<string, unknown> => {
     return value as Record<string, unknown>;
   }
   return { value: String(value) };
+};
+
+const roundLayoutValue = (value: number) => Math.round(value * 10) / 10;
+
+const readLayoutProbeEntry = (selector: string): AndroidLayoutProbeEntry | null => {
+  const element = document.querySelector<HTMLElement>(selector);
+  if (!element) return null;
+
+  const rect = element.getBoundingClientRect();
+  const styles = window.getComputedStyle(element);
+  const scrollWidth = Math.round(element.scrollWidth);
+  const clientWidth = Math.round(element.clientWidth);
+  const delta = Math.max(0, scrollWidth - clientWidth);
+
+  if (delta <= LAYOUT_OVERFLOW_THRESHOLD_PX && Math.abs(element.scrollLeft) <= 0) return null;
+
+  return {
+    selector,
+    scrollWidth,
+    clientWidth,
+    scrollLeft: Math.round(element.scrollLeft),
+    overflowX: styles.overflowX,
+    width: roundLayoutValue(rect.width),
+    left: roundLayoutValue(rect.left),
+    right: roundLayoutValue(rect.right),
+    delta,
+  };
+};
+
+export const collectAndroidLayoutSnapshot = (reason = "manual"): AndroidLayoutSnapshot | null => {
+  if (!isAndroidApp) return null;
+
+  const documentElement = document.documentElement;
+  const body = document.body;
+  const overflowing = layoutProbeSelectors
+    .map((selector) => readLayoutProbeEntry(selector))
+    .filter((entry): entry is AndroidLayoutProbeEntry => Boolean(entry));
+  const documentDelta = Math.max(
+    0,
+    Math.round(documentElement.scrollWidth - documentElement.clientWidth),
+  );
+  const bodyDelta = body ? Math.max(0, Math.round(body.scrollWidth - body.clientWidth)) : 0;
+  const hasRootScroll =
+    Math.abs(documentElement.scrollLeft) > 0 || (body ? Math.abs(body.scrollLeft) > 0 : false);
+  const hasOverflow =
+    overflowing.length > 0 ||
+    documentDelta > LAYOUT_OVERFLOW_THRESHOLD_PX ||
+    bodyDelta > LAYOUT_OVERFLOW_THRESHOLD_PX ||
+    hasRootScroll;
+
+  return {
+    reason,
+    capturedAt: now(),
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    documentScrollWidth: documentElement.scrollWidth,
+    documentClientWidth: documentElement.clientWidth,
+    bodyScrollWidth: body?.scrollWidth ?? 0,
+    bodyClientWidth: body?.clientWidth ?? 0,
+    rootScrollLeft: Math.round(documentElement.scrollLeft),
+    bodyScrollLeft: Math.round(body?.scrollLeft ?? 0),
+    hasOverflow,
+    overflowing,
+  };
+};
+
+export const recordAndroidLayoutProbe = (reason: string, force = false): void => {
+  if (!isAndroidApp) return;
+
+  const currentTime = Date.now();
+  if (!force && currentTime - lastLayoutProbeAt < LAYOUT_PROBE_MIN_INTERVAL_MS) return;
+  lastLayoutProbeAt = currentTime;
+
+  const snapshot = collectAndroidLayoutSnapshot(reason);
+  if (!snapshot) return;
+
+  document.documentElement.classList.toggle(
+    "android-layout-overflow-detected",
+    snapshot.hasOverflow,
+  );
+
+  if (!snapshot.hasOverflow && !force) return;
+
+  appendAndroidDiagnosticEvent(
+    "web:layout",
+    snapshot.hasOverflow ? "检测到 Android 布局溢出" : "Android 布局正常",
+    snapshot as unknown as Record<string, unknown>,
+    snapshot.hasOverflow,
+  );
 };
 
 const stopFlushTimer = () => {
@@ -322,6 +461,7 @@ export const buildAndroidPerformanceDiagnosticsReport = async (
           }
         : null,
       counters: Object.fromEntries(counters.entries()),
+      layout: collectAndroidLayoutSnapshot("report"),
       recentEvents: events.slice(-MAX_EVENTS),
     },
     native: parseNativeDiagnostics(getAndroidNativeDiagnosticsReport()),

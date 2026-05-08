@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v3.0.0--rc.3--Beta70-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v3.0.0--rc.3--Beta72-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Android%20%2F%20HarmonyOS-3DDC84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/ROM-Compat-8A2BE2?style=flat-square" alt="rom compat">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-red?style=flat-square" alt="license">
@@ -63,19 +63,18 @@
 
 本地构建后的 Release APK 位于：
 
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-arm64-v8a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-armeabi-v7a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-x86_64-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-arm64-v8a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-armeabi-v7a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-x86_64-release.apk`
 
 ---
 
-## v3.0.0-rc.3-Beta70 更新
+## v3.0.0-rc.3-Beta72 更新
 
-- 平板歌单页继续收敛排版：修复详情头部被顶出视口、详情区与列表区间距过大、首项贴近底部导航的问题。
-- 歌单页进入和切换时会主动重置 Android 外层滚动，避免沿用上一次页面滚动偏移。
-- 平板歌单页主内容改为页面级锁定外层滚动，只保留歌曲虚拟列表内部滚动。
-- 平板横屏详情头高度、封面尺寸和列表间距进一步压缩，保证首屏同时展示详情、表头和歌曲首项。
-- 已准备双端验证流程：手机虚拟机 `192.168.1.128` 与平板虚拟机 `192.168.1.167`。
+- 修复低分辨率窄屏设备首页歌单卡片排布怪异的问题，避免两列卡片被 `space-between` 拉开。
+- 新增 Android 窄屏与低分辨率标记，用于区分常规手机、超窄屏手机和平板布局。
+- 首页、发现页等封面网格在窄屏下改为稳定两列并填满列宽，减少中间异常留白。
+- 收紧窄屏顶部导航、搜索框和右侧操作按钮间距，保持 44px 触控目标。
 
 ## 快速开始
 
@@ -134,15 +133,15 @@ Android 自动打包使用 `.github/workflows/android-release.yml`，桌面端 m
 
 | 触发方式   | 操作                                                    | 结果                                                                    |
 | ---------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Tag 发布   | 推送 `v3.0.0-rc.3-Beta70`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
+| Tag 发布   | 推送 `v3.0.0-rc.3-Beta72`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
 | 手动构建   | `Actions` → `Android Release` → `Run workflow`          | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
 | 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`             | 仅在明确需要桌面端包时手动执行                                          |
 
 Android Release 会生成以下独立 APK：
 
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-arm64-v8a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-armeabi-v7a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta70-x86_64-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-arm64-v8a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-armeabi-v7a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta72-x86_64-release.apk`
 
 CI 中可以直接看 job 与步骤名称确认是否为 Android 分架构构建：
 

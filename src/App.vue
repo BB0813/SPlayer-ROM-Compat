@@ -164,6 +164,21 @@ const applyAndroidViewportMetrics = (metrics: AndroidViewportMetrics) => {
   const isHighDensity = metrics.densityDpi >= 420 || metrics.density >= 2.625;
 
   root.classList.toggle("android-small-width", metrics.shortEdge > 0 && metrics.shortEdge <= 380);
+  root.classList.toggle(
+    "android-narrow-width",
+    metrics.viewportWidth > 0 && metrics.viewportWidth <= 430,
+  );
+  root.classList.toggle(
+    "android-tiny-width",
+    metrics.viewportWidth > 0 && metrics.viewportWidth <= 360,
+  );
+  root.classList.toggle(
+    "android-low-resolution",
+    metrics.viewportWidth > 0 &&
+      metrics.viewportWidth <= 390 &&
+      metrics.viewportHeight > 0 &&
+      metrics.viewportHeight <= 760,
+  );
   root.classList.toggle("android-compact-height", metrics.longEdge > 0 && metrics.longEdge <= 760);
   root.classList.toggle("android-phone-compact", metrics.shortEdge > 0 && metrics.shortEdge <= 390);
   root.classList.toggle(
@@ -190,6 +205,9 @@ const cleanupAndroidViewportMetrics = () => {
   const root = document.documentElement;
   root.classList.remove(
     "android-small-width",
+    "android-narrow-width",
+    "android-tiny-width",
+    "android-low-resolution",
     "android-compact-height",
     "android-phone-compact",
     "android-phone-normal",
