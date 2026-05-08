@@ -85,11 +85,11 @@
           <!-- 虚拟列表 -->
           <VirtualScroll
             ref="listRef"
-            :item-height="90"
+            :item-height="songItemHeight"
             :item-fixed="true"
             :items="virtualListItems"
-            :height="`calc(100% - 40px)`"
-            :padding-bottom="80"
+            :height="`calc(100% - ${listHeaderHeight}px)`"
+            :padding-bottom="listBottomPadding"
             :buffer-size="androidVirtualBufferSize"
             :disable-item-transition="isAndroidPlaybackLite"
             :class="{ 'is-dragging-global': isDragging && draggable }"
@@ -210,6 +210,7 @@ import SongListMenu from "@/components/Menu/SongListMenu.vue";
 import MobileSongMenu from "@/components/Menu/MobileSongMenu.vue";
 import VirtualScroll from "@/components/UI/VirtualScroll.vue";
 import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
+import { isAndroidApp } from "@/utils/env";
 
 const props = withDefaults(
   defineProps<{
@@ -274,6 +275,25 @@ const settingStore = useSettingStore();
 const player = usePlayerController();
 const { isSmallScreen } = useMobile();
 const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
+const shouldUseAndroidCompactList = computed(
+  () => isAndroidApp && settingStore.androidCompactUi && isSmallScreen.value,
+);
+const androidUiScaleRatio = computed(() => {
+  const scale = Number(settingStore.androidUiScale) || 90;
+  return Math.min(1, Math.max(0.85, scale / 100));
+});
+const songItemHeight = computed(() => {
+  if (!shouldUseAndroidCompactList.value) return 90;
+  return Math.max(76, Math.round(90 * androidUiScaleRatio.value));
+});
+const listHeaderHeight = computed(() => {
+  if (!shouldUseAndroidCompactList.value) return 40;
+  return Math.max(34, Math.round(40 * androidUiScaleRatio.value));
+});
+const listBottomPadding = computed(() => {
+  if (!shouldUseAndroidCompactList.value) return 80;
+  return Math.max(64, Math.round(80 * androidUiScaleRatio.value));
+});
 const androidVirtualBufferSize = computed(() => 5);
 
 // 列表元素
@@ -444,7 +464,7 @@ const listKey = computed(() => {
   }
   // 对于本地音乐和没有特定ID的列表，使用数据的哈希值确保唯一性
   // 这样当数据内容变化时，key会改变，触发虚拟列表重新渲染
-  // const dataHash = props.data?.map((song) => song.id).join("-") || "";
+  // 注释已清理
   // return `type-${props.type}-${dataHash}`;
   return `list-${props.listVersion}-${props.type}-${statusStore.listSortField}-${statusStore.listSortOrder}`;
 });

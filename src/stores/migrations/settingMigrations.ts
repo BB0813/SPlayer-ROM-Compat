@@ -4,7 +4,7 @@ import { defaultAMLLDbServer } from "@/utils/meta";
 import { isAndroidApp } from "@/utils/env";
 import type { SettingState } from "../setting";
 
-export const CURRENT_SETTING_SCHEMA_VERSION = 23;
+export const CURRENT_SETTING_SCHEMA_VERSION = 28;
 
 export type MigrationFunction = (state: Partial<SettingState>) => Partial<SettingState>;
 
@@ -239,6 +239,41 @@ export const settingMigrations: Record<number, MigrationFunction> = {
   23: () => {
     return {
       androidFreezePlaybackRoutes: false,
+    };
+  },
+  24: () => {
+    return {
+      androidUiScale: isAndroidApp ? 90 : 100,
+      androidCompactUi: isAndroidApp,
+    };
+  },
+  25: () => {
+    return isAndroidApp ? { androidUiScale: 85 } : {};
+  },
+  26: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = state.androidUiScale;
+    const androidUiScale =
+      !currentScale || currentScale === 85 || currentScale === 90 ? 80 : currentScale;
+    return { androidUiScale, androidCompactUi: true };
+  },
+  27: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale = Number.isFinite(currentScale)
+      ? Math.min(110, Math.max(60, Math.round(currentScale)))
+      : 80;
+    return { androidUiScale };
+  },
+  28: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale = Number.isFinite(currentScale)
+      ? Math.min(110, Math.max(60, Math.round(currentScale)))
+      : 80;
+    return {
+      androidUiScale,
+      androidCompactUi: state.androidCompactUi ?? true,
     };
   },
 };

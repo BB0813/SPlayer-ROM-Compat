@@ -253,18 +253,28 @@ const getListData = async (id: number | string): Promise<SongType[]> => {
 <style lang="scss" scoped>
 .cover-list {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 20px 4px;
+  overflow-x: hidden;
+  overflow-x: clip;
   .cover-grid {
     display: grid;
+    width: 100%;
+    min-width: 0;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
     @media (max-width: 600px) {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 340px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   .cover-item {
     position: relative;
+    min-width: 0;
     height: auto;
     border-radius: 16px;
     z-index: 0;
@@ -308,15 +318,24 @@ const getListData = async (id: number | string): Promise<SongType[]> => {
         position: absolute;
         display: flex;
         align-items: center;
+        max-width: calc(100% - 14px);
+        min-width: 0;
         top: 10px;
         right: 12px;
         color: #fff;
         font-weight: bold;
         z-index: 2;
         .n-icon {
+          flex: 0 0 auto;
           color: #fff;
           font-size: 16px;
           margin-right: 4px;
+        }
+        .num {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
       .description {
@@ -472,5 +491,67 @@ const getListData = async (id: number | string): Promise<SongType[]> => {
 }
 .n-empty {
   margin-top: 60px;
+}
+
+:global(:root.android-app.android-compact-ui) .cover-list {
+  padding: max(14px, calc(20px * var(--android-ui-scale, 1)))
+    max(2px, calc(4px * var(--android-ui-scale, 1)));
+
+  .cover-grid {
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(clamp(104px, calc(160px * var(--android-ui-scale, 1)), 160px), 1fr)
+    );
+    gap: clamp(8px, calc(16px * var(--android-ui-scale, 1)), 18px);
+  }
+
+  .cover-item {
+    border-radius: max(12px, calc(16px * var(--android-ui-scale, 1)));
+
+    .cover-data {
+      padding: max(8px, calc(12px * var(--android-ui-scale, 1)));
+
+      .name {
+        font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+      }
+
+      .tip,
+      .meta,
+      .artists {
+        font-size: max(12px, calc(13px * var(--android-ui-scale, 1)));
+      }
+    }
+
+    .cover {
+      .play {
+        --n-width: max(36px, calc(42px * var(--android-ui-scale, 1)));
+        --n-height: max(36px, calc(42px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  :global(:root.android-app.android-compact-ui) .cover-list {
+    padding-right: 0;
+    padding-left: 0;
+
+    .cover-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(6px, calc(10px * var(--android-ui-scale, 1)), 12px);
+    }
+
+    .cover-item {
+      overflow: hidden;
+    }
+  }
+}
+
+@media (max-width: 340px) {
+  :global(:root.android-app.android-compact-ui) .cover-list {
+    .cover-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 }
 </style>

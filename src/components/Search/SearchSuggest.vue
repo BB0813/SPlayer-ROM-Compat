@@ -149,7 +149,7 @@ const getLinkType = (val: string) => {
     const url = new URL(fullUrl);
     let pathname = url.pathname;
     let searchParams = url.searchParams;
-    // 处理hash路由格式: /#/song?id=123
+    // 注释已清理
     if (url.hash) {
       const hashPath = url.hash.slice(1); // 移除 #
       if (hashPath.includes("?")) {

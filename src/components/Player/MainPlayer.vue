@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div
     ref="playerRef"
     :class="[
@@ -6,14 +6,14 @@
       {
         show: musicStore.isHasPlayer && statusStore.showPlayBar,
         player: statusStore.showFullPlayer,
+        'with-mobile-tabbar': isMobile,
+        'android-playback-lite': isAndroidPlaybackLite,
       },
     ]"
   >
-    <!-- 閺夆晜绋戠€规娊寮?-->
     <PlayerSlider />
-    <!-- 濞ｅ洠鍓濇导?-->
+    <!-- 播放信息 -->
     <div :class="['play-data', { 'hidden-cover': settingStore.hiddenCovers.player }]">
-      <!-- 閻忓繋绶氬?-->
       <Transition name="fade">
         <div
           v-if="!settingStore.hiddenCovers.player"
@@ -34,15 +34,15 @@
               </div>
             </template>
           </n-image>
-          <!-- 闁瑰灚鎸哥槐鎴﹀箻椤撶喐鏉归柛?-->
+
           <SvgIcon name="Expand" :size="30" />
         </div>
       </Transition>
-      <!-- 濞ｅ洠鍓濇导?-->
+      <!-- 歌曲信息 -->
       <Transition name="left-sm" mode="out-in">
         <div :key="musicStore.playSong.id" class="info">
           <div class="data">
-            <!-- 闁告艾绉惰ⅷ -->
+            <!-- 歌名 -->
             <TextContainer
               :key="musicStore.playSong.name"
               :text="
@@ -55,7 +55,7 @@
               style="cursor: pointer"
               @click.stop="settingStore.hiddenCovers.player && (statusStore.showFullPlayer = true)"
             />
-            <!-- 闁稿﹤绉归埀?-->
+            <!-- 播放速率 -->
             <n-tag
               v-if="statusStore.playRate !== 1"
               type="primary"
@@ -65,7 +65,7 @@
             >
               {{ statusStore.playRate }}x
             </n-tag>
-            <!-- 闁哥姵绮嶉?-->
+            <!-- 喜欢按钮 -->
             <SvgIcon
               v-if="musicStore.playSong.type !== 'radio'"
               :name="dataStore.isLikeSong(musicStore.playSong.id) ? 'Favorite' : 'FavoriteBorder'"
@@ -75,7 +75,7 @@
                 toLikeSong(musicStore.playSong, !dataStore.isLikeSong(musicStore.playSong.id))
               "
             />
-            <!-- 闁哄洦娼欓ˇ鍧楀箼瀹ュ嫮绋?-->
+            <!-- 更多操作 -->
             <n-dropdown :options="songMoreOptions" trigger="click" placement="top-start">
               <SvgIcon name="FormatList" :size="20" :depth="2" class="more" />
             </n-dropdown>
@@ -85,7 +85,6 @@
               :name="settingStore.lyricTransition === 'fade' ? 'fade' : 'lyric-slide'"
               :mode="settingStore.lyricTransition === 'fade' ? 'out-in' : undefined"
             >
-              <!-- 婵繂鐭侀惁?-->
               <TextContainer
                 v-if="isShowLyrics && instantLyrics"
                 :key="instantLyrics"
@@ -94,7 +93,7 @@
                 :delay="500"
                 class="lyric"
               />
-              <!-- 婵繂鏈晶?-->
+
               <div v-else class="artists">
                 <TextContainer :speed="0.5" class="artists-container">
                   <n-text
@@ -134,9 +133,8 @@
         </div>
       </Transition>
     </div>
-    <!-- 闁硅矇鍐ㄧ厬 -->
+    <!-- 播放控制 -->
     <n-flex :size="8" align="center" justify="center" class="play-control">
-      <!-- 闂傚懎绻戝┃鈧柟绋款樀閹?-->
       <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
         <div class="play-icon" @click.stop="player.toggleShuffle()">
           <SvgIcon
@@ -146,7 +144,7 @@
           />
         </div>
       </template>
-      <!-- 濞戞挸绉撮弸鈺佲枎?-->
+      <!-- 上一首 -->
       <div
         v-if="statusStore.personalFmMode"
         class="play-icon"
@@ -159,11 +157,11 @@
       >
         <SvgIcon class="icon" :size="18" name="ThumbDown" />
       </div>
-      <!-- 濞戞挸锕ｇ粩鎾即?-->
+      <!-- 播放暂停 -->
       <div v-else class="play-icon" v-debounce="() => player.nextOrPrev('prev')">
         <SvgIcon :size="26" name="SkipPrev" />
       </div>
-      <!-- 闁圭虎鍘介弬渚€寮抽崒姘不 -->
+      <!-- 播放参数 -->
       <n-button
         :loading="statusStore.playLoading"
         :focusable="false"
@@ -185,11 +183,11 @@
           </Transition>
         </template>
       </n-button>
-      <!-- 濞戞挸顑勭粩鎾即?-->
+      <!-- 下一首 -->
       <div class="play-icon" v-debounce="() => player.nextOrPrev('next')">
         <SvgIcon :size="26" name="SkipNext" />
       </div>
-      <!-- 鐎甸偊浜為獮鍡涘箰婢舵劖灏?-->
+      <!-- 播放模式 -->
       <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
         <div class="play-icon" @click.stop="player.toggleRepeat()">
           <SvgIcon
@@ -200,7 +198,7 @@
         </div>
       </template>
     </n-flex>
-    <!-- 闁告梻鍠曢崗?-->
+    <!-- 右侧菜单 -->
     <Transition name="fade" mode="out-in">
       <n-flex
         :key="statusStore.personalFmMode ? 'fm' : 'normal'"
@@ -208,7 +206,7 @@
         class="play-menu"
         justify="end"
       >
-        <!-- 闁哄啫鐖煎Λ鍧楁儎缁嬪灝褰?-->
+        <!-- 音量控制 -->
         <Transition name="fade" mode="out-in">
           <n-flex
             :key="statusStore.autoClose.enable ? 'autoClose' : 'time'"
@@ -221,7 +219,7 @@
               <n-text depth="2">{{ timeDisplay[0] }}</n-text>
               <n-text depth="2">{{ timeDisplay[1] }}</n-text>
             </div>
-            <!-- 閻庤纰嶅鍌炲礂閹惰姤锛?-->
+
             <n-tag
               v-if="statusStore.autoClose.enable"
               size="small"
@@ -236,7 +234,7 @@
             </n-tag>
           </n-flex>
         </Transition>
-        <!-- 闁告梻鍠曢崗姗€宕?-->
+        <!-- 播放队列 -->
         <PlayerRightMenu />
       </n-flex>
     </Transition>
@@ -250,6 +248,8 @@ import { useDataStore, useMusicStore, useSettingStore, useStatusStore } from "@/
 import { toLikeSong } from "@/utils/auth";
 import { useTimeFormat } from "@/composables/useTimeFormat";
 import { useSwipe } from "@vueuse/core";
+import { useMobile } from "@/composables/useMobile";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { copyData, coverLoaded, renderIcon, getShareUrl } from "@/utils/helper";
 import {
   openAutoClose,
@@ -268,6 +268,8 @@ const dataStore = useDataStore();
 const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
+const { isMobile } = useMobile();
+const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
 
 const player = usePlayerController();
 const songManager = useSongManager();
@@ -452,8 +454,13 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
   position: fixed;
   left: 0;
   bottom: calc(-90px - var(--safe-area-bottom, 0px));
-  height: calc(80px + var(--safe-area-bottom, 0px));
-  padding: 0 15px var(--safe-area-bottom, 0px);
+  height: calc(var(--player-bar-height, 80px) + var(--safe-area-bottom, 0px));
+  padding: 0
+    var(--android-content-padding-right, max(12px, calc(15px * var(--android-ui-scale, 1))))
+    var(--safe-area-bottom, 0px)
+    var(--android-content-padding-left, max(12px, calc(15px * var(--android-ui-scale, 1))));
+  --main-player-cover-size: 56px;
+  --main-player-name-size: 16px;
   width: 100%;
   background-color: var(--surface-container-hex);
   display: grid;
@@ -482,24 +489,24 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
     overflow: hidden;
     height: 100%;
     max-width: 640px;
-    padding-left: 68px;
+    padding-left: calc(var(--main-player-cover-size) + 12px);
     .cover {
       position: absolute;
       display: flex;
       align-items: center;
       justify-content: center;
       left: 0;
-      width: 56px;
-      height: 56px;
-      min-width: 56px;
+      width: var(--main-player-cover-size);
+      height: var(--main-player-cover-size);
+      min-width: var(--main-player-cover-size);
       border-radius: 8px;
       overflow: hidden;
       margin-right: 12px;
       transition: opacity 0.2s;
       cursor: pointer;
       :deep(img) {
-        width: 56px;
-        height: 56px;
+        width: var(--main-player-cover-size);
+        height: var(--main-player-cover-size);
         opacity: 0;
         transition:
           transform 0.3s,
@@ -541,7 +548,7 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
         align-items: center;
         .name {
           font-weight: bold;
-          font-size: 16px;
+          font-size: var(--main-player-name-size);
           flex: 0 1 auto;
           width: auto;
           min-width: 0;
@@ -719,21 +726,32 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
 
 <style lang="scss" scoped>
 @media (max-width: 768px) {
+  .main-player.with-mobile-tabbar.show {
+    bottom: calc(
+      var(--mobile-tabbar-outer-height, 64px) + var(--mobile-dock-gap, 8px) +
+        var(--safe-area-bottom, 0px)
+    );
+  }
+
   .main-player {
-    height: calc(76px + var(--safe-area-bottom, 0px));
-    padding: 0 12px var(--safe-area-bottom, 0px);
+    height: var(--player-bar-height, 82px);
+    padding: 0
+      var(--android-content-padding-right, max(10px, calc(14px * var(--android-ui-scale, 1)))) 0
+      var(--android-content-padding-left, max(10px, calc(14px * var(--android-ui-scale, 1))));
+    --main-player-cover-size: max(52px, calc(58px * var(--android-ui-scale, 1)));
+    --main-player-name-size: max(15px, calc(16px * var(--android-ui-scale, 1)));
     grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 8px;
+    column-gap: 10px;
 
     .play-data {
       max-width: none;
-      padding-left: 58px;
+      padding-left: calc(var(--main-player-cover-size) + 12px);
 
       .cover,
       .cover :deep(img) {
-        width: 48px;
-        height: 48px;
-        min-width: 48px;
+        width: var(--main-player-cover-size);
+        height: var(--main-player-cover-size);
+        min-width: var(--main-player-cover-size);
       }
 
       .info {
@@ -748,7 +766,7 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
       }
 
       .data .name {
-        font-size: 14px;
+        font-size: var(--main-player-name-size);
       }
     }
 
@@ -757,13 +775,13 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
       gap: 4px !important;
 
       .play-pause {
-        --n-width: 42px;
-        --n-height: 42px;
+        --n-width: 48px;
+        --n-height: 48px;
       }
 
       .play-icon {
-        width: 36px;
-        height: 36px;
+        width: 42px;
+        height: 42px;
         margin: 0;
       }
     }
@@ -776,22 +794,25 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
 
 @media (max-width: 420px) {
   .main-player {
-    height: calc(72px + var(--safe-area-bottom, 0px));
-    padding: 0 8px var(--safe-area-bottom, 0px);
-    column-gap: 6px;
+    height: var(--player-bar-height, 78px);
+    padding: 0
+      var(--android-content-padding-right, max(8px, calc(10px * var(--android-ui-scale, 1)))) 0
+      var(--android-content-padding-left, max(8px, calc(10px * var(--android-ui-scale, 1))));
+    --main-player-cover-size: max(50px, calc(54px * var(--android-ui-scale, 1)));
+    column-gap: 8px;
 
     .play-data {
-      padding-left: 50px;
+      padding-left: calc(var(--main-player-cover-size) + 10px);
 
       .cover,
       .cover :deep(img) {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
+        width: var(--main-player-cover-size);
+        height: var(--main-player-cover-size);
+        min-width: var(--main-player-cover-size);
       }
 
       .data .name {
-        font-size: 14px;
+        font-size: var(--main-player-name-size);
       }
     }
 
@@ -799,15 +820,109 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
       gap: 2px !important;
 
       .play-icon {
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
       }
 
       .play-pause {
-        --n-width: 40px;
-        --n-height: 40px;
+        --n-width: 46px;
+        --n-height: 46px;
       }
     }
   }
+}
+</style>
+
+<style lang="scss">
+// Android Beta64 平板横屏播放栏修正
+:root.android-app .main-player.with-mobile-tabbar {
+  height: var(--player-bar-height, 82px);
+  padding: 0
+    var(--android-content-padding-right, max(10px, calc(14px * var(--android-ui-scale, 1)))) 0
+    var(--android-content-padding-left, max(10px, calc(14px * var(--android-ui-scale, 1))));
+}
+
+:root.android-app .main-player.with-mobile-tabbar.show {
+  bottom: calc(
+    var(--mobile-tabbar-outer-height, 64px) + var(--mobile-dock-gap, 8px) +
+      var(--safe-area-bottom, 0px)
+  );
+}
+
+:root.android-app.android-tablet-layout.android-landscape .main-player.with-mobile-tabbar {
+  --main-player-cover-size: max(52px, calc(58px * var(--android-ui-scale, 1)));
+  --main-player-name-size: max(15px, calc(16px * var(--android-ui-scale, 1)));
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data {
+  max-width: none;
+  padding-left: calc(var(--main-player-cover-size) + 12px);
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .cover,
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .cover
+  img {
+  width: var(--main-player-cover-size);
+  height: var(--main-player-cover-size);
+  min-width: var(--main-player-cover-size);
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .lyric-container,
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .data
+  .n-tag,
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .data
+  .like,
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-data
+  .data
+  .more,
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-menu {
+  display: none !important;
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-control {
+  margin: 0;
+  gap: 4px !important;
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-control
+  .play-pause {
+  --n-width: 48px;
+  --n-height: 48px;
+}
+
+:root.android-app.android-tablet-layout.android-landscape
+  .main-player.with-mobile-tabbar
+  .play-control
+  .play-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0;
 }
 </style>

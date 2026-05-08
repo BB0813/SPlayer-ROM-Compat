@@ -104,20 +104,8 @@
         <n-slider
           v-else-if="item.type === 'slider'"
           :value="modelValue"
-          @update:value="
-            (val) => {
-              if (!isForcedConditionMet) {
-                baseModelValue = val;
-              }
-            }
-          "
-          @dragend="
-            () => {
-              if (!isForcedConditionMet) {
-                handleAction();
-              }
-            }
-          "
+          @update:value="handleSliderUpdate"
+          @dragend="handleSliderDragEnd"
           class="set"
           :min="resolve(item.min)"
           :max="resolve(item.max)"
@@ -128,8 +116,6 @@
           :title="title"
           v-bind="item.componentProps"
           @pointerdown.stop
-          @touchstart.stop
-          @touchmove.stop
           @click.stop
         />
 
@@ -308,6 +294,18 @@ const handleAction = () => {
   }
 };
 
+const handleSliderUpdate = (value: number | [number, number]) => {
+  if (!isForcedConditionMet.value) {
+    modelValue.value = value;
+  }
+};
+
+const handleSliderDragEnd = () => {
+  if (!isForcedConditionMet.value) {
+    handleAction();
+  }
+};
+
 // 计算是否显示恢复默认按钮
 const showReset = computed(() => {
   if (isDisabled.value) return false;
@@ -439,7 +437,7 @@ const activeActions = computed(() => {
     min-height: 52px;
     margin: 4px 4px 18px;
     padding: 14px 4px 20px;
-    touch-action: pan-x;
+    touch-action: none;
   }
 
   .setting-item-wrapper :deep(.n-slider .n-slider-mark) {
@@ -457,12 +455,54 @@ const activeActions = computed(() => {
   }
 
   .setting-item-wrapper :deep(.n-slider) {
-    touch-action: pan-x;
+    touch-action: none;
   }
 
   .setting-item-wrapper :deep(.n-slider .n-slider-rail) {
     min-height: 24px;
-    touch-action: pan-x;
+    touch-action: none;
+  }
+}
+
+:global(:root.android-app.android-compact-ui) .setting-item-wrapper {
+  margin-bottom: max(8px, calc(12px * var(--android-ui-scale, 1)));
+
+  :deep(.n-card__content) {
+    padding: var(--android-compact-card-padding);
+  }
+
+  .control-wrapper {
+    gap: var(--android-compact-gap);
+  }
+
+  .label {
+    .name {
+      font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+    }
+
+    .tip {
+      font-size: var(--android-compact-small-font-size);
+      line-height: 1.45;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  :global(:root.android-app.android-compact-ui) .setting-item-wrapper {
+    :deep(.n-card__content) {
+      gap: max(8px, calc(12px * var(--android-ui-scale, 1)));
+    }
+
+    .control-wrapper {
+      gap: max(8px, calc(10px * var(--android-ui-scale, 1)));
+    }
+
+    .set.n-slider {
+      min-height: 48px;
+      margin-bottom: 14px;
+      padding-top: 12px;
+      padding-bottom: 18px;
+    }
   }
 }
 </style>

@@ -255,6 +255,17 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.home-online {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.rec-public {
+  min-width: 0;
+}
+
 .main-rec {
   .main-rec-grid {
     display: grid;

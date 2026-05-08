@@ -1,6 +1,5 @@
-﻿<template>
+<template>
   <div id="app-layout">
-    <!-- 闂佺厧鍟块張顒€鈻嶅▎鎾崇倞?-->
     <Transition name="fade">
       <div
         v-if="
@@ -42,7 +41,7 @@
         />
       </div>
     </Transition>
-    <!-- 婵炴垶鎸剧划顖炪€佺€ｎ喖鍑?-->
+
     <n-layout
       id="main"
       :class="{
@@ -54,7 +53,6 @@
       }"
       has-sider
     >
-      <!-- 婵炴挻鐨滈崱娆戝骄闂?-->
       <n-layout-sider
         v-if="isDesktop"
         id="main-sider"
@@ -80,7 +78,7 @@
         <Sider />
       </n-layout-sider>
       <n-layout id="main-layout">
-        <!-- 闁诲簼绲绘竟鍫ュ春閸涙潙鍐€?-->
+        <!-- 顶部导航 -->
         <Nav id="main-header" />
         <n-layout
           ref="contentRef"
@@ -93,12 +91,11 @@
             display: 'grid',
             gridTemplateRows: '1fr',
             minHeight: '100%',
-            padding: isMobile ? '0 10px' : '0 24px',
+            padding: isMobile ? '0 var(--android-content-padding, 10px)' : '0 24px',
           }"
           position="absolute"
           embedded
         >
-          <!-- 闁荤姳璀﹂崹鎶藉极鏉堛劊浜滈柣銏犳啞濡?-->
           <RouterView v-slot="{ Component }">
             <Transition
               :name="shouldReduceMotion ? undefined : `router-${settingStore.routeAnimation}`"
@@ -112,19 +109,19 @@
               <component v-else :is="Component" class="router-view" />
             </Transition>
           </RouterView>
-          <!-- 闂佹悶鍎抽崑銈夊Υ?-->
+
           <n-back-top :right="isMobile ? 16 : 40" :bottom="backTopBottom">
             <SvgIcon :size="22" name="Up" />
           </n-back-top>
         </n-layout>
       </n-layout>
     </n-layout>
-    <!-- 闂佸湱铏庨崢浠嬪棘娓氣偓瀹曟艾螖閸曗斁鍋?-->
+
     <SongPlayList />
-    <!-- 闂佺绻堥崝宀勬儑椤掑嫬绠绘い鎾跺枑閺夊綊鏌?-->
+
     <MainPlayer />
     <MobileTabBar v-if="showMobileTabBar" />
-    <!-- 闂佺绻堥崝宀勬儓閸℃稑绠绘い鎾跺枑閺夊綊鏌?-->
+
     <PlayerProvider>
       <FullPlayer />
     </PlayerProvider>
@@ -191,7 +188,7 @@ onMounted(() => {
   if (!isElectron) {
     window.addEventListener("beforeunload", (event) => {
       event.preventDefault();
-      // 闂備焦褰冮敃銉╁棘娓氣偓楠炲秹鍩€椤掑嫬瀚?blob URL
+
       blobURLManager.revokeAllBlobURLs();
       event.returnValue = "";
     });
@@ -205,6 +202,8 @@ onMounted(() => {
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --player-bar-height: 80px;
   --mobile-tabbar-height: 0px;
+  --mobile-tabbar-outer-height: 0px;
+  --android-content-padding: 10px;
   width: 100%;
   height: 100%;
   min-height: 100dvh;
@@ -276,14 +275,14 @@ onMounted(() => {
 
   &.show-mobile-tabbar {
     #main-content {
-      bottom: calc(var(--mobile-tabbar-height) + var(--safe-area-bottom));
+      bottom: calc(var(--mobile-tabbar-outer-height) + var(--safe-area-bottom));
     }
   }
 
   &.show-player.show-mobile-tabbar {
     #main-content {
       bottom: calc(
-        var(--player-bar-height) + var(--mobile-tabbar-height) + var(--safe-area-bottom)
+        var(--player-bar-height) + var(--mobile-tabbar-outer-height) + var(--safe-area-bottom)
       );
     }
   }
@@ -297,27 +296,55 @@ onMounted(() => {
 }
 @media (max-width: 768px) {
   #app-layout {
-    --player-bar-height: 76px;
-    --mobile-tabbar-height: 58px;
+    --player-bar-height: max(68px, calc(76px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-height: max(52px, calc(58px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-outer-height: calc(
+      var(--mobile-tabbar-height) + max(6px, calc(8px * var(--android-ui-scale, 1)))
+    );
+    --android-content-padding: max(8px, calc(10px * var(--android-ui-scale, 1)));
   }
 
   #main {
     #main-content {
-      top: calc(64px + var(--safe-area-top));
+      top: calc(max(56px, calc(64px * var(--android-ui-scale, 1))) + var(--safe-area-top));
     }
   }
 }
 
 @media (max-width: 420px) {
   #app-layout {
-    --player-bar-height: 72px;
-    --mobile-tabbar-height: 54px;
+    --player-bar-height: max(64px, calc(72px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-height: max(48px, calc(54px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-outer-height: calc(
+      var(--mobile-tabbar-height) + max(5px, calc(6px * var(--android-ui-scale, 1)))
+    );
+    --android-content-padding: max(6px, calc(8px * var(--android-ui-scale, 1)));
   }
 
   #main {
     #main-content {
-      top: calc(60px + var(--safe-area-top));
+      top: calc(max(54px, calc(60px * var(--android-ui-scale, 1))) + var(--safe-area-top));
     }
+  }
+}
+
+:global(:root.android-app.android-small-width) #app-layout,
+:global(:root.android-app.android-compact-height) #app-layout {
+  --player-bar-height: max(58px, calc(68px * var(--android-ui-scale, 1)));
+  --mobile-tabbar-height: max(44px, calc(50px * var(--android-ui-scale, 1)));
+  --mobile-tabbar-outer-height: calc(
+    var(--mobile-tabbar-height) + max(4px, calc(5px * var(--android-ui-scale, 1)))
+  );
+  --android-content-padding: max(5px, calc(7px * var(--android-ui-scale, 1)));
+}
+@media (max-height: 760px), (max-width: 380px) {
+  #app-layout {
+    --player-bar-height: max(58px, calc(68px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-height: max(44px, calc(50px * var(--android-ui-scale, 1)));
+    --mobile-tabbar-outer-height: calc(
+      var(--mobile-tabbar-height) + max(4px, calc(5px * var(--android-ui-scale, 1)))
+    );
+    --android-content-padding: max(5px, calc(7px * var(--android-ui-scale, 1)));
   }
 }
 </style>

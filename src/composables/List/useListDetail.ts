@@ -1,6 +1,7 @@
 import type { CoverType, SongType } from "@/types/main";
 import { useStatusStore } from "@/stores";
 import { useMobile } from "@/composables/useMobile";
+import { isAndroidApp } from "@/utils/env";
 
 /**
  * 列表详情逻辑
@@ -18,8 +19,9 @@ export const useListDetail = () => {
    */
   const getSongListHeight = (listScrolling: boolean) => {
     // 移动端高度较小
-    const normalHeight = isSmallScreen.value ? 360 : 240;
-    const smallHeight = isSmallScreen.value ? 132 : 120;
+    const normalHeight =
+      isAndroidApp && isSmallScreen.value ? 190 : isSmallScreen.value ? 360 : 240;
+    const smallHeight = isAndroidApp && isSmallScreen.value ? 118 : isSmallScreen.value ? 132 : 120;
     return statusStore.mainContentHeight - (listScrolling ? smallHeight : normalHeight);
   };
 

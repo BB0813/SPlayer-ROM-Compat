@@ -274,9 +274,21 @@ class AndroidLocalApiService {
           URLEncoder.encode(playlistId, StandardCharsets.UTF_8.name()) +
           "&n=" + URLEncoder.encode(requestUrl.getQueryParameter("n") ?: "100000", StandardCharsets.UTF_8.name()) +
           "&s=" + URLEncoder.encode(requestUrl.getQueryParameter("s") ?: "0", StandardCharsets.UTF_8.name())
-      buildRawJsonResponse(200, fetchText(endpoint))
+      val response = JSONObject(fetchText(endpoint))
+      normalizePlaylistDetailTrackCount(response)
+      buildRawJsonResponse(200, response.toString())
     } catch (_: Exception) {
       buildPlaylistDetailFallbackResponse(requestUrl)
+    }
+  }
+
+  private fun normalizePlaylistDetailTrackCount(response: JSONObject) {
+    val playlist = response.optJSONObject("playlist") ?: return
+    val tracksCount = playlist.optJSONArray("tracks")?.length() ?: 0
+    val trackIdsCount = playlist.optJSONArray("trackIds")?.length() ?: 0
+    val fixedTrackCount = maxOf(playlist.optInt("trackCount", tracksCount), tracksCount, trackIdsCount)
+    if (fixedTrackCount > 0) {
+      playlist.put("trackCount", fixedTrackCount)
     }
   }
 
@@ -295,16 +307,25 @@ class AndroidLocalApiService {
           URLEncoder.encode(playlistId, StandardCharsets.UTF_8.name()) +
           "&n=100000&s=0",
       ))
-      val tracks = playlistResponse.optJSONObject("playlist")?.optJSONArray("tracks") ?: JSONArray()
+      val playlist = playlistResponse.optJSONObject("playlist") ?: JSONObject()
+      val tracks = playlist.optJSONArray("tracks") ?: JSONArray()
+      val trackIds = extractPlaylistTrackIds(playlist)
       val privileges = playlistResponse.optJSONArray("privileges") ?: JSONArray()
+      val total = maxOf(trackIds.size, tracks.length(), playlist.optInt("trackCount", tracks.length()))
+      val requestedIds = trackIds.drop(offset).take(limit)
+      val songs = if (trackIds.isNotEmpty() && tracks.length() < minOf(total, offset + limit)) {
+        fetchSongDetailsByIds(requestedIds)
+      } else {
+        sliceJsonArray(tracks, offset, limit)
+      }
       buildJsonResponse(
         200,
         JSONObject()
           .put("code", playlistResponse.optInt("code", 200))
-          .put("songs", sliceJsonArray(tracks, offset, limit))
+          .put("songs", songs)
           .put("privileges", sliceJsonArray(privileges, offset, limit))
-          .put("total", tracks.length())
-          .put("more", offset + limit < tracks.length()),
+          .put("total", total)
+          .put("more", offset + limit < total),
       )
     } catch (error: Exception) {
       buildJsonResponse(
@@ -464,6 +485,35 @@ class AndroidLocalApiService {
       result.put(source.opt(index))
     }
     return result
+  }
+
+  private fun extractPlaylistTrackIds(playlist: JSONObject): List<String> {
+    val trackIds = playlist.optJSONArray("trackIds") ?: return emptyList()
+    val result = mutableListOf<String>()
+    for (index in 0 until trackIds.length()) {
+      val item = trackIds.optJSONObject(index)
+      val id = item?.optString("id")?.takeIf { it.isNotBlank() && it != "0" }
+        ?: trackIds.opt(index)?.toString()
+      if (!id.isNullOrBlank() && id != "null") result.add(id)
+    }
+    return result
+  }
+
+  private fun fetchSongDetailsByIds(songIds: List<String>): JSONArray {
+    val songs = JSONArray()
+    if (songIds.isEmpty()) return songs
+    songIds.chunked(500).forEach { chunk ->
+      val idsParam = chunk.joinToString(",")
+      val endpoint =
+        "https://music.163.com/api/song/detail?ids=" +
+          URLEncoder.encode("[$idsParam]", StandardCharsets.UTF_8.name())
+      val response = JSONObject(fetchText(endpoint))
+      val chunkSongs = response.optJSONArray("songs") ?: JSONArray()
+      for (index in 0 until chunkSongs.length()) {
+        songs.put(chunkSongs.opt(index))
+      }
+    }
+    return songs
   }
   private fun handleNeteaseSongDetailRequest(request: JSONObject, requestUrl: URL): String {
     val songIds = parseSongIds(request, requestUrl)

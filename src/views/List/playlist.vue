@@ -129,6 +129,28 @@ const playlistId = computed<number>(() => Number(router.currentRoute.value.query
 // 当前正在请求的歌单 ID，用于防止竞态条件
 const currentRequestId = ref<number>(0);
 
+const getDetailTrackIds = (detail: any): any[] => {
+  return Array.isArray(detail?.playlist?.trackIds) ? detail.playlist.trackIds : [];
+};
+
+const getDetailPrivileges = (detail: any): any[] => {
+  return Array.isArray(detail?.privileges) ? detail.privileges : [];
+};
+
+const getRealPlaylistCount = (detail: any, formattedCount: number = 0) => {
+  const trackIds = getDetailTrackIds(detail);
+  const trackCount = Number(detail?.playlist?.trackCount ?? 0);
+  return Math.max(formattedCount, Number.isFinite(trackCount) ? trackCount : 0, trackIds.length);
+};
+
+const canUsePrivilegeFastPath = (detail: any, count: number) => {
+  const privileges = getDetailPrivileges(detail);
+  const trackIds = getDetailTrackIds(detail);
+  if (isLogin() !== 1 || count >= 800 || privileges.length === 0) return false;
+  if (privileges.length !== count) return false;
+  return trackIds.length === 0 || trackIds.length === privileges.length;
+};
+
 // 加载提示
 const loadingMsg = ref<MessageReactive | null>(null);
 
@@ -351,16 +373,18 @@ const handleOnlinePlaylist = async (id: number, getList: boolean, refresh: boole
   const detail = await playlistDetail(id);
   // 检查是否仍然是当前请求的歌单
   if (currentRequestId.value !== id) return;
-  setDetailData(formatCoverList(detail.playlist)[0]);
-  const count = detailData.value?.count || 0;
+  const formattedDetail = formatCoverList(detail.playlist)[0];
+  const count = getRealPlaylistCount(detail, formattedDetail?.count ?? 0);
+  if (formattedDetail) formattedDetail.count = count;
+  setDetailData(formattedDetail);
   // 不需要获取列表或无歌曲
   if (!getList || count === 0) {
     setLoading(false);
     return;
   }
   // 如果已登录且歌曲数量少于 800，直接加载所有歌曲
-  if (isLogin() === 1 && count === detail.privileges?.length && count < 800) {
-    const ids = detail.privileges.map((song: any) => song.id as number);
+  if (canUsePrivilegeFastPath(detail, count)) {
+    const ids = getDetailPrivileges(detail).map((song: any) => song.id as number);
     const result = await songDetail(ids);
     // 检查是否仍然是当前请求的歌单
     if (currentRequestId.value !== id) return;
@@ -384,6 +408,8 @@ const backgroundCheck = async (id: number, cached: ListCacheData) => {
     if (currentRequestId.value !== id) return;
 
     const latestDetail = formatCoverList(detail.playlist)[0];
+    const latestCount = getRealPlaylistCount(detail, latestDetail?.count ?? 0);
+    if (latestDetail) latestDetail.count = latestCount;
 
     if (checkNeedsUpdate(cached, latestDetail)) {
       console.log("Cache expired, refreshing...");
@@ -406,6 +432,8 @@ const getPlaylistAllSongs = async (
   loadingMsgShow(!refresh, count);
   // 循环获取
   let offset: number = 0;
+  let expectedCount = count;
+  let hasMore = false;
   const limit: number = 500;
   const listDataArray: SongType[] = [];
   do {
@@ -420,14 +448,23 @@ const getPlaylistAllSongs = async (
       loadingMsgShow(false);
       return;
     }
+    const resultTotal = Number(result.total ?? result.count ?? result.playlist?.trackCount ?? 0);
+    if (Number.isFinite(resultTotal) && resultTotal > expectedCount) {
+      expectedCount = resultTotal;
+    }
     const songData = formatSongsList(result.songs);
+    hasMore = Boolean(result.more) && songData.length > 0;
     listDataArray.push(...songData);
     if (!refresh) {
       appendListData(songData);
     }
     // 更新数据
     offset += limit;
-  } while (offset < count && isPlaylistPage.value && currentRequestId.value === id);
+  } while (
+    (offset < expectedCount || hasMore) &&
+    isPlaylistPage.value &&
+    currentRequestId.value === id
+  );
   // 最终检查是否仍然是当前请求的歌单
   if (currentRequestId.value !== id) {
     loadingMsgShow(false);

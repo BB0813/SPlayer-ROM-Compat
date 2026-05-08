@@ -11,45 +11,45 @@ export type ListType = "playlist" | "album" | "radio";
  * 列表缓存数据结构
  */
 export interface ListCacheData {
-  /** 缓存版本号 */
+  /** 注释已清理 */
   version: number;
-  /** 缓存时间戳 */
+  /** 注释已清理 */
   timestamp: number;
-  /** 列表类型 */
+  /** 注释已清理 */
   type: ListType;
-  /** 列表 ID */
+  /** 注释已清理 */
   id: number;
-  /** 列表详情 */
+  /** 注释已清理 */
   detail: CoverType;
-  /** 歌曲列表 */
+  /** 注释已清理 */
   songs: SongType[];
 }
 
-/** 缓存版本号 */
-const CACHE_VERSION = 2; // Bump version due to logic change
+/** 注释已清理 */
+const CACHE_VERSION = 4;
 
 /**
- * 列表数据缓存组合式函数
- * 提供列表缓存的读写功能
+ * 注释已清理
+ * 注释已清理
  */
 export const useListDataCache = () => {
   const cacheManager = useCacheManager();
 
   /**
-   * 生成缓存 key
-   * @param type 列表类型
-   * @param id 列表 ID
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
    */
   const getCacheKey = (type: ListType, id: number): string => {
     return `${type}-${id}.json`;
   };
 
   /**
-   * 保存缓存
-   * @param type 列表类型
-   * @param id 列表 ID
-   * @param detail 列表详情数据
-   * @param songs 歌曲列表
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
    */
   const saveCache = async (
     type: ListType,
@@ -73,17 +73,17 @@ export const useListDataCache = () => {
 
     try {
       await cacheManager.set("list-data", key, jsonStr);
-      console.log(`✅ List cache saved: ${key}`);
+      console.log(`List cache saved: ${key}`);
     } catch (error) {
-      console.error(`❌ Failed to save list cache: ${key}`, error);
+      console.error(`Failed to save list cache: ${key}`, error);
     }
   };
 
   /**
-   * 加载缓存
-   * @param type 列表类型
-   * @param id 列表 ID
-   * @returns 缓存数据，如果不存在或已过期则返回 null
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
    */
   const loadCache = async (type: ListType, id: number): Promise<ListCacheData | null> => {
     if (!isElectron) return null;
@@ -96,65 +96,65 @@ export const useListDataCache = () => {
         return null;
       }
 
-      // 将 Uint8Array 转换为字符串
+      // 注释已清理
       const jsonStr = new TextDecoder().decode(result.data);
       const cacheData: ListCacheData = JSON.parse(jsonStr);
 
-      // 检查版本
+      // 注释已清理
       if (cacheData.version !== CACHE_VERSION) {
-        console.log(`⚠️ Cache version mismatch: ${key}, removing old cache`);
+        console.log(`Cache version mismatch: ${key}, removing old cache`);
         await removeCache(type, id);
         return null;
       }
 
-      console.log(`✅ List cache loaded: ${key}`);
+      console.log(`List cache loaded: ${key}`);
       return cacheData;
     } catch (error) {
-      console.error(`❌ Failed to load list cache: ${key}`, error);
+      console.error(`获取列表缓存失败: ${key}`, error);
       return null;
     }
   };
 
   /**
-   * 检查缓存是否需要更新
-   * 通过比较 updateTime 来判断
-   * @param cached 缓存数据
-   * @param latestDetail 新获取的详情数据
-   * @returns 是否需要更新
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
    */
   const checkNeedsUpdate = (cached: ListCacheData, latestDetail: CoverType): boolean => {
-    // 如果有 updateTime，则比较
+    // 注释已清理
     if (cached.detail.updateTime && latestDetail.updateTime) {
       const needsUpdate = cached.detail.updateTime !== latestDetail.updateTime;
       if (needsUpdate) {
-        console.log(`🔄 Cache needs update: timestamp changed`);
+        console.log(`Cache needs update: timestamp changed`);
         console.log(`   Old: ${cached.detail.updateTime}`);
         console.log(`   New: ${latestDetail.updateTime}`);
       } else {
-        console.log(`✅ Cache is up to date (timestamp match)`);
+        console.log(`Cache is up to date (timestamp match)`);
       }
       return needsUpdate;
     }
 
-    // 如果没有 updateTime，比较 count
+    // 注释已清理
     if (cached.detail.count !== latestDetail.count) {
-      console.log(`🔄 Cache needs update: count changed`);
+      console.log(`Cache needs update: count changed`);
       return true;
     }
 
     if (cached.type === "album") {
-      console.log(`✅ Album cache is up to date (count match)`);
+      console.log(`Album cache is up to date (count match)`);
     } else {
-      console.log(`⚠️ No timestamp found, assuming up to date based on count`);
+      console.log(`No timestamp found, assuming up to date based on count`);
     }
 
     return false;
   };
 
   /**
-   * 删除缓存
-   * @param type 列表类型
-   * @param id 列表 ID
+   * 注释已清理
+   * 注释已清理
+   * 注释已清理
    */
   const removeCache = async (type: ListType, id: number): Promise<void> => {
     if (!isElectron) return;
@@ -163,23 +163,23 @@ export const useListDataCache = () => {
 
     try {
       await cacheManager.remove("list-data", key);
-      console.log(`🗑️ List cache removed: ${key}`);
+      console.log(`List cache removed: ${key}`);
     } catch (error) {
-      console.error(`❌ Failed to remove list cache: ${key}`, error);
+      console.error(`Failed to remove list cache: ${key}`, error);
     }
   };
 
   /**
-   * 清除所有列表缓存
+   * 注释已清理
    */
   const clearAllCache = async (): Promise<void> => {
     if (!isElectron) return;
 
     try {
       await cacheManager.clear("list-data");
-      console.log(`🗑️ All list cache cleared`);
+      console.log(`All list cache cleared`);
     } catch (error) {
-      console.error(`❌ Failed to clear list cache`, error);
+      console.error(`Failed to clear list cache`, error);
     }
   };
 

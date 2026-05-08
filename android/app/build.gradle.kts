@@ -2,6 +2,56 @@
 import java.util.Properties
 import org.gradle.api.GradleException
 
+fun readPackageVersion(projectRoot: File): String {
+  val packageJsonFile = projectRoot.resolve("../package.json")
+  if (!packageJsonFile.exists()) {
+    throw GradleException("未找到 package.json，无法读取 Android 版本信息")
+  }
+
+  val versionMatch = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+    .find(packageJsonFile.readText())
+    ?.groupValues
+    ?.getOrNull(1)
+    ?.trim()
+
+  return versionMatch?.takeUnless { it.isBlank() }
+    ?: throw GradleException("package.json 缺少有效的 version 字段")
+}
+
+fun computeAndroidVersionCode(versionName: String): Int {
+  val regex = Regex(
+    "^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([A-Za-z]+)(?:\\.(\\d+))?(?:-([A-Za-z]+)(\\d+))?)?$",
+    RegexOption.IGNORE_CASE,
+  )
+  val match = regex.matchEntire(versionName)
+    ?: throw GradleException("无法解析 Android 版本号：$versionName")
+
+  val major = match.groupValues[1].toInt()
+  val minor = match.groupValues[2].toInt()
+  val patch = match.groupValues[3].toInt()
+  val stage = match.groupValues[4].lowercase()
+  val stageNumber = match.groupValues[5].toIntOrNull() ?: 0
+  val suffixStage = match.groupValues[6].lowercase()
+  val suffixNumber = match.groupValues[7].toIntOrNull() ?: 0
+
+  val prereleaseCode = when {
+    stage.isBlank() -> 9999
+    stage == "rc" && suffixStage == "beta" -> 7000 + stageNumber * 100 + suffixNumber
+    stage == "rc" -> 8000 + stageNumber
+    stage == "beta" -> 5000 + stageNumber
+    stage == "alpha" -> 3000 + stageNumber
+    stage == "dev" || stage == "canary" || stage == "nightly" -> 1000 + stageNumber
+    else -> throw GradleException("不支持的 Android 预发布版本：$versionName")
+  }
+
+  val versionCode = major * 100_000_000 + minor * 1_000_000 + patch * 10_000 + prereleaseCode
+  if (versionCode > Int.MAX_VALUE) {
+    throw GradleException("Android versionCode 超出 Int 范围：$versionCode")
+  }
+
+  return versionCode
+}
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -45,6 +95,8 @@ val dotEnvProperties = buildMap {
   putAll(loadDotEnvFile(rootProject.file("../.env")))
   putAll(loadDotEnvFile(rootProject.file("../.env.local")))
 }
+val packageVersionName = readPackageVersion(rootProject.projectDir)
+val packageVersionCode = computeAndroidVersionCode(packageVersionName)
 val webUrl = providers.gradleProperty("SPLAYER_WEB_URL").orElse("https://appassets.androidplatform.net/assets/www/index.html")
 val targetAbi = providers.gradleProperty("targetAbi").orNull
 val signingProperties = Properties().apply {
@@ -109,8 +161,8 @@ android {
     applicationId = "top.imsyy.splayer.romcompat"
     minSdk = 24
     targetSdk = 36
-    versionCode = 30313
-    versionName = "3.0.0-rc.3-Beta13"
+    versionCode = packageVersionCode
+    versionName = packageVersionName
     buildConfigField("String", "SPLAYER_WEB_URL", "\"${webUrl.get()}\"")
     buildConfigField("String", "SPLAYER_REMOTE_API_ROOT", "\"$remoteApiRoot\"")
   }

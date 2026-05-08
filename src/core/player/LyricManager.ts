@@ -252,7 +252,7 @@ class LyricManager {
 
     // 处理 QQ 音乐歌词
     const adoptQQMusic = async () => {
-      // 检查开关 (如果显式选了 QM 优先, 则忽略开关限制? 不, UI上限制了)
+      // 注释已清理
       if (!settingStore.enableQQMusicLyric && settingStore.lyricPriority !== "qm") return;
 
       const qqLyric = await this.fetchQQMusicLyric(song);

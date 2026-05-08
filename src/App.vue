@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import {
   initializeAndroidPerformanceDiagnostics,
   setAndroidPerformanceDiagnosticsEnabled,
@@ -70,6 +70,23 @@ const syncSystemBarsFromTheme = () => {
   });
 };
 
+const syncAndroidViewportMetrics = () => {
+  const root = document.documentElement;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  root.style.setProperty("--android-viewport-width", `${viewportWidth}px`);
+  root.style.setProperty("--android-viewport-height", `${viewportHeight}px`);
+  root.classList.toggle("android-small-width", viewportWidth > 0 && viewportWidth <= 380);
+  root.classList.toggle("android-compact-height", viewportHeight > 0 && viewportHeight <= 760);
+};
+
+const cleanupAndroidViewportMetrics = () => {
+  const root = document.documentElement;
+  root.classList.remove("android-small-width");
+  root.classList.remove("android-compact-height");
+  root.style.removeProperty("--android-viewport-width");
+  root.style.removeProperty("--android-viewport-height");
+};
 const scheduleSystemBarsSync = () => {
   void nextTick(() => {
     window.requestAnimationFrame(syncSystemBarsFromTheme);
@@ -79,6 +96,13 @@ const scheduleSystemBarsSync = () => {
 if (isAndroidApp) {
   document.documentElement.classList.add("android-app");
   initializeAndroidPerformanceDiagnostics();
+  const handleAndroidViewportChange = () => syncAndroidViewportMetrics();
+
+  onMounted(() => {
+    syncAndroidViewportMetrics();
+    window.addEventListener("resize", handleAndroidViewportChange);
+    window.addEventListener("orientationchange", handleAndroidViewportChange);
+  });
 
   watch(
     () =>
@@ -90,6 +114,8 @@ if (isAndroidApp) {
         settingStore.androidLowFrequencyLyrics,
         settingStore.androidDisablePlaybackBackground,
         settingStore.androidNativePlayerPageEnabled,
+        settingStore.androidUiScale,
+        settingStore.androidCompactUi,
         statusStore.playStatus,
         statusStore.showFullPlayer,
       ] as const,
@@ -101,11 +127,25 @@ if (isAndroidApp) {
       lowFrequencyLyrics,
       disablePlaybackBackground,
       nativePlayerPageEnabled,
+      androidUiScale,
+      androidCompactUi,
       playStatus,
       showFullPlayer,
     ]) => {
       const playbackPerformanceActive = performanceMode && playStatus;
       const allowRoutePerformanceReduction = playbackPerformanceActive && !showFullPlayer;
+      const uiScaleValue = Number(androidUiScale);
+      const normalizedUiScale = Number.isFinite(uiScaleValue)
+        ? Math.min(110, Math.max(60, uiScaleValue))
+        : 80;
+      document.documentElement.style.setProperty(
+        "--android-ui-scale",
+        (normalizedUiScale / 100).toFixed(2),
+      );
+      document.documentElement.classList.toggle(
+        "android-compact-ui",
+        androidCompactUi || normalizedUiScale !== 100,
+      );
       document.documentElement.classList.toggle("android-performance-mode", performanceMode);
       document.documentElement.classList.toggle(
         "android-playback-active",
@@ -176,6 +216,11 @@ if (isAndroidApp) {
     document.documentElement.classList.remove("android-low-frequency-lyrics");
     document.documentElement.classList.remove("android-static-background");
     document.documentElement.classList.remove("android-native-player-page");
+    document.documentElement.classList.remove("android-compact-ui");
+    window.removeEventListener("resize", handleAndroidViewportChange);
+    window.removeEventListener("orientationchange", handleAndroidViewportChange);
+    cleanupAndroidViewportMetrics();
+    document.documentElement.style.removeProperty("--android-ui-scale");
   });
 }
 </script>

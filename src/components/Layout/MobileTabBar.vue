@@ -82,18 +82,19 @@ const activeKey = computed(() => {
   left: 0;
   right: 0;
   bottom: var(--safe-area-bottom, 0px);
-  z-index: 9;
-  padding: 0 10px 8px;
+  z-index: 12;
+  padding: 0 max(8px, calc(10px * var(--android-ui-scale, 1)))
+    max(6px, calc(8px * var(--android-ui-scale, 1)));
   pointer-events: none;
 
   &.with-player {
-    bottom: calc(var(--player-bar-height, 80px) + var(--safe-area-bottom, 0px));
+    bottom: var(--safe-area-bottom, 0px);
   }
 
   .mobile-tabbar-inner {
     min-height: var(--mobile-tabbar-height, 58px);
-    border-radius: 18px;
-    padding: 6px;
+    border-radius: max(14px, calc(18px * var(--android-ui-scale, 1)));
+    padding: max(5px, calc(6px * var(--android-ui-scale, 1)));
     background-color: color-mix(in srgb, var(--surface-container-hex) 88%, rgba(0, 0, 0, 0.12) 12%);
     border: 1px solid rgba(var(--primary), 0.12);
     backdrop-filter: blur(18px);
@@ -105,7 +106,7 @@ const activeKey = computed(() => {
     flex: 1;
     min-width: 0;
     height: calc(var(--mobile-tabbar-height, 58px) - 12px);
-    border-radius: 14px;
+    border-radius: max(12px, calc(14px * var(--android-ui-scale, 1)));
     color: rgba(var(--text-color), 0.68);
 
     &.active {
@@ -119,13 +120,13 @@ const activeKey = computed(() => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: max(2px, calc(3px * var(--android-ui-scale, 1)));
     width: 100%;
     min-width: 0;
   }
 
   .tab-label {
-    font-size: 11px;
+    font-size: max(10px, calc(11px * var(--android-ui-scale, 1)));
     line-height: 1;
     white-space: nowrap;
   }
@@ -133,7 +134,8 @@ const activeKey = computed(() => {
 
 @media (max-width: 420px) {
   .mobile-tabbar {
-    padding: 0 8px 6px;
+    padding: 0 max(6px, calc(8px * var(--android-ui-scale, 1)))
+      max(5px, calc(6px * var(--android-ui-scale, 1)));
 
     .tab-label {
       font-size: 10px;

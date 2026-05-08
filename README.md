@@ -1,11 +1,11 @@
-﻿# SPlayer-ROM-Compat
+# SPlayer-ROM-Compat
 
 <p align="center">
   <img alt="logo" height="100" width="100" src="public/icons/logo-icon.png" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v3.0.0--rc.1-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v3.0.0--rc.3--Beta64-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Android%20%2F%20HarmonyOS-3DDC84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/ROM-Compat-8A2BE2?style=flat-square" alt="rom compat">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-red?style=flat-square" alt="license">
@@ -63,26 +63,20 @@
 
 本地构建后的 Release APK 位于：
 
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-arm64-v8a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-armeabi-v7a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-x86_64-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-arm64-v8a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-armeabi-v7a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-x86_64-release.apk`
 
 ---
 
-## v3.0.0-rc.3-Beta8 更新
+## v3.0.0-rc.3-Beta64 更新
 
-- 修复 HarmonyOS Connect / 原生音频控制卡片切歌时可能触发的前台服务超时闪退。
-- 调整播放桥接顺序：先完成播放器准备与播放，再按需启动前台服务。
-- 通知栏与媒体控制动作改为普通服务路径处理，避免切歌动作误触发前台服务强制启动。
-- 补齐 Android Release 分架构构建脚本，并将 `x86_64` 调整为 Release 包。
-- 接入 GitHub Actions Android Release 工作流，支持签名 Secrets 自动打包。
-- 修复部分 Android 构建与运行日志中文乱码文案。
-- 修复第三方 ROM 增强通知卡片播放 / 暂停状态与软件内状态不同步的问题。
-- 新增增强通知独占模式，开启后可尽量隐藏原生 ROM 媒体卡片。
-- 增强通知进度条增加 10% / 30% / 50% / 70% / 90% 触控跳转区域。
-- Android 播放页默认降载：关闭 AMLyric / 频谱绘制 / 重模糊背景，降低播放时 WebView 渲染压力。
-- 原生播放元数据改为差异更新，歌词变化不再频繁重建 MediaItem，减少播放中卡顿。
-- 清理构建产物、签名文件和本地缓存，并补齐 `.gitignore`，避免再次误提交 APK、Gradle、Rust target 或 keystore。
+- 修复 Android 平板横屏下底部播放器与底部导航栏重叠的问题，播放器会稳定抬到导航栏上方。
+- 修复全屏播放页左右滑动到歌词页失效的问题，横向手势不再被根节点纵向触摸策略拦截。
+- 歌词页入口增加兜底：非电台歌曲都允许进入歌词页，避免歌词状态未及时刷新时无法滑动。
+- 平板横屏播放栏改为移动端紧凑布局，隐藏不适合横屏底栏的右侧菜单，减少控件挤压。
+- 延续 Android 本地 API、分架构构建、原生音频播放、原生媒体控制卡片与国内 ROM 兼容策略。
+- 当前测试重点：横屏平板底部布局、播放页左右滑动、歌词页纵向滚动、手机竖屏底栏是否回退。
 
 ---
 
@@ -141,17 +135,17 @@ pnpm build
 
 Android 自动打包使用 `.github/workflows/android-release.yml`，桌面端 macOS / Windows / Linux 的历史 workflow 已改为仅手动触发，发布 `v*` 标签时不会再自动构建桌面端包。当前 Android Release 采用单个 Ubuntu Job 执行 `pnpm android:apk:all`，只安装一次依赖、只准备一次 Web 资源，并一次性产出三 ABI APK，避免矩阵构建重复耗时。
 
-| 触发方式   | 操作                                                   | 结果                                                                    |
-| ---------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
-| Tag 发布   | 推送 `v3.0.0-rc.3-Beta8`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
-| 手动构建   | `Actions` → `Android Release` → `Run workflow`         | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
-| 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`            | 仅在明确需要桌面端包时手动执行                                          |
+| 触发方式   | 操作                                                    | 结果                                                                    |
+| ---------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Tag 发布   | 推送 `v3.0.0-rc.3-Beta64`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
+| 手动构建   | `Actions` → `Android Release` → `Run workflow`          | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
+| 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`             | 仅在明确需要桌面端包时手动执行                                          |
 
 Android Release 会生成以下独立 APK：
 
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-arm64-v8a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-armeabi-v7a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta8-x86_64-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-arm64-v8a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-armeabi-v7a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta64-x86_64-release.apk`
 
 CI 中可以直接看 job 与步骤名称确认是否为 Android 分架构构建：
 

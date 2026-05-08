@@ -33,7 +33,10 @@ const greetings = computed(() => {
 .home {
   width: 100%;
   max-width: 1500px;
+  min-width: 0;
   margin: 0 auto;
+  overflow-x: hidden;
+  overflow-x: clip;
   .welcome {
     margin-top: 8px;
     margin-bottom: 20px;

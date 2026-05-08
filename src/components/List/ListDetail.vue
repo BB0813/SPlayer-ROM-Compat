@@ -753,4 +753,86 @@ const handleTabChange = (value: "songs" | "comments") => {
     }
   }
 }
+
+:global(:root.android-app.android-compact-ui) .list-detail {
+  .detail {
+    height: max(170px, calc(190px * var(--android-ui-scale, 1)));
+    padding-bottom: max(12px, calc(18px * var(--android-ui-scale, 1)));
+
+    .cover {
+      margin-right: max(12px, calc(20px * var(--android-ui-scale, 1)));
+    }
+
+    .data {
+      .name {
+        font-size: max(20px, calc(24px * var(--android-ui-scale, 1)));
+        margin-bottom: max(8px, calc(12px * var(--android-ui-scale, 1)));
+      }
+
+      .collapse {
+        margin-bottom: max(8px, calc(12px * var(--android-ui-scale, 1)));
+      }
+
+      .meta {
+        column-gap: max(8px, calc(12px * var(--android-ui-scale, 1)));
+        row-gap: max(6px, calc(8px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+
+  &.small {
+    .detail {
+      min-height: max(100px, calc(120px * var(--android-ui-scale, 1)));
+      height: max(100px, calc(120px * var(--android-ui-scale, 1)));
+
+      .data .name {
+        font-size: max(18px, calc(22px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  :global(:root.android-app.android-compact-ui) .list-detail {
+    .detail {
+      min-height: max(160px, calc(180px * var(--android-ui-scale, 1)));
+      height: max(160px, calc(180px * var(--android-ui-scale, 1)));
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  :global(:root.android-app.android-compact-ui) .list-detail {
+    .detail {
+      flex-direction: row;
+      min-height: max(150px, calc(172px * var(--android-ui-scale, 1)));
+      height: max(150px, calc(172px * var(--android-ui-scale, 1)));
+      align-items: flex-start;
+    }
+
+    .cover {
+      width: min(42vw, calc(170px * var(--android-ui-scale, 1)));
+      height: auto;
+      margin-right: max(10px, calc(12px * var(--android-ui-scale, 1)));
+      margin-bottom: 0;
+    }
+
+    .data {
+      height: 100%;
+      min-width: 0;
+
+      .name {
+        font-size: max(18px, calc(22px * var(--android-ui-scale, 1)));
+      }
+
+      .collapse {
+        margin-bottom: max(6px, calc(8px * var(--android-ui-scale, 1)));
+      }
+
+      .menu {
+        padding-top: max(8px, calc(10px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+}
 </style>

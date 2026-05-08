@@ -500,4 +500,45 @@ const albumName = computed(() => {
     }
   }
 }
+
+:global(:root.android-app.android-compact-ui) .song-card {
+  height: max(76px, calc(90px * var(--android-ui-scale, 1)));
+
+  .song-content {
+    padding: max(6px, calc(8px * var(--android-ui-scale, 1)))
+      max(8px, calc(12px * var(--android-ui-scale, 1)));
+    border-radius: max(10px, calc(12px * var(--android-ui-scale, 1)));
+  }
+
+  .num {
+    width: max(34px, calc(40px * var(--android-ui-scale, 1)));
+    min-width: max(34px, calc(40px * var(--android-ui-scale, 1)));
+    margin-right: max(8px, calc(12px * var(--android-ui-scale, 1)));
+  }
+
+  .title {
+    padding-right: max(12px, calc(20px * var(--android-ui-scale, 1)));
+
+    .cover {
+      width: max(42px, calc(50px * var(--android-ui-scale, 1)));
+      height: max(42px, calc(50px * var(--android-ui-scale, 1)));
+      min-width: max(42px, calc(50px * var(--android-ui-scale, 1)));
+      margin-right: max(8px, calc(12px * var(--android-ui-scale, 1)));
+    }
+
+    .info {
+      .name {
+        font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+      }
+
+      .desc {
+        font-size: max(12px, calc(13px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+
+  .album {
+    padding-right: max(12px, calc(20px * var(--android-ui-scale, 1)));
+  }
+}
 </style>

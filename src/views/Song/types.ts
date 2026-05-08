@@ -70,9 +70,9 @@ export interface MusicFirstListenDto {
   listenTime?: number;
   /** 相遇时长描述 */
   meetDurationDesc?: string;
-  /** 场景文案 (旧版?) */
+  /** 注释已清理 */
   sceneText?: string;
-  /** 时间文案 (旧版?) */
+  /** 注释已清理 */
   timeText?: string;
   /** 具体时间 (HH:mm) */
   time?: string;
@@ -82,7 +82,7 @@ export interface MusicFirstListenDto {
   subTitles?: string;
   /** 描述 */
   desc?: string;
-  /** 相遇时长 (分/秒?) */
+  /** 注释已清理 */
   meetDuration?: string;
 }
 
@@ -116,7 +116,7 @@ export interface MusicLikeSongDto {
   text: string;
   /** 红色描述文案 */
   redDesc: string;
-  /** 是否收藏 (collect 字段?) */
+  /** 注释已清理 */
   collect?: boolean;
   /** 收藏时间字符串 */
   redTime?: string;
@@ -171,7 +171,7 @@ export interface SheetSimpleInfoVO {
   musicKey?: string;
   /** 演奏版本 (如: 弹唱版) */
   playVersion?: string;
-  /** 和弦名称? */
+  /** 注释已清理 */
   chordName?: string;
   /** BPM */
   bpm?: number;

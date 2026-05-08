@@ -412,6 +412,90 @@ audio {
   }
 }
 
+:root.android-app {
+  --android-ui-scale: 0.9;
+  --android-compact-font-size: max(13px, calc(14px * var(--android-ui-scale, 1)));
+  --android-compact-small-font-size: max(11px, calc(12px * var(--android-ui-scale, 1)));
+  --android-compact-card-padding: max(12px, calc(16px * var(--android-ui-scale, 1)));
+  --android-compact-gap: max(8px, calc(12px * var(--android-ui-scale, 1)));
+}
+
+:root.android-app.android-compact-ui {
+  body {
+    font-size: var(--android-compact-font-size);
+  }
+
+  .n-button:not(.n-button--circle) {
+    --n-height: max(36px, calc(40px * var(--android-ui-scale, 1))) !important;
+    --n-font-size: var(--android-compact-font-size) !important;
+    --n-padding: 0 max(12px, calc(16px * var(--android-ui-scale, 1))) !important;
+  }
+
+  .n-base-selection,
+  .n-input,
+  .n-input-number {
+    --n-height: max(36px, calc(40px * var(--android-ui-scale, 1))) !important;
+    --n-font-size: var(--android-compact-font-size) !important;
+  }
+
+  .n-tag {
+    --n-height: max(20px, calc(24px * var(--android-ui-scale, 1))) !important;
+    --n-font-size: var(--android-compact-small-font-size) !important;
+  }
+
+  .n-tabs {
+    --n-tab-font-size: var(--android-compact-font-size) !important;
+    --n-tab-padding: max(4px, calc(6px * var(--android-ui-scale, 1)))
+      max(10px, calc(14px * var(--android-ui-scale, 1))) !important;
+  }
+
+  .album-list,
+  .playlist-list,
+  .liked-list,
+  .radio-list {
+    .song-list,
+    .list-comment,
+    .loading,
+    .n-empty {
+      padding-top: max(190px, calc(240px * var(--android-ui-scale, 1)));
+    }
+
+    .list-detail.small {
+      & ~ .song-list,
+      & ~ .list-comment,
+      & ~ .loading,
+      & ~ .n-empty {
+        padding-top: max(96px, calc(120px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  :root.android-app.android-compact-ui {
+    .album-list,
+    .playlist-list,
+    .liked-list,
+    .radio-list {
+      .song-list,
+      .list-comment,
+      .loading,
+      .n-empty {
+        padding-top: max(150px, calc(180px * var(--android-ui-scale, 1)));
+      }
+
+      .list-detail.small {
+        & ~ .song-list,
+        & ~ .list-comment,
+        & ~ .loading,
+        & ~ .n-empty {
+          padding-top: max(86px, calc(100px * var(--android-ui-scale, 1)));
+        }
+      }
+    }
+  }
+}
+
 :root.android-performance-mode {
   scroll-behavior: auto !important;
 

@@ -1,5 +1,5 @@
 ﻿import type { VNodeChild } from "vue";
-import { computed, h, ref } from "vue";
+import { computed, h, markRaw, ref } from "vue";
 import { NTooltip, type SelectOption } from "naive-ui";
 import {
   checkAndroidAudioPermission,
@@ -33,6 +33,7 @@ import { copyData } from "@/utils/helper";
 import { collectCookieSnapshot } from "@/utils/cookie";
 import { checkIsolationSupport, isAndroidApp, isElectron } from "@/utils/env";
 import { uniqBy } from "lodash-es";
+import AndroidUiScaleControl from "../components/AndroidUiScaleControl.vue";
 
 const androidRomCompatActionLabels: Record<AndroidRomCompatAction, string> = {
   autoStart: "自启动",
@@ -219,6 +220,12 @@ export const usePlaySettings = (): SettingConfig => {
       ? "原生播放页预览开启"
       : "原生播放页预览关闭";
     return `${modeText} | ${strategyText} | ${diagnosticsText} | ${nativePageText}`;
+  });
+
+  const androidUiScaleSummary = computed(() => {
+    const scale = settingStore.androidUiScale || 80;
+    const compactText = settingStore.androidCompactUi ? "紧凑布局已开启" : "紧凑布局已关闭";
+    return `当前 Android 界面缩放为 ${scale}%，${compactText}；缩放会影响列表、设置页、底栏和通用控件密度。`;
   });
 
   const androidRomPrimaryActionLabel = computed(() => {
@@ -1000,6 +1007,26 @@ export const usePlaySettings = (): SettingConfig => {
               get: () => settingStore.androidPerformanceMode,
               set: (value) => {
                 settingStore.androidPerformanceMode = value;
+              },
+            }),
+          },
+          {
+            key: "androidUiScale",
+            label: "Android 界面缩放",
+            type: "custom",
+            description: () =>
+              `${androidUiScaleSummary.value} 当前为自定义百分比，可以在 60% 到 110% 之间连续调整。`,
+            component: markRaw(AndroidUiScaleControl),
+          },
+          {
+            key: "androidCompactUi",
+            label: "Android 紧凑布局",
+            type: "switch",
+            description: "开启后会收紧设置项、列表、顶部栏和底部栏间距；触控按钮仍保留可点击尺寸。",
+            value: computed({
+              get: () => settingStore.androidCompactUi,
+              set: (value) => {
+                settingStore.androidCompactUi = value;
               },
             }),
           },

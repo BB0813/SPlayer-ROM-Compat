@@ -1,35 +1,36 @@
-﻿<template>
-  <div class="full-player-mobile" ref="mobileStart">
-    <!-- 妞ゅ爼鍎撮崝鐔诲厴閺?-->
+<template>
+  <div
+    class="full-player-mobile"
+    ref="mobileStart"
+    data-allow-horizontal-pan
+    data-android-touch-free
+    @touchstart.capture="onTouchStart"
+    @touchmove.capture="onTouchMove"
+    @touchend.capture="onTouchEnd"
+    @touchcancel.capture="resetTouchState"
+  >
     <div class="top-bar">
-      <!-- 閺€鎯版崳閹稿鎸?-->
       <div class="btn" @click.stop="statusStore.showFullPlayer = false">
         <SvgIcon name="Down" :size="26" />
       </div>
     </div>
 
-    <!-- 娑撹鍞寸€?-->
     <div
-      :class="['mobile-content', { swiping: isSwiping }]"
+      :class="['mobile-content', { swiping: isSwipingX }]"
       :style="{ transform: contentTransform }"
       @click.stop
     >
-      <!-- 濮濆本娲告穱鈩冧紖妞?-->
       <div class="page info-page">
-        <!-- 鐏忎線娼?-->
         <div class="cover-section">
           <PlayerCover :no-lyric="true" />
         </div>
 
-        <!-- 濮濆本娲告穱鈩冧紖閸栧搫鐓?-->
         <div class="info-group">
-          <!-- 濮濆本娲告穱鈩冧紖娑撳孩鎼锋担?-->
           <div class="song-info-bar">
             <div class="info-section">
               <PlayerData :center="false" :light="false" class="mobile-data" />
             </div>
             <div class="info-actions">
-              <!-- 閸犳粍顐?-->
               <div
                 v-if="musicStore.playSong.type !== 'radio'"
                 class="action-btn"
@@ -45,7 +46,7 @@
                   :class="{ liked: dataStore.isLikeSong(musicStore.playSong.id) }"
                 />
               </div>
-              <!-- 濞ｈ濮為崚鐗堢摃閸?-->
+
               <div
                 class="action-btn"
                 @click.stop="openPlaylistAdd([musicStore.playSong], !!musicStore.playSong.path)"
@@ -55,16 +56,13 @@
             </div>
           </div>
 
-          <!-- 鏉╂稑瀹抽弶?-->
           <div class="progress-section">
             <span class="time" @click="toggleTimeFormat">{{ timeDisplay[0] }}</span>
             <PlayerSlider class="player" :show-tooltip="false" />
             <span class="time" @click="toggleTimeFormat">{{ timeDisplay[1] }}</span>
           </div>
 
-          <!-- 娑撶粯甯堕崚鑸靛瘻闁?-->
           <div class="control-section">
-            <!-- 闂呭繑婧€濡€崇础 -->
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
               <div class="mode-btn" @click.stop="player.toggleShuffle()">
                 <SvgIcon
@@ -76,12 +74,10 @@
             </template>
             <div v-else class="placeholder"></div>
 
-            <!-- 娑撳﹣绔撮弴?-->
             <div class="ctrl-btn" @click.stop="player.nextOrPrev('prev')">
               <SvgIcon name="SkipPrev" :size="36" />
             </div>
 
-            <!-- 閹绢厽鏂?閺嗗倸浠?-->
             <n-button
               :loading="statusStore.playLoading"
               class="play-btn"
@@ -102,12 +98,10 @@
               </template>
             </n-button>
 
-            <!-- 娑撳绔撮弴?-->
             <div class="ctrl-btn" @click.stop="player.nextOrPrev('next')">
               <SvgIcon name="SkipNext" :size="36" />
             </div>
 
-            <!-- 瀵邦亞骞嗗Ο鈥崇础 -->
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
               <div class="mode-btn" @click.stop="player.toggleRepeat()">
                 <SvgIcon
@@ -122,7 +116,6 @@
         </div>
       </div>
 
-      <!-- 濮濆矁鐦濇い?-->
       <div class="page lyric-page">
         <div class="lyric-header">
           <s-image :src="musicStore.getSongCover('s')" class="lyric-cover" />
@@ -136,7 +129,7 @@
             </div>
             <div class="artist text-hidden">{{ artistName }}</div>
           </div>
-          <!-- 閸犳粍顐介幐澶愭尦 -->
+
           <div
             v-if="musicStore.playSong.type !== 'radio'"
             class="action-btn"
@@ -157,8 +150,7 @@
       </div>
     </div>
 
-    <!-- 妞ょ敻娼伴幐鍥┿仛閸?-->
-    <div class="pagination" v-if="hasLyric">
+    <div class="pagination" v-if="canOpenLyricPage">
       <div
         v-for="i in 2"
         :key="i"
@@ -170,7 +162,6 @@
 </template>
 
 <script setup lang="ts">
-import { useSwipe } from "@vueuse/core";
 import { useMusicStore, useStatusStore, useDataStore, useSettingStore } from "@/stores";
 import { usePlayerController } from "@/core/player/PlayerController";
 import { useTimeFormat } from "@/composables/useTimeFormat";
@@ -188,9 +179,7 @@ const { timeDisplay, toggleTimeFormat } = useTimeFormat();
 const mobileStart = ref<HTMLElement | null>(null);
 const pageIndex = ref(0);
 
-const hasLyric = computed(() => {
-  return musicStore.isHasLrc && musicStore.playSong.type !== "radio";
-});
+const canOpenLyricPage = computed(() => musicStore.playSong.type !== "radio");
 
 const artistName = computed(() => {
   const artists = musicStore.playSong.artists;
@@ -200,29 +189,97 @@ const artistName = computed(() => {
   return artists || "未知艺术家";
 });
 
-watch(hasLyric, (value) => {
+watch(canOpenLyricPage, (value) => {
   if (!value) {
     pageIndex.value = 0;
   }
 });
 
-const { direction, isSwiping, lengthX } = useSwipe(mobileStart, {
-  threshold: 10,
-  onSwipeEnd: () => {
-    if (!hasLyric.value) return;
+const axisLock = ref<"x" | "y" | null>(null);
+const isSwiping = ref(false);
+const lengthX = ref(0);
 
-    if (direction.value === "left" && lengthX.value > 100) {
+let touchStartX = 0;
+let touchStartY = 0;
+
+const cancelChildTouch = (target: EventTarget | null) => {
+  if (!target) return;
+
+  try {
+    target.dispatchEvent(new TouchEvent("touchcancel", { bubbles: true, cancelable: true }));
+  } catch {
+    target.dispatchEvent(new Event("touchcancel", { bubbles: true, cancelable: true }));
+  }
+};
+
+const resetTouchState = () => {
+  isSwiping.value = false;
+  axisLock.value = null;
+  lengthX.value = 0;
+};
+
+const getSwipeThreshold = () => {
+  return Math.min(96, Math.max(56, window.innerWidth * 0.16));
+};
+
+const onTouchStart = (event: TouchEvent) => {
+  if (!canOpenLyricPage.value || event.touches.length === 0) return;
+
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+  axisLock.value = null;
+  isSwiping.value = true;
+  lengthX.value = 0;
+};
+
+const onTouchMove = (event: TouchEvent) => {
+  if (!canOpenLyricPage.value || !isSwiping.value || event.touches.length === 0) return;
+
+  const deltaX = touchStartX - event.touches[0].clientX;
+  const deltaY = touchStartY - event.touches[0].clientY;
+
+  if (axisLock.value === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+    axisLock.value = Math.abs(deltaX) >= Math.abs(deltaY) ? "x" : "y";
+
+    if (axisLock.value === "x") {
+      cancelChildTouch(event.target);
+    }
+  }
+
+  if (axisLock.value !== "x") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  lengthX.value = deltaX;
+};
+
+const onTouchEnd = (event: TouchEvent) => {
+  if (!canOpenLyricPage.value || !isSwiping.value) {
+    resetTouchState();
+    return;
+  }
+
+  if (axisLock.value === "x" && event.changedTouches.length > 0) {
+    event.stopPropagation();
+    const finalLengthX = touchStartX - event.changedTouches[0].clientX;
+
+    const swipeThreshold = getSwipeThreshold();
+    if (finalLengthX > swipeThreshold) {
       pageIndex.value = 1;
-    } else if (direction.value === "right" && lengthX.value < -100) {
+    } else if (finalLengthX < -swipeThreshold) {
       pageIndex.value = 0;
     }
-  },
-});
+  }
+
+  resetTouchState();
+};
+
+const isSwipingX = computed(() => isSwiping.value && axisLock.value === "x");
 
 const contentTransform = computed(() => {
   const baseOffset = pageIndex.value * 50;
 
-  if (!isSwiping.value || !hasLyric.value) {
+  if (!isSwipingX.value || !canOpenLyricPage.value) {
     return `translateX(-${baseOffset}%)`;
   }
 
@@ -241,6 +298,7 @@ const contentTransform = computed(() => {
 <style lang="scss" scoped>
 .full-player-mobile {
   width: 100%;
+  touch-action: pan-x pan-y;
   height: 100dvh;
   min-height: 100svh;
   position: relative;
@@ -282,6 +340,7 @@ const contentTransform = computed(() => {
     width: 200%;
     height: 100%;
     transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
     &.swiping {
       transition: none;
     }
@@ -347,6 +406,11 @@ const contentTransform = computed(() => {
               max-width: 100%;
               .name {
                 margin-left: 0;
+                font-size: max(18px, calc(20px * var(--android-ui-scale, 1)));
+              }
+              .alia,
+              .artist {
+                font-size: max(13px, calc(14px * var(--android-ui-scale, 1)));
               }
             }
           }
@@ -386,7 +450,7 @@ const contentTransform = computed(() => {
           align-items: center;
           margin: 0 4px 24px;
           .time {
-            font-size: 12px;
+            font-size: max(13px, calc(13px * var(--android-ui-scale, 1)));
             opacity: 0.6;
             width: 40px;
             text-align: center;
@@ -487,12 +551,12 @@ const contentTransform = computed(() => {
           flex-direction: column;
           justify-content: center;
           .name {
-            font-size: 18px;
+            font-size: max(19px, calc(20px * var(--android-ui-scale, 1)));
             font-weight: bold;
             margin-bottom: 2px;
           }
           .artist {
-            font-size: 13px;
+            font-size: max(14px, calc(14px * var(--android-ui-scale, 1)));
             opacity: 0.6;
           }
         }
@@ -524,6 +588,8 @@ const contentTransform = computed(() => {
         flex: 1;
         min-height: 0;
         position: relative;
+        // Android 歌词页保留纵向滚动
+        touch-action: pan-y;
       }
     }
   }
@@ -537,8 +603,9 @@ const contentTransform = computed(() => {
     gap: 8px;
     pointer-events: none;
     .dot {
-      width: 6px;
-      height: 6px;
+      pointer-events: auto;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background-color: rgba(255, 255, 255, 0.2);
       transition: all 0.3s;
@@ -724,6 +791,34 @@ const contentTransform = computed(() => {
           margin-bottom: 16px;
           padding: 8px 0 0;
         }
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+:global(.android-tablet-layout) {
+  .full-player-mobile {
+    .mobile-content {
+      .info-page {
+        padding-left: max(32px, 7vw);
+        padding-right: max(32px, 7vw);
+
+        .cover-section {
+          :deep(.player-cover) {
+            width: min(54vw, 42svh, 460px);
+          }
+        }
+
+        .info-group {
+          max-width: 640px;
+        }
+      }
+
+      .lyric-page {
+        padding-left: max(40px, 8vw);
+        padding-right: max(40px, 8vw);
       }
     }
   }

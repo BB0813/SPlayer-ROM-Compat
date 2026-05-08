@@ -62,7 +62,7 @@ const noSideSpace = (value: string) => !value.startsWith(" ");
 
 // 搜索框 focus
 const searchInputToFocus = () => {
-  // searchInpRef.value?.focus();
+  // 注释已清理
   statusStore.searchFocus = true;
 };
 
@@ -244,13 +244,13 @@ onMounted(() => {
     }
   }
   @media (max-width: 768px) {
-    width: calc(100% - 150px);
+    width: min(calc(100% - 150px), calc(100vw - 174px));
     .search-input {
       width: 100%;
     }
     &.focus {
       left: -52px;
-      width: calc(100% + 52px);
+      width: min(calc(100% + 52px), calc(100vw - 122px));
       .search-input {
         width: 100%;
       }

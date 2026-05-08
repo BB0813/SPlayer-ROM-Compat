@@ -1,7 +1,6 @@
 import request from "@/utils/request";
 import idMeta from "@/assets/data/idMeta.json";
 
-/** ?????? */
 export const dailyRecommend = (type: "songs" | "resource" = "songs") => {
   return request({
     url: `/recommend/${type}`,
@@ -9,7 +8,6 @@ export const dailyRecommend = (type: "songs" | "resource" = "songs") => {
   });
 };
 
-/** ?????????? */
 export const dailyRecommendDislike = (id: number) => {
   return request({
     url: "/recommend/songs/dislike",
@@ -17,7 +15,6 @@ export const dailyRecommendDislike = (id: number) => {
   });
 };
 
-/** ????????? */
 export const personalized = (
   type: "playlist" | "mv" | "newsong" | "djprogram" | "privatecontent" = "playlist",
   limit: number = 50,
@@ -31,7 +28,6 @@ export const personalized = (
   });
 };
 
-// ????
 export const radarPlaylist = async () => {
   const allRadar = idMeta.radarPlaylist.map((playlist) => {
     return request({
@@ -48,7 +44,6 @@ export const radarPlaylist = async () => {
   }, []);
 };
 
-/** ?????? */
 export const topArtists = async (limit: number = 10) => {
   return request({
     url: "/top/artists",
@@ -56,7 +51,6 @@ export const topArtists = async (limit: number = 10) => {
   });
 };
 
-/** ?????? */
 export const newSongs = async (type: 0 | 7 | 96 | 16 | 8 = 0) => {
   return request({
     url: "/top/song",
@@ -64,14 +58,12 @@ export const newSongs = async (type: 0 | 7 | 96 | 16 | 8 = 0) => {
   });
 };
 
-// ????
 export const newAlbums = async () => {
   return request({
     url: "/album/new",
   });
 };
 
-/** ?????? */
 export const newAlbumsAll = (
   cat: "ALL" | "ZH" | "EA" | "KR" | "JP" = "ALL",
   limit: number = 20,
@@ -83,7 +75,7 @@ export const newAlbumsAll = (
   });
 };
 
-// ?? FM
+// 注释已清理
 export const personalFm = () => {
   return request({
     url: "/personal_fm",
@@ -93,7 +85,6 @@ export const personalFm = () => {
   });
 };
 
-// ?? FM - ???
 export const personalFmToTrash = (id: number) => {
   return request({
     url: "/fm_trash",

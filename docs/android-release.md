@@ -8,6 +8,8 @@
 - Web 资源会先通过 `pnpm android:prepareWeb` 生成到 Android 资源目录
 - Android 构建前建议在 `.env` 中配置 `SPLAYER_REMOTE_API_ROOT=https://your-api-root.com`
 - 若未配置 `SPLAYER_REMOTE_API_ROOT`，会回退到绝对地址形式的 `VITE_API_URL`
+- `versionName` 读取根目录 `package.json` 的 `version`
+- `versionCode` 会根据 `package.json` 的版本自动生成，无需再手动修改 Gradle
 
 ## 构建命令
 
@@ -98,8 +100,7 @@ pnpm android:bundleRelease
 发布前请确认：
 
 - 已配置正式签名
-- `versionCode` 已递增
-- `versionName` 与本次版本一致
+- 已更新 `package.json` 的 `version`
 - 已在真机验证音频播放、后台播放、通知控制、耳机控制
 
 ## 故障排查

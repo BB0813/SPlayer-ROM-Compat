@@ -1,4 +1,4 @@
-﻿import axios, {
+import axios, {
   AxiosError,
   AxiosHeaders,
   AxiosInstance,
@@ -215,6 +215,108 @@ const findHeaderValue = (headers: Record<string, string>, name: string): string 
   return match?.[1];
 };
 
+const ANDROID_API_CACHE_PREFIX = "splayer:android-api-cache:v3:";
+const ANDROID_API_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
+const ANDROID_API_CACHE_DENY_PATHS = [
+  "/api/netease/login",
+  "/api/netease/captcha",
+  "/api/netease/logout",
+  "/api/netease/song/url",
+  "/api/netease/song/download",
+  "/api/netease/resource/like",
+  "/api/netease/playlist/subscribe",
+  "/api/netease/playlist/tracks",
+  "/api/netease/playlist/create",
+  "/api/netease/playlist/delete",
+  "/api/netease/playlist/update",
+  "/api/netease/song/order/update",
+  "/api/unblock",
+  "/api/control",
+];
+
+type AndroidApiCacheEntry = {
+  time: number;
+  data: unknown;
+};
+
+const getAndroidApiCacheStorage = (): Storage | null => {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeAndroidApiCachePath = (path: string): string => {
+  const url = new URL(path, "https://appassets.androidplatform.net");
+  ["timestamp", "_", "realIP", "randomCNIP"].forEach((key) => url.searchParams.delete(key));
+  url.searchParams.sort();
+  return `${url.pathname}${url.search}`;
+};
+
+const isAndroidApiCacheable = (config: SPlayerAxiosRequestConfig): boolean => {
+  const method = String(config.method ?? "GET").toUpperCase();
+  if (method !== "GET") return false;
+
+  const path = buildApiPath(config);
+  const normalizedPath = normalizeAndroidApiCachePath(path);
+  return !ANDROID_API_CACHE_DENY_PATHS.some((denyPath) => normalizedPath.startsWith(denyPath));
+};
+
+const getAndroidApiCacheKey = (config: SPlayerAxiosRequestConfig): string | null => {
+  if (!isAndroidApiCacheable(config)) return null;
+  return `${ANDROID_API_CACHE_PREFIX}${normalizeAndroidApiCachePath(buildApiPath(config))}`;
+};
+
+const isCacheableAndroidApiData = (data: unknown): boolean => {
+  if (data === null || data === undefined) return false;
+  if (typeof data !== "object") return true;
+
+  const code = (data as { code?: unknown }).code;
+  if (code === undefined || code === null) return true;
+  return Number(code) === 200 || Number(code) === 0;
+};
+
+const readAndroidApiCache = <T = any>(cacheKey: string | null): T | null => {
+  if (!cacheKey) return null;
+
+  const storage = getAndroidApiCacheStorage();
+  if (!storage) return null;
+
+  try {
+    const rawValue = storage.getItem(cacheKey);
+    if (!rawValue) return null;
+
+    const cache = JSON.parse(rawValue) as AndroidApiCacheEntry;
+    if (!cache || Date.now() - cache.time > ANDROID_API_CACHE_MAX_AGE) {
+      storage.removeItem(cacheKey);
+      return null;
+    }
+
+    return cache.data as T;
+  } catch {
+    storage.removeItem(cacheKey);
+    return null;
+  }
+};
+
+const writeAndroidApiCache = (cacheKey: string | null, data: unknown): void => {
+  if (!cacheKey || !isCacheableAndroidApiData(data)) return;
+
+  const storage = getAndroidApiCacheStorage();
+  if (!storage) return;
+
+  try {
+    const cache: AndroidApiCacheEntry = {
+      time: Date.now(),
+      data,
+    };
+    storage.setItem(cacheKey, JSON.stringify(cache));
+  } catch {
+    void 0;
+  }
+};
+
 const persistAndroidResponseCookies = (headers: Record<string, string>, data: unknown): void => {
   const cookieValues: string[] = [];
   const setCookieHeader = findHeaderValue(headers, "set-cookie");
@@ -299,7 +401,19 @@ const request = async <T = any>(config: SPlayerAxiosRequestConfig): Promise<T> =
   const preparedConfig = prepareRequestConfig(config);
 
   if (shouldUseAndroidLocalApi(preparedConfig)) {
-    return requestByAndroidBridge<T>(preparedConfig);
+    const cacheKey = getAndroidApiCacheKey(preparedConfig);
+    try {
+      const data = await requestByAndroidBridge<T>(preparedConfig);
+      writeAndroidApiCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      const cachedData = readAndroidApiCache<T>(cacheKey);
+      if (cachedData !== null) {
+        console.warn("Android 本地 API 请求失败，已使用缓存", buildApiPath(preparedConfig), error);
+        return cachedData;
+      }
+      throw error;
+    }
   }
 
   const { data } = await server.request(preparedConfig);

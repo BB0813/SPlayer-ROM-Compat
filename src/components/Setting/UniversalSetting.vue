@@ -109,4 +109,13 @@ const displayList = computed(() => {
   animation: slide-up-fade-in 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
   animation-delay: var(--delay, 0s);
 }
+
+:global(:root.android-app.android-compact-ui) .group-title {
+  padding-top: max(20px, calc(30px * var(--android-ui-scale, 1)));
+
+  :deep(.n-h) {
+    font-size: max(17px, calc(20px * var(--android-ui-scale, 1)));
+    margin: 0 0 max(8px, calc(12px * var(--android-ui-scale, 1)));
+  }
+}
 </style>

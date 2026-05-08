@@ -721,4 +721,45 @@ onMounted(() => {
     }
   }
 }
+:root.android-app.android-compact-ui .main-setting {
+  .n-card-header {
+    padding: max(8px, calc(14px * var(--android-ui-scale, 1)));
+  }
+
+  .n-card__content {
+    .set-content {
+      padding: 0 max(10px, calc(24px * var(--android-ui-scale, 1)));
+    }
+
+    .set-list {
+      padding-top: max(20px, calc(30px * var(--android-ui-scale, 1)));
+    }
+
+    .set-item {
+      margin-bottom: max(8px, calc(12px * var(--android-ui-scale, 1)));
+
+      .n-card__content {
+        padding: var(--android-compact-card-padding);
+      }
+
+      .label {
+        padding-right: max(12px, calc(20px * var(--android-ui-scale, 1)));
+
+        .name {
+          font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  :root.android-app.android-compact-ui .main-setting {
+    .n-card__content {
+      .set-content {
+        padding: 0 max(8px, calc(12px * var(--android-ui-scale, 1)));
+      }
+    }
+  }
+}
 </style>

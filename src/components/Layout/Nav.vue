@@ -408,11 +408,16 @@ onUnmounted(() => {
 </style>
 
 <style lang="scss" scoped>
+:global(:root.android-app) .nav {
+  max-width: 100vw;
+  overflow: hidden;
+}
+
 @media (max-width: 768px) {
   .nav {
     gap: 8px;
     height: calc(64px + var(--safe-area-top, 0px));
-    padding: var(--safe-area-top, 0px) 12px 0;
+    padding: var(--safe-area-top, 0px) max(8px, calc(12px * var(--android-ui-scale, 1))) 0;
 
     .page-control {
       gap: 4px;
@@ -433,7 +438,7 @@ onUnmounted(() => {
   .nav {
     gap: 6px;
     height: calc(60px + var(--safe-area-top, 0px));
-    padding: var(--safe-area-top, 0px) 10px 0;
+    padding: var(--safe-area-top, 0px) max(6px, calc(10px * var(--android-ui-scale, 1))) 0;
 
     .nav-main {
       margin-left: 4px;

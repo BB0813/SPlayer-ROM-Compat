@@ -286,7 +286,7 @@ const keyDownEvent = debounce((event: KeyboardEvent) => {
     if (mainKey !== key) match = false;
 
     if (match && shortcutKey) {
-      console.log(shortcutKey, `蹇嵎閿Е鍙? ${shortcut.name}`);
+      console.log(shortcutKey, `快捷键触发：${shortcut.name}`);
       switch (shortcutKey) {
         case "playOrPause":
           player.playOrPause();

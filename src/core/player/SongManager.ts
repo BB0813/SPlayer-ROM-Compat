@@ -1,4 +1,4 @@
-﻿import { personalFm, personalFmToTrash } from "@/api/rec";
+import { personalFm, personalFmToTrash } from "@/api/rec";
 import { songQuality, songUrl, unlockSongUrl } from "@/api/song";
 import { useLyricManager } from "@/core/player/LyricManager";
 import {
@@ -17,8 +17,6 @@ import { AI_AUDIO_LEVELS } from "@/utils/meta";
 import { handleSongQuality } from "@/utils/helper";
 import { openUserLogin } from "@/utils/modal";
 
-/**
- * 濠殿喗绻傞張顒€煤閸濄儲鍠嗛柨婵嗩槹閺佹岸鏌￠崼婵埿㈠┑顔惧枛瀹? */
 export enum SongUnlockServer {
   NETEASE = "netease",
   BODIAN = "bodian",
@@ -26,24 +24,21 @@ export enum SongUnlockServer {
   GEQUBAO = "gequbao",
 }
 
-/** 濠殿喗绻傞張顒€煤閹间礁绠绘い鎾跺枑閺夊綊鏌涢敂鑺ョ凡婵炵厧鍟粚閬嶅焺閸愌呯 */
 export type AudioSource = {
-  /** 濠殿喗绻傞張顒€煤缁旀攧 */
+  /** 音频源 ID */
   id: number;
-  /** 濠殿喗绻傞張顒€煤閹间礁绠绘い鎾跺枑閺夊綊鏌涢敂鑺ョ凡婵?*/
+
   url?: string;
-  /** 闂佸搫瀚烽崹浼村箚娴ｇ儤鍠嗛柨婵嗩槹閺?*/
+
   isUnlocked?: boolean;
-  /** 闂佸搫瀚烽崹浼村箚娴ｅ湱鈻斿Δ锕佹硶濡叉悂鏌?*/
+
   isTrial?: boolean;
-  /** 闂傚倸锕ら悿鍥ь啅?*/
+
   quality?: QualityType;
-  /** 闂傚倸锕ㄥ▍鏇犺姳?*/
+
   source?: AudioSourceType;
 };
 
-/**
- * 濠殿喗绻傞張顒€煤閸濄儳涓嶉柨娑樺閸婄偤鏌? * 闁荤姵鍔楅崰鏇㈡儗濡も偓椤垻浠﹂悙顒勬暅闂佹眹鍔岀€氼垶鐛箛娑樼煑闁哄秲鍎崑鎾存媴閾忕懓顦╅柣搴㈢⊕鑿ч柍褜鍏涚欢姘躲€傞埡鍛闁绘鍎ょ粊鎵磼濞戞﹩妲归柟濂告敱閹? */
 class SongManager {
   // 预加载下一首播放源
   private nextPrefetch: AudioSource | undefined;
@@ -97,11 +92,8 @@ class SongManager {
     return await this.getMusicCachePath(id);
   }
 
-  /**
-   * 婵☆偅婢樼€氼剚鎱ㄩ悙瀛樺闁芥ê顦卞▓閬嶆⒒閸稑鐏╂繛瀛橈耿閹?   * @param song 濠殿喗绻傞張顒€煤閸涘﹦鈹嶉柍鈺佸暕缁?
-   */
   private prefetchCover(song: SongType): void {
-    if (!song || song.path) return; // 闂佸搫鐗滈崜娆忥耿閺夋埈娼伴悘鐐靛亾闁裤倝鎮归崫鍕瀮缂?
+    if (!song || song.path) return;
     const coverUrls: string[] = [];
 
     // 优先预取高质量封面
@@ -128,10 +120,6 @@ class SongManager {
     });
   }
 
-  /**
-   * 濠碘槅鍋€閸嬫捇鏌＄仦璇插姕婵犫偓娴兼潙鎹堕柟娈垮枤婢跺嫰鎮?   * @param id 濠殿喗绻傞張顒€煤缁旀攧
-   * @param quality 闂傚倸锕ら悿鍥ь啅?   * @param md5 濠殿喗绻傞張顒€煤閹间礁妫橀柛銉檮椤愮丹d5
-   */
   private checkLocalCache = async (
     id: number,
     quality?: QualityType,
@@ -151,16 +139,12 @@ class SongManager {
           return toFileUrl(cachePath);
         }
       } catch (e) {
-        console.error(`闂?[${id}] 濠碘槅鍋€閸嬫捇鏌＄仦璇插姢缂佹唻濡囬埀顒佺⊕閿氶柕鍥ㄥ灩閹?`, e);
+        console.error("[SongManager] 获取播放地址失败", e);
       }
     }
     return null;
   };
 
-  /**
-   * 闁荤喐鐟辩粻鎴ｃ亹閸屾粎纾介柟鎯х－閹界姴鈽夐幘鎰佸創婵?   * @param id 濠殿喗绻傞張顒€煤缁旀攧
-   * @param url 婵炴垶鎸搁鍫澝归崶顒€鎹堕柡澶嬪缁?
-   * @param quality 闂傚倸锕ら悿鍥ь啅?   */
   private triggerCacheDownload = (id: number, url: string, quality?: QualityType | string) => {
     const settingStore = useSettingStore();
     if (isElectron && settingStore.cacheEnabled && settingStore.songCacheEnabled && url) {
@@ -168,15 +152,10 @@ class SongManager {
     }
   };
 
-  /**
-   * 闂佸吋鍎抽崲鑼躲亹閸ヮ剙鎹堕柕濞у啯鐤囬梺鍦檸閸樹粙寮笟鈧弻褔鎮欓鈧径?
-   * @param id 濠殿喗绻傞張顒€煤缁旀攧
-   * @returns 闂侀潻璐熼崝搴ㄥ吹鎼淬劌绠绘い鎾跺枑閺夌懓菐閸ワ絽澧插ù?   */
   public getOnlineUrl = async (id: number, isPc: boolean = false): Promise<AudioSource> => {
     const settingStore = useSettingStore();
     let level: string = isPc ? "exhigh" : settingStore.songLevel;
 
-    // Fuck AI Mode: 婵犵鈧啿鈧綊鎮樻径濠庡殨闁逞屽墴瀹曘儵顢涢妶鍥╊槷婵炴垶鎸诲Λ渚€顢氶鈧晥闁稿本绮嶉悾?level 闂?AI 闂傚倸锕ら悿鍥ь啅濠靛鏅€光偓閸曨剦鈧牜绱掗悪娆忓€界粈?hires
     if (settingStore.disableAiAudio && AI_AUDIO_LEVELS.includes(level)) {
       level = "hires";
     }
@@ -189,7 +168,7 @@ class SongManager {
         // 注释已清理
         if (!hasDb) {
           console.log("日志输出");
-          // 闂佸湱顭堥ˇ顔炬椤撱垹绀傞柛顐犲灲閻涙捇姊婚崟顐ばゅΔ鐘叉喘閺佸秴顫㈤埡顧竐s -> lossless -> exhigh
+
           if (qualityRes.data?.hr && Number(qualityRes.data.hr.br) > 0) {
             level = "hires";
           } else if (qualityRes.data?.sq && Number(qualityRes.data.sq.br) > 0) {
@@ -199,21 +178,17 @@ class SongManager {
           }
         }
       } catch (e) {
-        console.error(
-          `濠碘槅鍋€閸嬫捇鏌＄仦璇插姕婵炵鍔岃闁哄啫鐗忛崣楣冩偣閹扳晛濡介柡渚囧櫍楠炴劖鎷呴幖鐐版澀闁荤姵鍔戦崕鑽ゆ濠靛鈷旂€广儱娲悰鎾绘煕閹烘柨顣奸柣搴墯椤ㄥ洤顫滈埀顒勬偂閸撲焦瀚?`,
-          e,
-        );
+        console.error("[SongManager] 获取播放地址失败", e);
         level = "exhigh";
       }
     }
 
     const res = await songUrl(id, level as any);
-    console.log(`濡絽鍟?${id} music data:`, res);
+    console.log(`[${id}] 官方播放地址请求完成`);
 
     // 注释已清理
     const songData = Array.isArray(res.data) ? res.data[0] : res.data?.[0];
 
-    // 闂佸搫瀚烽崹浼村箚娓氣偓瀵灚寰勭€ｎ偄鍟婇梺琛″亾闁诡垎鍕瑎闂佺鈧崑?
     if (!songData || !songData?.url) return { id, url: undefined };
     // 注释已清理
     const isTrial = songData?.freeTrialInfo != null;
@@ -227,10 +202,8 @@ class SongManager {
     // 注释已清理
     const finalUrl = normalizedUrl;
 
-    // 闂佸吋鍎抽崲鑼躲亹閸ヮ剚顥婇悗鍦Т缁愭盯鏌ㄥ☉娆掑妞も敪鍥у嚑婵犲﹤妫崵鐐存叏閻熸澘鈧鈻撻幋锕€鍙婃い鏍ㄧ⊕瀵ょ儤鎱ㄩ敐鍡橆棖缂佽鲸绻堥幆鍕偓娑櫭径宥吤归敐鍫熺《闁轰降鍊濆璺侯煥閸曨厽啸闂傚倸锕ら悿鍥ь啅濠靛鏅悘鐐跺Г閸庡﹪鏌涢幒鎾舵噥缂侇喚濮靛濠氬棘閹稿海顦ラ梺杞拌兌婢ф鐣垫笟鈧畷姘跺Χ閸℃鍔?
     let quality: QualityType | undefined;
     if (level === "dolby") {
-      // 闁荤姴娲弨閬嶆儑娴煎瓨鍎嶉柛鏇ㄥ墯绗戦梺鍝勵槹缁秹鎯侀鈧Λ鍛偓鍦Т缁愭盯鏌ㄥ☉妯肩伇婵炴彃娼￠獮鎺楀Ψ閿旀儳鐏遍柣鐘辩窔椤ｏ妇鎷归悢鐓庣骇婵犲﹤瀚Σ?
       quality = QualityType.Dolby;
     } else {
       // 注释已清理
@@ -251,18 +224,13 @@ class SongManager {
     return { id, url: finalUrl, isTrial, quality };
   };
 
-  /**
-   * 闂佸吋鍎抽崲鑼躲亹閸モ晜鍠嗛柨婵嗩槹閺佹岸鏌熺紒銏犲箺闁哄倷绶氶弻褔鎮欓鈧径?
-   * @param songData 濠殿喗绻傞張顒€煤閹间礁鏋侀柣妤€鐗嗙粊?
-   * @param specificSource 闂佸湱顭堝ú銈夋偩閸撗勫枂闁挎繂顦伴弫姘節?   * @returns
-   */
   public getUnlockSongUrl = async (
     song: SongType,
     specificSource?: string,
   ): Promise<AudioSource> => {
     const settingStore = useSettingStore();
     const songId = song.id;
-    // 婵炴潙鍚嬮敋闁告ɑ绋戣灋闁逞屽墴瀵濡烽敂鑺ュ闂侀潻闄勬竟鍡欐閿旈敮鍋?(婵炲濮撮幊搴★耿椤忓牆瀚夋い蹇撴噹閻﹀綊鎮楃憴鍕暡缂侇煈鍣ｉ獮瀣冀閵娿儳妯勯柣搴ゎ潐閻喚鎷?auto 闂?
+
     if (!specificSource || specificSource === "auto") {
       const cachedUrl = await this.checkLocalCache(songId);
       if (cachedUrl) {
@@ -318,9 +286,9 @@ class SongManager {
     for (const r of results) {
       if (r.status === "fulfilled" && r.value.success) {
         const unlockUrl = r.value?.result?.url;
-        // 闁荤喐鐟辩紞渚€寮ㄩ敐澶婄闁归偊鍓欓～鐘绘煕濮橆剙鍤辩紒杈ㄧ箘閹叉挳鏁冮埀顒冦亹閸屾稓鈻旈悗锝庡幗缁?
+
         this.triggerCacheDownload(songId, unlockUrl);
-        // 闂佽浜介崝宥夊蓟閸ヮ剚顥婇悗鍦Т缁?
+
         let quality = QualityType.HQ;
         if (unlockUrl && (unlockUrl.includes(".flac") || unlockUrl.includes(".wav"))) {
           quality = QualityType.SQ;
@@ -338,9 +306,6 @@ class SongManager {
     return { id: songId, url: undefined };
   };
 
-  /**
-   * 婵☆偅婢樼€氼垰霉閸ャ劎鈻旈悗锝傛櫇椤忓崬螞閿濆棛澧柣鈩冩礋瀵?   * @returns 婵☆偅婢樼€氼垰霉閸ヮ剙鏋侀柣妤€鐗嗙粊?
-   */
   public prefetchNextSong = async (): Promise<AudioSource | undefined> => {
     try {
       const dataStore = useDataStore();
@@ -396,9 +361,8 @@ class SongManager {
       this.prefetchCover(nextSong);
       // 注释已清理
       lyricManager.prefetchLyric(nextSong);
-      // 闂佸搫鐗滈崜娆忥耿閺夋埈娼伴悘鐐靛亾闁?
+
       if (nextSong.path) {
-        // 婵☆偅婢樼€氼剟宕规惔銊ュ嚑闁圭増澹嗛崣鎯?(Automix)
         if (isElectron && settingStore.enableAutomix) {
           window.electron.ipcRenderer.invoke("analyze-audio-head", nextSong.path).catch((e) => {
             console.warn("[Prefetch] Analysis failed:", e);
@@ -458,20 +422,15 @@ class SongManager {
     }
   };
 
-  /**
-   * 濠电偞鎸搁幊妯衡枍鎼搭澁绱ｉ柛鏇ㄥ亜椤綁寮堕悙鍨珪缂佹唻濡囬埀?   */
   public clearPrefetch() {
     this.nextPrefetch = undefined;
     console.log("日志输出");
   }
 
-  /**
-   * 闂佸吋鍎抽崲鑼躲亹閸ヮ剚顥婇柟鍓佺摂閺嗐儲绻?   * 婵犳鍠栭鍥╁垝閹惧顩烽幖娣焺閸斿啴鏌￠崒婵愭綈缁绢厼鐖奸幊銏犵暋閺夎法鎮奸柣搴ｆ暩閹虫挾鑺遍幓鎺濇桨閻忕偟鍋撻柨銈夋煙缂併垹骞楅柡鍌欑劍缁岄亶鍩勯崘褏绀€
-   * @param song 濠殿喗绻傞張顒€煤?   * @returns 闂傚倸锕ユ繛濠囥€傜捄琛℃敠?   */
   public getAudioSource = async (song: SongType, forceSource?: string): Promise<AudioSource> => {
     const settingStore = useSettingStore();
 
-    // 鏈湴鏂囦欢鐩存帴杩斿洖
+    // 本地文件直接返回
     if (song.path && song.type !== "streaming") {
       if (isAndroidApp && song.streamUrl) {
         return { id: song.id, url: song.streamUrl, source: "local" };
@@ -491,7 +450,7 @@ class SongManager {
     if (song.type === "streaming" && song.streamUrl) {
       const streamingStore = useStreamingStore();
       const finalUrl = streamingStore.getSongUrl(song);
-      console.log(`馃摟 [${song.id}] Stream URL:`, finalUrl);
+      console.log(`[${song.id}] 流媒体播放地址:`, finalUrl);
       return {
         id: song.id,
         url: finalUrl,
@@ -525,7 +484,7 @@ class SongManager {
         }
         const unlockUrl = await this.getUnlockSongUrl(song, forceSource);
         if (unlockUrl.url) {
-          console.log(`馃攣 [${songId}] 鎸囧畾婧愯В閿佹垚鍔?${forceSource}`, unlockUrl);
+          console.log(`[${songId}] 指定源解锁成功：${forceSource}`, unlockUrl);
           return unlockUrl;
         }
         return { id: songId, url: undefined };
@@ -540,7 +499,7 @@ class SongManager {
       if ((!forceSource || forceSource === "auto") && canUnlock) {
         const unlockUrl = await this.getUnlockSongUrl(song);
         if (unlockUrl.url) {
-          console.log(`馃攣 [${songId}] 瑙ｉ攣鎴愬姛`, unlockUrl);
+          console.log(`[${songId}] 解锁成功`, unlockUrl);
           return unlockUrl;
         }
       }
@@ -548,7 +507,7 @@ class SongManager {
       if (!forceSource || forceSource === "auto") {
         const fallbackUrl = await this.checkLocalCache(songId);
         if (fallbackUrl) {
-          console.log(`馃帉 [${songId}] 浣跨敤鏈湴缂撳瓨鍥為€€`, fallbackUrl);
+          console.log("[SongManager] 播放地址处理完成", fallbackUrl);
           return {
             id: songId,
             url: fallbackUrl,
@@ -564,11 +523,11 @@ class SongManager {
       }
       return { id: songId, url: undefined, quality: undefined, isUnlocked: false };
     } catch (error) {
-      console.error(`鉂?[${songId}] 鑾峰彇鎾斁鍦板潃澶辫触`, error);
+      console.error(`[${songId}] 获取播放地址失败`, error);
       if (!forceSource || forceSource === "auto") {
         const fallbackUrl = await this.checkLocalCache(songId);
         if (fallbackUrl) {
-          console.log(`馃帉 [${songId}] 寮傚父鍚庝娇鐢ㄦ湰鍦扮紦瀛樺洖閫€`);
+          console.log(`[${songId}] 异常后使用本地缓存回退`);
           return {
             id: songId,
             url: fallbackUrl,
@@ -587,10 +546,6 @@ class SongManager {
     }
   };
 
-  /**
-   * 闂佸憡甯楃换鍌烇綖閹版澘绀?闂佸湱铏庨崢浠嬪棘娴ｈ櫣鐭撳ù锝夋敱閻?FM
-   * @param playNext 闂佸搫瀚烽崹浼村箚娓氣偓楠炴﹢顢橀悢鍛婃緬婵炴垶鎸搁鍕博鐎涙﹫绱?   * @returns 闂佸搫瀚烽崹浼村箚娓氣偓楠炲骞囬鈧～?
-   */
   public async initPersonalFM(playNext: boolean = false) {
     const musicStore = useMusicStore();
     const statusStore = useStatusStore();
@@ -620,8 +575,6 @@ class SongManager {
     }
   }
 
-  /**
-   * 缂備礁顦鎺懶?FM 闂佹悶鍔岄崯顐⑩攦閸パ屾禆?   */
   public async personalFMTrash(id: number, onSuccess?: () => void) {
     if (!isLogin()) {
       openUserLogin(true);
@@ -639,9 +592,6 @@ class SongManager {
     }
   }
 
-  /**
-   * 闂佸憡甯￠弨閬嶅蓟婵犲嫮鐭撳ù锝夋敱閻?FM
-   */
   public async refreshPersonalFM() {
     const musicStore = useMusicStore();
     if (!isLogin()) {
@@ -652,9 +602,7 @@ class SongManager {
       const res = await personalFm();
       const newList = formatSongsList(res.data);
       if (!newList || newList.length === 0) {
-        throw new Error(
-          "闂佸憡姊绘慨鎯归崶鈺冪煋濞达綁鏀遍惇鑺ョ節閺囥劌浜濋柣鏍х埣瀹曟艾螖閸曗斁鍋撻崘鈺佺窞閺夊牜鍋夎",
-        );
+        throw new Error("私人 FM 暂无可用歌曲");
       }
       musicStore.personalFM.list = newList;
       musicStore.personalFM.playIndex = 0;
@@ -668,9 +616,6 @@ class SongManager {
 
 let instance: SongManager | null = null;
 
-/**
- * 闂佸吋鍎抽崲鑼躲亹?SongManager 闁诲骸婀遍崑妯兼? * @returns SongManager
- */
 export const useSongManager = (): SongManager => {
   if (!instance) instance = new SongManager();
   return instance;

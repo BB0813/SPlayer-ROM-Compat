@@ -1,4 +1,5 @@
-﻿name: Android Release
+name: Android Release
+run-name: Android Release ${{ github.ref_name }}
 
 on:
   push:
@@ -26,6 +27,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag freshness
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          default_branch="${{ github.event.repository.default_branch }}"
+          git fetch origin "$default_branch" --depth=1
+          tag_commit="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+          branch_commit="$(git rev-parse "origin/$default_branch")"
+          if [ "$tag_commit" != "$branch_commit" ]; then
+            echo "::error::当前 tag 不在默认分支最新提交上，GitHub 预发布列表可能会按旧提交时间下排。请先把版本提交推到默认分支，再在最新提交上重新打 tag。"
+            echo "tag commit: $tag_commit"
+            echo "$default_branch commit: $branch_commit"
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -128,7 +147,7 @@ jobs:
       - name: Upload arm64-v8a APK
         uses: actions/upload-artifact@v4
         with:
-          name: SPlayer-ROM-Compat-arm64-v8a
+          name: 01-SPlayer-ROM-Compat-arm64-v8a
           path: android/dist/apk/release/SPlayer-ROM-Compat-v*-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 14
@@ -136,7 +155,7 @@ jobs:
       - name: Upload armeabi-v7a APK
         uses: actions/upload-artifact@v4
         with:
-          name: SPlayer-ROM-Compat-armeabi-v7a
+          name: 02-SPlayer-ROM-Compat-armeabi-v7a
           path: android/dist/apk/release/SPlayer-ROM-Compat-v*-armeabi-v7a-release.apk
           if-no-files-found: error
           retention-days: 14
@@ -144,24 +163,58 @@ jobs:
       - name: Upload x86_64 APK
         uses: actions/upload-artifact@v4
         with:
-          name: SPlayer-ROM-Compat-x86_64
+          name: 03-SPlayer-ROM-Compat-x86_64
           path: android/dist/apk/release/SPlayer-ROM-Compat-v*-x86_64-release.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare ordered release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="android/dist/apk/release"
+          upload_dir="android/dist/apk/release-upload"
+          mkdir -p "$upload_dir"
+          rm -f "$upload_dir"/*.apk
+
+          copy_latest_apk() {
+            local abi="$1"
+            local index="$2"
+            local source_file
+            source_file=$(find "$release_dir" -maxdepth 1 -type f -name "SPlayer-ROM-Compat-v*-${abi}-release.apk" | sort -V | tail -n 1)
+            if [ -z "$source_file" ]; then
+              echo "::error::未找到 ${abi} 分架构 APK"
+              exit 1
+            fi
+            cp "$source_file" "$upload_dir/${index}-SPlayer-ROM-Compat-${GITHUB_REF_NAME}-${abi}.apk"
+          }
+
+          copy_latest_apk arm64-v8a 01
+          copy_latest_apk armeabi-v7a 02
+          copy_latest_apk x86_64 03
+          find "$upload_dir" -maxdepth 1 -type f -name "*.apk" -print | sort
 
       - name: Publish Android GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: android/dist/apk/release/SPlayer-ROM-Compat-v*-release.apk
+          name: SPlayer-ROM-Compat Android ${{ github.ref_name }}
+          files: |
+            android/dist/apk/release-upload/01-SPlayer-ROM-Compat-${{ github.ref_name }}-arm64-v8a.apk
+            android/dist/apk/release-upload/02-SPlayer-ROM-Compat-${{ github.ref_name }}-armeabi-v7a.apk
+            android/dist/apk/release-upload/03-SPlayer-ROM-Compat-${{ github.ref_name }}-x86_64.apk
           fail_on_unmatched_files: true
+          overwrite_files: true
+          preserve_order: true
+          make_latest: ${{ (contains(github.ref_name, '-rc.') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha')) && 'false' || 'true' }}
           prerelease: ${{ contains(github.ref_name, '-rc.') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
           body: |
             SPlayer-ROM-Compat Android 分架构签名包。
 
             产物说明：
-            - arm64-v8a：现代 Android / HarmonyOS 手机、平板推荐使用。
-            - armeabi-v7a：旧款 32 位 ARM 设备使用。
-            - x86_64：Android Studio 模拟器或 x86_64 环境测试使用。
+            - 01 arm64-v8a：现代 Android / HarmonyOS 手机、平板推荐使用。
+            - 02 armeabi-v7a：旧款 32 位 ARM 设备使用。
+            - 03 x86_64：Android Studio 模拟器或 x86_64 环境测试使用。
 
-            桌面端 macOS / Windows / Linux 构建已改为手动 workflow，不会随 v* 标签自动运行。
+            发布资产已按推荐顺序上传。桌面端 macOS / Windows / Linux 构建已改为手动 workflow，不会随 v* 标签自动运行。

@@ -17,7 +17,7 @@ import {
 } from "./PlayerIpc";
 
 /**
- * 濯掍綋浼氳瘽绠＄悊鍣紝璐熻矗涓嶅悓骞冲彴鐨勫獟浣撴帶鍒堕泦鎴? * 鍦?Electron 骞冲彴涓婁細浣跨敤鍘熺敓鎻掍欢锛學eb 骞冲彴涓婁細浣跨敤 Navigator.mediaSession
+ * 注释已清理
  */
 class MediaSessionManager {
   private metadataAbortController: AbortController | null = null;
@@ -28,15 +28,12 @@ class MediaSessionManager {
   }, 200);
 
   /**
-   * 鏄惁浣跨敤鍘熺敓濯掍綋闆嗘垚
+   * 是否使用原生媒体集成
    */
   private shouldUseNativeMedia(): boolean {
     return isElectron;
   }
 
-  /**
-   * 澶勭悊鍘熺敓鏉ョ殑濯掍綋浜嬩欢
-   */
   private handleMediaEvent(
     event: SystemMediaEvent,
     player: ReturnType<typeof usePlayerController>,
@@ -85,7 +82,7 @@ class MediaSessionManager {
   }
 
   /**
-   * 鍒濆鍖栧獟浣撲細璇?   */
+   * 注释已清理 */
   public init() {
     if (isAndroidApp) return;
 
@@ -114,7 +111,7 @@ class MediaSessionManager {
       sendMediaPlayMode(shuffle, repeat);
       player.syncMediaPlayMode();
 
-      // 鍚屾鍒濆鎾斁閫熺巼
+      // 同步初始播放速率
       sendMediaPlaybackRate(statusStore.playRate);
 
       // 注释已清理
@@ -126,7 +123,7 @@ class MediaSessionManager {
         });
       }
 
-      // 濡傛灉鏈夊師鐢熼泦鎴愬垯涓嶉渶瑕?Web API
+      // 注释已清理
       if (settingStore.smtcOpen) return;
     }
 
@@ -144,7 +141,7 @@ class MediaSessionManager {
   }
 
   /**
-   * 鏇存柊鍏冩暟鎹?   */
+   * 注释已清理 */
   public async updateMetadata() {
     if (isAndroidApp) return;
     if (!("mediaSession" in navigator) && !isElectron) return;
@@ -158,11 +155,11 @@ class MediaSessionManager {
     this.metadataAbortController = new AbortController();
     const { signal } = this.metadataAbortController;
     const metadata = this.buildMetadata(song);
-    // 鍘熺敓鎻掍欢
+    // 原生插件
     if (this.shouldUseNativeMedia() && settingStore.smtcOpen) {
       try {
         let coverBuffer: Uint8Array | undefined;
-        // 鏈湴鏂囦欢涓斿皝闈笉鏄?Blob URL
+        // 注释已清理
         if (song.path && isElectron && !isAndroidApp && !metadata.coverUrl.startsWith("blob:")) {
           try {
             const coverData = await window.electron.ipcRenderer.invoke(
@@ -173,10 +170,10 @@ class MediaSessionManager {
               coverBuffer = new Uint8Array(coverData.data);
             }
           } catch {
-            // 蹇界暐璇诲彇澶辫触
+            // 忽略读取失败
           }
         }
-        // 鍦ㄧ嚎姝屾洸
+        // 在线歌曲
         else if (
           metadata.coverUrl &&
           (metadata.coverUrl.startsWith("http") || metadata.coverUrl.startsWith("blob:"))
@@ -185,7 +182,7 @@ class MediaSessionManager {
             const resp = await fetch(metadata.coverUrl, { signal });
             coverBuffer = new Uint8Array(await resp.arrayBuffer());
           } catch {
-            // 蹇界暐涓嬭浇澶辫触
+            // 忽略下载失败
           }
         }
         sendMediaMetadata({
@@ -221,7 +218,7 @@ class MediaSessionManager {
   }
 
   /**
-   * 鏋勫缓鍏冩暟鎹?   */
+   * 注释已清理 */
   private buildMetadata(song: ReturnType<typeof getPlaySongData>): {
     title: string;
     artist: string;
@@ -234,12 +231,12 @@ class MediaSessionManager {
     return {
       title: song!.name,
       artist: isRadio
-        ? song!.dj?.creator || "鏈煡鎾"
+        ? song!.dj?.creator || "未知播客"
         : Array.isArray(song!.artists)
           ? song!.artists.map((a) => a.name).join("/")
           : String(song!.artists),
       album: isRadio
-        ? song!.dj?.name || "鏈煡鎾"
+        ? song!.dj?.name || "未知播客"
         : typeof song!.album === "object"
           ? song!.album.name
           : String(song!.album),
@@ -248,7 +245,7 @@ class MediaSessionManager {
   }
 
   /**
-   * 鏋勫缓涓撹緫灏侀潰鏁扮粍
+   * 构建专辑封面数组
    */
   private buildArtwork(musicStore: ReturnType<typeof useMusicStore>) {
     return [
@@ -281,19 +278,19 @@ class MediaSessionManager {
   }
 
   /**
-   * 鏇存柊鎾斁杩涘害
-   * @param duration 鎬绘椂闀?   * @param position 褰撳墠浣嶇疆
-   * @param immediate 鏄惁绔嬪嵆鍙戦€侊紝鐢ㄤ簬 Seek 鎿嶄綔
+   * 更新播放进度
+   * 注释已清理
+   * @param immediate 是否立即发送，用于 Seek 操作
    */
   public updateState(duration: number, position: number, immediate: boolean = false) {
     const settingStore = useSettingStore();
     if (!settingStore.smtcOpen) return;
 
-    // 鍘熺敓鎻掍欢
+    // 原生插件
     if (this.shouldUseNativeMedia()) {
       if (immediate) {
         this.throttledSendTimeline.cancel();
-        // 缁濆浣嶇疆鏇存柊锛岄伩鍏?Seek 鎿嶄綔鐨勮繘搴︽洿鏂拌闄愭祦涓㈠純
+        // 注释已清理
         sendMediaTimeline(position, duration, true);
       } else {
         this.throttledSendTimeline(position, duration);
@@ -306,16 +303,16 @@ class MediaSessionManager {
   }
 
   /**
-   * 鏇存柊鎾斁鐘舵€?   */
+   * 注释已清理 */
   public updatePlaybackStatus(isPlaying: boolean) {
-    // 鍙戦€佸埌鍘熺敓鎻掍欢
+    // 发送到原生插件
     if (this.shouldUseNativeMedia()) {
       sendMediaPlayState(isPlaying ? "Playing" : "Paused");
     }
   }
 
   /**
-   * 鏇存柊鎾斁閫熺巼
+   * 更新播放速率
    */
   public updatePlaybackRate(rate: number) {
     this.currentRate = rate;
@@ -332,7 +329,7 @@ class MediaSessionManager {
   }
 
   /**
-   * 闄愭祦鏇存柊杩涘害鐘舵€?   */
+   * 注释已清理 */
   private throttledUpdatePositionState = throttle((duration: number, position: number) => {
     if ("mediaSession" in navigator) {
       navigator.mediaSession.setPositionState({

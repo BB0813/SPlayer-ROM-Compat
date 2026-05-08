@@ -138,7 +138,7 @@ export class AudioElementPlayer extends BaseAudioPlayer {
     // true (default) = time stretch (pitch constant, speed changes)
     // false = pitch shift (pitch changes with speed)
 
-    // We want to change pitch without changing speed?
+    // 注释已清理
     // No, standard Web Audio doesn't support independent pitch shift natively without libraries like SoundTouch.
     // However, if we want to change pitch to match keys:
     // If we use playbackRate to change pitch, speed also changes.
@@ -149,7 +149,7 @@ export class AudioElementPlayer extends BaseAudioPlayer {
     // That's complex.
 
     // For now, let's assume 'preservesPitch' control.
-    // If semitones != 0, we might want to disable pitch preservation if we are using rate to shift pitch?
+    // 注释已清理
     // Actually, 'preservesPitch' only affects what happens when playbackRate != 1.
 
     // If we want independent pitch shifting, we can't do it with just AudioElement.
