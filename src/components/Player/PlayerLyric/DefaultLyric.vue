@@ -27,6 +27,7 @@
         'align-right': settingStore.lyricAlignRight,
         'meta-show': statusStore.playerMetaShow,
         'android-lite': isAndroidPerformanceMode,
+        'android-player': isAndroidApp,
       },
     ]"
     @mouseleave="lrcAllLeave"
@@ -40,6 +41,8 @@
           class="lyric-scroll-container"
           tabindex="-1"
           @wheel="handleUserScroll"
+          @touchstart.passive="handleLyricTouchStart"
+          @touchmove.passive="handleLyricTouchMove"
         >
           <!-- 顶部占位 -->
           <div id="lrc-placeholder" class="placeholder" />
@@ -161,9 +164,7 @@ const isAndroidPerformanceMode = computed(
 const lyricScrollContainer = ref<HTMLElement | null>(null);
 
 // 是否为逐字歌词模式
-const isYrcMode = computed(
-  () => settingStore.showWordLyrics && musicStore.isHasYrc && !isAndroidPerformanceMode.value,
-);
+const isYrcMode = computed(() => settingStore.showWordLyrics && musicStore.isHasYrc);
 
 // 获取当前使用的歌词数据
 const currentLyricData = computed(() => {
@@ -297,6 +298,8 @@ const userScrolling = ref(false);
 let userScrollTimeoutId: ReturnType<typeof setTimeout> | null = null;
 /** 用户滚动恢复超时时间（毫秒） */
 const USER_SCROLL_TIMEOUT = 3000;
+let lyricTouchStartX = 0;
+let lyricTouchStartY = 0;
 
 /**
  * 自主滚动
@@ -312,6 +315,28 @@ const handleUserScroll = () => {
     userScrollTimeoutId = null;
     lyricsScroll(firstActiveIndex.value);
   }, USER_SCROLL_TIMEOUT);
+};
+
+const handleLyricTouchStart = (event: TouchEvent) => {
+  const touch = event.touches[0];
+  if (!touch || event.touches.length !== 1) return;
+
+  lyricTouchStartX = touch.clientX;
+  lyricTouchStartY = touch.clientY;
+};
+
+const handleLyricTouchMove = (event: TouchEvent) => {
+  const touch = event.touches[0];
+  if (!touch || event.touches.length !== 1) return;
+
+  const deltaX = touch.clientX - lyricTouchStartX;
+  const deltaY = touch.clientY - lyricTouchStartY;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  if (absX < 6 && absY < 6) return;
+  if (absX > absY * 1.12) return;
+
+  handleUserScroll();
 };
 
 /**
@@ -429,24 +454,21 @@ const getYrcVars = (wordData: LyricWord, lyricIndex: number): CssVars => {
   if (!currentLineItem || currentLineItem.type !== "lyric") return {};
 
   if (!isYrcLineOn(lyricIndex)) return {};
-  if (isAndroidPerformanceMode.value) return { "--yrc-opacity": "1" };
+  const useLiteWordRender = isAndroidPerformanceMode.value;
   // 计算进度
   const duration = wordData.endTime - wordData.startTime;
   const safeDuration = Math.max(duration, 1);
   const rawProgress = (currentSeek - wordData.startTime) / safeDuration;
-  const progress = Math.min(Math.max(rawProgress, 0), 1); // Allow > 1 for latching
+  const progress = Math.min(Math.max(rawProgress, 0), 1);
   const maskX = `${(1 - Math.min(progress, 1)) * 100}%`;
   // 计算透明度
   const hasStarted = currentSeek >= wordData.startTime;
   const brightAlpha = hasStarted ? YRC_DIM_ALPHA + (1 - YRC_DIM_ALPHA) * fadeFactor : YRC_DIM_ALPHA;
   const darkAlpha = YRC_DIM_ALPHA;
 
-  // 计算每个字的动态变换效果
-  // Calculate dynamic transform for each word
+  // 计算每个字的轻量动效
   let transform = "scale(1)";
-  if (progress > 0) {
-    // 随着播放进度逐渐放大并上浮
-    // Gradually scale up and float up with playback progress
+  if (!useLiteWordRender && progress > 0) {
     const scale = 1 + 0.08 * progress;
     const y = -2 * progress;
     transform = `scale(${scale}) translateY(${y}px)`;
@@ -575,6 +597,8 @@ onBeforeUnmount(() => {
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     padding-left: var(--lrc-left-padding, 10px);
     padding-right: 80px;
     box-sizing: border-box;
@@ -802,9 +826,43 @@ onBeforeUnmount(() => {
       .content-text {
         .yrc-word {
           will-change: auto;
-          mask-image: none;
-          -webkit-mask-image: none;
-          -webkit-mask-position-x: initial;
+          transition: none;
+        }
+      }
+    }
+  }
+  &.android-player {
+    .lyric-scroll-container {
+      padding-right: max(18px, calc(22px * var(--android-ui-scale, 1)));
+    }
+    .lrc-line {
+      margin: 8px 0;
+      padding: 12px 12px;
+      .content {
+        font-size: clamp(30px, var(--lrc-size), 54px);
+        line-height: 1.18;
+      }
+      .tran {
+        font-size: clamp(17px, var(--lrc-tran-size), 28px);
+        line-height: 1.35;
+      }
+      .roma {
+        font-size: clamp(15px, var(--lrc-roma-size), 24px);
+        line-height: 1.35;
+      }
+    }
+  }
+  @media (min-width: 700px) {
+    &.android-player {
+      .lrc-line {
+        .content {
+          font-size: clamp(34px, var(--lrc-size), 60px);
+        }
+        .tran {
+          font-size: clamp(18px, var(--lrc-tran-size), 30px);
+        }
+        .roma {
+          font-size: clamp(16px, var(--lrc-roma-size), 26px);
         }
       }
     }

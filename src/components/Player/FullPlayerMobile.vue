@@ -4,6 +4,11 @@
     ref="mobileStart"
     data-allow-horizontal-pan
     data-android-touch-free
+    :data-page-index="pageIndex"
+    @pointerdown.capture="onPointerDown"
+    @pointermove.capture="onPointerMove"
+    @pointerup.capture="onPointerUp"
+    @pointercancel.capture="onPointerCancel"
     @touchstart.capture="onTouchStart"
     @touchmove.capture="onTouchMove"
     @touchend.capture="onTouchEnd"
@@ -150,6 +155,10 @@
       </div>
     </div>
 
+    <n-text v-if="canOpenLyricPage" class="page-tip" depth="3">
+      {{ pageIndex === 0 ? "左滑查看歌词" : "右滑返回播放" }}
+    </n-text>
+
     <div class="pagination" v-if="canOpenLyricPage">
       <div
         v-for="i in 2"
@@ -195,83 +204,234 @@ watch(canOpenLyricPage, (value) => {
   }
 });
 
-const axisLock = ref<"x" | "y" | null>(null);
+type SwipeAxis = "x" | "y";
+
+const axisLock = ref<SwipeAxis | null>(null);
 const isSwiping = ref(false);
 const lengthX = ref(0);
 
-let touchStartX = 0;
-let touchStartY = 0;
+const gestureIgnoreSelector = [
+  ".top-bar",
+  ".progress-section",
+  ".control-section",
+  ".info-actions",
+  ".action-btn",
+  ".mode-btn",
+  ".ctrl-btn",
+  ".play-btn",
+  ".pagination",
+  ".n-slider",
+  ".n-button",
+  "button",
+  "a",
+  "input",
+  "textarea",
+  "select",
+  "[contenteditable='true']",
+  "[data-player-gesture-ignore]",
+].join(", ");
 
-const cancelChildTouch = (target: EventTarget | null) => {
-  if (!target) return;
+const supportsPointerEvents = typeof window !== "undefined" && "PointerEvent" in window;
 
-  try {
-    target.dispatchEvent(new TouchEvent("touchcancel", { bubbles: true, cancelable: true }));
-  } catch {
-    target.dispatchEvent(new Event("touchcancel", { bubbles: true, cancelable: true }));
-  }
+let gestureStartX = 0;
+let gestureStartY = 0;
+let gestureStartedAt = 0;
+let gestureLastDeltaX = 0;
+let activePointerId: number | null = null;
+let activePointerTarget: HTMLElement | null = null;
+let pointerCaptured = false;
+let touchFallbackActive = false;
+
+const isElement = (target: EventTarget | null): target is Element => target instanceof Element;
+
+const isGestureIgnoredTarget = (target: EventTarget | null) => {
+  return isElement(target) && Boolean(target.closest(gestureIgnoreSelector));
+};
+
+const getViewportWidth = () => {
+  return Math.max(320, window.visualViewport?.width || window.innerWidth || 360);
+};
+
+const getSwipeThreshold = () => {
+  return Math.min(120, Math.max(56, getViewportWidth() * 0.12));
+};
+
+const getFastSwipeThreshold = () => {
+  return Math.min(72, Math.max(36, getViewportWidth() * 0.06));
+};
+
+const getLimitedSwipeOffset = (deltaX: number) => {
+  const limit = Math.min(240, getViewportWidth() * 0.45);
+  return Math.max(-limit, Math.min(limit, deltaX));
+};
+
+const stopGestureEvent = (event: Event) => {
+  if (event.cancelable) event.preventDefault();
+  event.stopPropagation();
 };
 
 const resetTouchState = () => {
   isSwiping.value = false;
   axisLock.value = null;
   lengthX.value = 0;
+  gestureLastDeltaX = 0;
+  activePointerId = null;
+  activePointerTarget = null;
+  pointerCaptured = false;
+  touchFallbackActive = false;
 };
 
-const getSwipeThreshold = () => {
-  return Math.min(96, Math.max(56, window.innerWidth * 0.16));
-};
-
-const onTouchStart = (event: TouchEvent) => {
-  if (!canOpenLyricPage.value || event.touches.length === 0) return;
-
-  touchStartX = event.touches[0].clientX;
-  touchStartY = event.touches[0].clientY;
+const beginSwipe = (clientX: number, clientY: number) => {
+  gestureStartX = clientX;
+  gestureStartY = clientY;
+  gestureStartedAt = performance.now();
+  gestureLastDeltaX = 0;
   axisLock.value = null;
   isSwiping.value = true;
   lengthX.value = 0;
 };
 
-const onTouchMove = (event: TouchEvent) => {
-  if (!canOpenLyricPage.value || !isSwiping.value || event.touches.length === 0) return;
+const resolveSwipeAxis = (deltaX: number, deltaY: number): SwipeAxis | null => {
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  if (absX < 8 && absY < 8) return null;
+  if (absX > absY * 1.12) return "x";
+  if (absY > absX * 1.12) return "y";
+  return null;
+};
 
-  const deltaX = touchStartX - event.touches[0].clientX;
-  const deltaY = touchStartY - event.touches[0].clientY;
+const updateSwipe = (clientX: number, clientY: number): SwipeAxis | null => {
+  if (!isSwiping.value) return null;
 
-  if (axisLock.value === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-    axisLock.value = Math.abs(deltaX) >= Math.abs(deltaY) ? "x" : "y";
+  const deltaX = gestureStartX - clientX;
+  const deltaY = gestureStartY - clientY;
 
-    if (axisLock.value === "x") {
-      cancelChildTouch(event.target);
+  if (axisLock.value === null) {
+    axisLock.value = resolveSwipeAxis(deltaX, deltaY);
+    if (axisLock.value === "y") {
+      lengthX.value = 0;
     }
   }
 
-  if (axisLock.value !== "x") return;
+  if (axisLock.value !== "x") return axisLock.value;
 
-  event.preventDefault();
-  event.stopPropagation();
-  lengthX.value = deltaX;
+  gestureLastDeltaX = deltaX;
+  lengthX.value = getLimitedSwipeOffset(deltaX);
+  return "x";
 };
 
-const onTouchEnd = (event: TouchEvent) => {
-  if (!canOpenLyricPage.value || !isSwiping.value) {
-    resetTouchState();
-    return;
-  }
+const finishSwipe = (clientX: number) => {
+  if (axisLock.value === "x") {
+    const finalLengthX = gestureStartX - clientX || gestureLastDeltaX;
+    const elapsed = Math.max(1, performance.now() - gestureStartedAt);
+    const velocity = Math.abs(finalLengthX) / elapsed;
+    const shouldSwitchPage =
+      Math.abs(finalLengthX) > getSwipeThreshold() ||
+      (Math.abs(finalLengthX) > getFastSwipeThreshold() && velocity > 0.45);
 
-  if (axisLock.value === "x" && event.changedTouches.length > 0) {
-    event.stopPropagation();
-    const finalLengthX = touchStartX - event.changedTouches[0].clientX;
-
-    const swipeThreshold = getSwipeThreshold();
-    if (finalLengthX > swipeThreshold) {
+    if (shouldSwitchPage && finalLengthX > 0 && pageIndex.value === 0) {
       pageIndex.value = 1;
-    } else if (finalLengthX < -swipeThreshold) {
+    } else if (shouldSwitchPage && finalLengthX < 0 && pageIndex.value === 1) {
       pageIndex.value = 0;
     }
   }
 
   resetTouchState();
+};
+
+const capturePointer = (event: PointerEvent) => {
+  if (pointerCaptured || activePointerTarget === null) return;
+
+  try {
+    activePointerTarget.setPointerCapture(event.pointerId);
+    pointerCaptured = true;
+  } catch {
+    pointerCaptured = false;
+  }
+};
+
+const releasePointer = (target: HTMLElement | null, pointerId: number | null) => {
+  if (!target || pointerId === null) return;
+
+  try {
+    if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
+  } catch {
+    // 忽略 ROM WebView 的释放差异
+  }
+};
+
+const onPointerDown = (event: PointerEvent) => {
+  if (!canOpenLyricPage.value || !event.isPrimary || isGestureIgnoredTarget(event.target)) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+
+  activePointerId = event.pointerId;
+  activePointerTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  beginSwipe(event.clientX, event.clientY);
+};
+
+const onPointerMove = (event: PointerEvent) => {
+  if (!canOpenLyricPage.value || activePointerId !== event.pointerId) return;
+
+  const axis = updateSwipe(event.clientX, event.clientY);
+  if (axis !== "x") return;
+
+  capturePointer(event);
+  stopGestureEvent(event);
+};
+
+const onPointerUp = (event: PointerEvent) => {
+  if (activePointerId !== event.pointerId) return;
+
+  const shouldStop = axisLock.value === "x";
+  const target = activePointerTarget;
+  const pointerId = activePointerId;
+
+  finishSwipe(event.clientX);
+  releasePointer(target, pointerId);
+
+  if (shouldStop) stopGestureEvent(event);
+};
+
+const onPointerCancel = (event: PointerEvent) => {
+  if (activePointerId !== event.pointerId) return;
+
+  const target = activePointerTarget;
+  const pointerId = activePointerId;
+  resetTouchState();
+  releasePointer(target, pointerId);
+};
+
+const shouldUseTouchFallback = () => !supportsPointerEvents;
+
+const onTouchStart = (event: TouchEvent) => {
+  if (!shouldUseTouchFallback() || !canOpenLyricPage.value) return;
+  if (event.touches.length !== 1 || isGestureIgnoredTarget(event.target)) return;
+
+  const touch = event.touches[0];
+  touchFallbackActive = true;
+  beginSwipe(touch.clientX, touch.clientY);
+};
+
+const onTouchMove = (event: TouchEvent) => {
+  if (!shouldUseTouchFallback() || !touchFallbackActive || event.touches.length !== 1) return;
+
+  const touch = event.touches[0];
+  const axis = updateSwipe(touch.clientX, touch.clientY);
+  if (axis !== "x") return;
+
+  stopGestureEvent(event);
+};
+
+const onTouchEnd = (event: TouchEvent) => {
+  if (!shouldUseTouchFallback()) return;
+  if (!touchFallbackActive || event.changedTouches.length === 0) {
+    resetTouchState();
+    return;
+  }
+
+  const shouldStop = axisLock.value === "x";
+  finishSwipe(event.changedTouches[0].clientX);
+  if (shouldStop) stopGestureEvent(event);
 };
 
 const isSwipingX = computed(() => isSwiping.value && axisLock.value === "x");
@@ -298,7 +458,8 @@ const contentTransform = computed(() => {
 <style lang="scss" scoped>
 .full-player-mobile {
   width: 100%;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
   height: 100dvh;
   min-height: 100svh;
   position: relative;
@@ -349,6 +510,8 @@ const contentTransform = computed(() => {
       height: 100%;
       flex-shrink: 0;
       position: relative;
+      overflow-x: hidden;
+      touch-action: pan-y;
     }
     .info-page {
       display: flex;
@@ -356,6 +519,8 @@ const contentTransform = computed(() => {
       align-items: center;
       padding: 0 24px calc(40px + env(safe-area-inset-bottom, 0px)) 24px;
       overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       .cover-section {
         flex: 1;
         width: 100%;
@@ -588,11 +753,26 @@ const contentTransform = computed(() => {
         flex: 1;
         min-height: 0;
         position: relative;
-        // Android 歌词页保留纵向滚动
+        // Android 歌词页纵向滚动交给浏览器，横向切页交给父级
         touch-action: pan-y;
+        overscroll-behavior: contain;
       }
     }
   }
+  .page-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 3;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: rgba(var(--main-cover-color), 0.62);
+    background-color: rgba(var(--main-cover-color), 0.08);
+    pointer-events: none;
+  }
+
   .pagination {
     position: absolute;
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
@@ -722,6 +902,10 @@ const contentTransform = computed(() => {
           padding: 8px 0 0;
         }
       }
+    }
+
+    .page-tip {
+      bottom: calc(34px + env(safe-area-inset-bottom, 0px));
     }
 
     .pagination {

@@ -1,16 +1,9 @@
-<!-- 歌曲列表 - 虚拟列表 -->
+﻿<!-- 歌曲列表 - 虚拟列表 -->
 <template>
   <Transition name="fade">
     <div v-if="!isEmpty(listData)" ref="songListRef" class="song-list">
       <Transition name="fade">
-        <div
-          :key="listKey"
-          :style="{
-            height: height === 'auto' ? 'auto' : `${height || songListHeight}px`,
-            transition: disableHeightTransition ? 'transform 0.3s, opacity 0.3s' : undefined,
-          }"
-          class="virtual-list-wrapper"
-        >
+        <div :key="listKey" :style="virtualListWrapperStyle" class="virtual-list-wrapper">
           <!-- 悬浮顶栏 -->
           <div class="list-header song-card sticky-header">
             <n-text class="num">#</n-text>
@@ -274,27 +267,65 @@ const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 const player = usePlayerController();
 const { isSmallScreen } = useMobile();
+const { width: viewportWidth, height: viewportHeight } = useWindowSize();
 const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
 const shouldUseAndroidCompactList = computed(
   () => isAndroidApp && settingStore.androidCompactUi && isSmallScreen.value,
 );
+const androidShortEdge = computed(() =>
+  Math.min(viewportWidth.value || 0, viewportHeight.value || 0),
+);
+const isAndroidTabletList = computed(() => isAndroidApp && androidShortEdge.value >= 560);
+const isAndroidTabletLandscapeList = computed(
+  () => isAndroidTabletList.value && viewportWidth.value > viewportHeight.value,
+);
+const isAndroidTabletPortraitList = computed(
+  () => isAndroidTabletList.value && viewportHeight.value >= viewportWidth.value,
+);
 const androidUiScaleRatio = computed(() => {
+  // 依赖视口尺寸，确保横竖屏切换后重新读取根变量
+  void viewportWidth.value;
+  void viewportHeight.value;
+  if (typeof document !== "undefined") {
+    const cssScale = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--android-ui-scale"),
+    );
+    if (Number.isFinite(cssScale)) return Math.min(1.1, Math.max(0.6, cssScale));
+  }
   const scale = Number(settingStore.androidUiScale) || 90;
-  return Math.min(1, Math.max(0.85, scale / 100));
+  return Math.min(1.05, Math.max(0.85, scale / 100));
 });
 const songItemHeight = computed(() => {
+  if (isAndroidTabletLandscapeList.value) {
+    return Math.min(86, Math.max(74, Math.round(80 * androidUiScaleRatio.value)));
+  }
+  if (isAndroidTabletPortraitList.value) {
+    return Math.min(90, Math.max(80, Math.round(84 * androidUiScaleRatio.value)));
+  }
   if (!shouldUseAndroidCompactList.value) return 90;
   return Math.max(76, Math.round(90 * androidUiScaleRatio.value));
 });
 const listHeaderHeight = computed(() => {
+  if (isAndroidTabletLandscapeList.value) {
+    return Math.min(46, Math.max(38, Math.round(42 * androidUiScaleRatio.value)));
+  }
+  if (isAndroidTabletPortraitList.value) {
+    return Math.min(48, Math.max(40, Math.round(44 * androidUiScaleRatio.value)));
+  }
   if (!shouldUseAndroidCompactList.value) return 40;
   return Math.max(34, Math.round(40 * androidUiScaleRatio.value));
 });
 const listBottomPadding = computed(() => {
+  if (isAndroidTabletLandscapeList.value) {
+    return Math.min(110, Math.max(84, Math.round(96 * androidUiScaleRatio.value)));
+  }
+  if (isAndroidTabletPortraitList.value) {
+    return Math.min(120, Math.max(92, Math.round(104 * androidUiScaleRatio.value)));
+  }
   if (!shouldUseAndroidCompactList.value) return 80;
   return Math.max(64, Math.round(80 * androidUiScaleRatio.value));
 });
-const androidVirtualBufferSize = computed(() => 5);
+const androidVirtualBufferSize = computed(() => (isAndroidTabletList.value ? 8 : 5));
 
 // 列表元素
 const listRef = ref<InstanceType<typeof VirtualScroll> | null>(null);
@@ -477,6 +508,16 @@ const hasPlaySong = computed(() => {
 // 列表元素高度
 const { height: songListHeight, stop: stopCalcHeight } = useElementSize(songListRef);
 
+const virtualListWrapperStyle = computed(() => ({
+  height:
+    props.height === "auto" || isAndroidTabletList.value
+      ? "auto"
+      : `${props.height || songListHeight.value}px`,
+  flex: isAndroidTabletList.value ? "1 1 auto" : undefined,
+  minHeight: isAndroidTabletList.value ? "0" : undefined,
+  transition: props.disableHeightTransition ? "transform 0.3s, opacity 0.3s" : undefined,
+}));
+
 // 列表滚动
 const onScroll = (event: Event) => {
   const target = event.target as HTMLElement;
@@ -492,7 +533,7 @@ const onScroll = (event: Event) => {
     lastAndroidScrollStateUpdate = now;
     emit("scroll", event);
     scrollTop.value = top;
-    scrollIndex.value = Math.floor(top / 90);
+    scrollIndex.value = Math.floor(top / songItemHeight.value);
   }
 
   const scrollHeight = target.scrollHeight;

@@ -48,30 +48,29 @@ class AndroidLocalApiService {
         requestUrl.path == "/api/netease/mv/all" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildMvAllFallbackResponse)
         requestUrl.path == "/api/netease/search/hot/detail" -> handleNeteaseSearchHotDetailRequest(requestUrl)
         requestUrl.path == "/api/netease/search/default" -> handleNeteaseSearchDefaultRequest(requestUrl)
-        AndroidNeteaseApiService.canHandle(requestUrl.path) -> AndroidNeteaseApiService.handle(request, requestUrl)
-        requestUrl.path == "/api/netease/login/status" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLoginStatusFallbackResponse)
+        requestUrl.path == "/api/netease/login/status" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildLoginStatusFallbackResponse)
         requestUrl.path == "/api/netease/search/suggest" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildSearchSuggestFallbackResponse)
         requestUrl.path == "/api/netease/search/multimatch" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildSearchMultimatchFallbackResponse)
         requestUrl.path == "/api/netease/toplist/detail" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildToplistFallbackResponse)
         requestUrl.path == "/api/netease/toplist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildToplistFallbackResponse)
-        requestUrl.path == "/api/netease/user/account" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildUserAccountFallbackResponse)
-        requestUrl.path == "/api/netease/login/refresh" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLoginRefreshFallbackResponse)
-        requestUrl.path == "/api/netease/logout" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLogoutFallbackResponse)
+        requestUrl.path == "/api/netease/user/account" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildUserAccountFallbackResponse)
+        requestUrl.path == "/api/netease/login/refresh" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildLoginRefreshFallbackResponse)
+        requestUrl.path == "/api/netease/logout" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildLogoutFallbackResponse)
         requestUrl.path == "/api/netease/countries/code/list" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildCountryCodeListFallbackResponse)
         requestUrl.path == "/api/netease/dj/toplist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildDjToplistFallbackResponse)
         requestUrl.path == "/api/netease/dj/catelist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildDjCatlistFallbackResponse)
         requestUrl.path == "/api/netease/dj/category/recommend" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildDjCategoryRecommendFallbackResponse)
         requestUrl.path == "/api/netease/cloudsearch" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildCloudSearchFallbackResponse)
-        requestUrl.path == "/api/netease/login/qr/key" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildQrKeyFallbackResponse)
-        requestUrl.path == "/api/netease/login/qr/create" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildQrCreateFallbackResponse)
-        requestUrl.path == "/api/netease/login/qr/check" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildQrCheckFallbackResponse)
-        requestUrl.path == "/api/netease/captcha/sent" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildCaptchaSentFallbackResponse)
-        requestUrl.path == "/api/netease/captcha/verify" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildCaptchaVerifyFallbackResponse)
-        requestUrl.path == "/api/netease/login/cellphone" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLoginCellphoneFallbackResponse)
-        requestUrl.path == "/api/netease/user/detail" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildUserDetailFallbackResponse)
-        requestUrl.path == "/api/netease/user/subcount" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildUserSubcountFallbackResponse)
-        requestUrl.path == "/api/netease/likelist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildLikelistFallbackResponse)
-        requestUrl.path == "/api/netease/user/playlist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildUserPlaylistFallbackResponse)
+        requestUrl.path == "/api/netease/login/qr/key" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildQrKeyFallbackResponse)
+        requestUrl.path == "/api/netease/login/qr/create" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildQrCreateFallbackResponse)
+        requestUrl.path == "/api/netease/login/qr/check" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildQrCheckFallbackResponse)
+        requestUrl.path == "/api/netease/captcha/sent" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildCaptchaSentFallbackResponse)
+        requestUrl.path == "/api/netease/captcha/verify" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildCaptchaVerifyFallbackResponse)
+        requestUrl.path == "/api/netease/login/cellphone" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildLoginCellphoneFallbackResponse)
+        requestUrl.path == "/api/netease/user/detail" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildUserDetailFallbackResponse)
+        requestUrl.path == "/api/netease/user/subcount" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildUserSubcountFallbackResponse)
+        requestUrl.path == "/api/netease/likelist" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildLikelistFallbackResponse)
+        requestUrl.path == "/api/netease/user/playlist" -> handleNeteaseApiRequestWithRemoteFallback(request, requestUrl, ::buildUserPlaylistFallbackResponse)
         requestUrl.path == "/api/netease/album/sublist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildAlbumSublistFallbackResponse)
         requestUrl.path == "/api/netease/artist/sublist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildArtistSublistFallbackResponse)
         requestUrl.path == "/api/netease/mv/sublist" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildMvSublistFallbackResponse)
@@ -103,6 +102,7 @@ class AndroidLocalApiService {
         requestUrl.path == "/api/netease/song/url" || requestUrl.path == "/api/netease/song/url/v1" -> handleNeteaseSongUrlRequest(request, requestUrl)
         requestUrl.path == "/api/netease/comment/new" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildNeteaseCommentNewFallbackResponse)
         requestUrl.path == "/api/netease/comment/hot" -> proxyRemoteRequestWithFallback(request, requestUrl, ::buildNeteaseCommentHotFallbackResponse)
+        AndroidNeteaseApiService.canHandle(requestUrl.path) -> AndroidNeteaseApiService.handle(request, requestUrl)
         requestUrl.path.startsWith("/api/") -> proxyRemoteRequest(request, requestUrl)
         else -> buildJsonResponse(404, errorBody("api not found"))
       }
@@ -318,6 +318,7 @@ class AndroidLocalApiService {
       } else {
         sliceJsonArray(tracks, offset, limit)
       }
+      val returnedCount = songs.length()
       buildJsonResponse(
         200,
         JSONObject()
@@ -325,7 +326,7 @@ class AndroidLocalApiService {
           .put("songs", songs)
           .put("privileges", sliceJsonArray(privileges, offset, limit))
           .put("total", total)
-          .put("more", offset + limit < total),
+          .put("more", returnedCount > 0 && offset + returnedCount < total),
       )
     } catch (error: Exception) {
       buildJsonResponse(
@@ -502,15 +503,19 @@ class AndroidLocalApiService {
   private fun fetchSongDetailsByIds(songIds: List<String>): JSONArray {
     val songs = JSONArray()
     if (songIds.isEmpty()) return songs
-    songIds.chunked(500).forEach { chunk ->
-      val idsParam = chunk.joinToString(",")
-      val endpoint =
-        "https://music.163.com/api/song/detail?ids=" +
-          URLEncoder.encode("[$idsParam]", StandardCharsets.UTF_8.name())
-      val response = JSONObject(fetchText(endpoint))
-      val chunkSongs = response.optJSONArray("songs") ?: JSONArray()
-      for (index in 0 until chunkSongs.length()) {
-        songs.put(chunkSongs.opt(index))
+    songIds.chunked(50).forEach { chunk ->
+      runCatching {
+        val idsParam = chunk.joinToString(",")
+        val endpoint =
+          "https://music.163.com/api/song/detail?ids=" +
+            URLEncoder.encode("[$idsParam]", StandardCharsets.UTF_8.name())
+        val response = JSONObject(fetchText(endpoint))
+        val chunkSongs = response.optJSONArray("songs") ?: JSONArray()
+        for (index in 0 until chunkSongs.length()) {
+          songs.put(chunkSongs.opt(index))
+        }
+      }.onFailure { error ->
+        Log.w(TAG, "song detail chunk failed size=${chunk.size}: ${error.message}")
       }
     }
     return songs
@@ -522,13 +527,15 @@ class AndroidLocalApiService {
     }
 
     return try {
-      val idsParam = songIds.joinToString(",")
-      val endpoint =
-        "https://music.163.com/api/song/detail?ids=" +
-          URLEncoder.encode("[$idsParam]", StandardCharsets.UTF_8.name())
-      val responseText = fetchText(endpoint)
-      buildRawJsonResponse(200, responseText)
+      val songs = fetchSongDetailsByIds(songIds)
+      buildJsonResponse(
+        200,
+        JSONObject()
+          .put("code", 200)
+          .put("songs", songs),
+      )
     } catch (error: Exception) {
+      Log.w(TAG, "song detail request failed count=${songIds.size}: ${error.message}")
       buildJsonResponse(
         200,
         JSONObject()
@@ -906,6 +913,28 @@ class AndroidLocalApiService {
       if (status in 200..299) responseText else fallbackBuilder(requestUrl)
     } catch (_: Exception) {
       fallbackBuilder(requestUrl)
+    }
+  }
+
+  private fun handleNeteaseApiRequestWithRemoteFallback(
+    request: JSONObject,
+    requestUrl: URL,
+    fallbackBuilder: (URL) -> String,
+  ): String {
+    return try {
+      val localResponse = AndroidNeteaseApiService.handle(request, requestUrl)
+      if (isSuccessfulApiEnvelope(localResponse)) localResponse else proxyRemoteRequestWithFallback(request, requestUrl, fallbackBuilder)
+    } catch (_: Exception) {
+      proxyRemoteRequestWithFallback(request, requestUrl, fallbackBuilder)
+    }
+  }
+
+  private fun isSuccessfulApiEnvelope(responseText: String): Boolean {
+    return try {
+      val responseJson = JSONObject(responseText)
+      responseJson.optInt("status", 500) in 200..299
+    } catch (_: Exception) {
+      false
     }
   }
 

@@ -1,4 +1,4 @@
-<!-- 歌单列表 -->
+﻿<!-- 歌单列表 -->
 <template>
   <div class="playlist-list">
     <ListDetail
@@ -100,6 +100,8 @@ import { useListSearch } from "@/composables/List/useListSearch";
 import { useListScroll } from "@/composables/List/useListScroll";
 import { useListActions } from "@/composables/List/useListActions";
 import { useListDataCache, type ListCacheData } from "@/composables/List/useListDataCache";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
+import { isAndroidApp } from "@/utils/env";
 
 const router = useRouter();
 const dataStore = useDataStore();
@@ -121,6 +123,7 @@ const { searchValue, searchData, displayData, clearSearch, performSearch } =
 const { listScrolling, handleListScroll, resetScroll } = useListScroll();
 const { playAllSongs: playAllSongsAction } = useListActions();
 const { saveCache, loadCache, checkNeedsUpdate } = useListDataCache();
+const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
 
 // 歌单 ID
 const oldPlaylistId = ref<number>(0);
@@ -128,6 +131,44 @@ const playlistId = computed<number>(() => Number(router.currentRoute.value.query
 
 // 当前正在请求的歌单 ID，用于防止竞态条件
 const currentRequestId = ref<number>(0);
+const ANDROID_PLAYLIST_ROUTE_CLASS = "android-playlist-route";
+
+// 重置 Android 歌单页外层滚动，避免平板端详情头被顶出
+const resetAndroidPlaylistOuterScroll = () => {
+  if (!isAndroidApp || typeof document === "undefined") return;
+
+  const selectors = [
+    "#main-content .n-layout-scroll-container",
+    "#main-content .n-scrollbar-container",
+    "#main-content",
+  ];
+
+  selectors.forEach((selector) => {
+    const element = document.querySelector<HTMLElement>(selector);
+    if (!element) return;
+    element.scrollTop = 0;
+    element.scrollLeft = 0;
+    element.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+  });
+
+  window.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+};
+
+// 启用 Android 平板歌单页专用布局
+const enableAndroidPlaylistLayout = () => {
+  if (!isAndroidApp || typeof document === "undefined") return;
+  document.documentElement.classList.add(ANDROID_PLAYLIST_ROUTE_CLASS);
+  resetAndroidPlaylistOuterScroll();
+  nextTick(() => {
+    resetAndroidPlaylistOuterScroll();
+    window.setTimeout(resetAndroidPlaylistOuterScroll, 120);
+  });
+};
+
+const disableAndroidPlaylistLayout = () => {
+  if (!isAndroidApp || typeof document === "undefined") return;
+  document.documentElement.classList.remove(ANDROID_PLAYLIST_ROUTE_CLASS);
+};
 
 const getDetailTrackIds = (detail: any): any[] => {
   return Array.isArray(detail?.playlist?.trackIds) ? detail.playlist.trackIds : [];
@@ -143,12 +184,35 @@ const getRealPlaylistCount = (detail: any, formattedCount: number = 0) => {
   return Math.max(formattedCount, Number.isFinite(trackCount) ? trackCount : 0, trackIds.length);
 };
 
+const getCachedPlaylistCount = (cached: ListCacheData) => {
+  const count = Number(cached.detail?.count ?? 0);
+  return Number.isFinite(count) ? count : 0;
+};
+
+const isPlaylistCacheComplete = (cached: ListCacheData) => {
+  const count = getCachedPlaylistCount(cached);
+  return count <= 0 || cached.songs.length >= count;
+};
+
 const canUsePrivilegeFastPath = (detail: any, count: number) => {
   const privileges = getDetailPrivileges(detail);
   const trackIds = getDetailTrackIds(detail);
   if (isLogin() !== 1 || count >= 800 || privileges.length === 0) return false;
   if (privileges.length !== count) return false;
   return trackIds.length === 0 || trackIds.length === privileges.length;
+};
+
+const loadSongsByIds = async (ids: number[]) => {
+  const chunkSize = isAndroidApp ? 60 : 300;
+  const songs: SongType[] = [];
+
+  for (let index = 0; index < ids.length; index += chunkSize) {
+    const chunk = ids.slice(index, index + chunkSize);
+    const result = await songDetail(chunk);
+    songs.push(...formatSongsList(result.songs));
+  }
+
+  return songs;
 };
 
 // 加载提示
@@ -361,11 +425,18 @@ const handleOnlinePlaylist = async (id: number, getList: boolean, refresh: boole
     if (cached) {
       setDetailData(cached.detail);
       setListData(cached.songs);
-      setLoading(false);
 
-      // 后台检查更新
-      backgroundCheck(id, cached);
-      return;
+      if (isPlaylistCacheComplete(cached)) {
+        setLoading(false);
+        backgroundCheck(id, cached);
+        return;
+      }
+
+      console.warn(
+        "Playlist cache is incomplete, refreshing full tracks",
+        id,
+        `${cached.songs.length}/${getCachedPlaylistCount(cached)}`,
+      );
     }
   }
 
@@ -382,16 +453,21 @@ const handleOnlinePlaylist = async (id: number, getList: boolean, refresh: boole
     setLoading(false);
     return;
   }
-  // 如果已登录且歌曲数量少于 800，直接加载所有歌曲
+  // 如果已登录且歌曲数量少于 800，优先分片加载全部歌曲
   if (canUsePrivilegeFastPath(detail, count)) {
     const ids = getDetailPrivileges(detail).map((song: any) => song.id as number);
-    const result = await songDetail(ids);
+    const songs = await loadSongsByIds(ids);
     // 检查是否仍然是当前请求的歌单
     if (currentRequestId.value !== id) return;
-    const songs = formatSongsList(result.songs);
-    setListData(songs);
-    // 保存缓存
-    saveCache("playlist", id, detailData.value!, songs);
+    if (songs.length > 0) {
+      setListData(songs);
+      // 保存缓存
+      saveCache("playlist", id, detailData.value!, songs);
+    } else {
+      console.warn("歌单快速加载返回空列表，改用分页接口", id, count);
+      if (!refresh) setListData([]);
+      await getPlaylistAllSongs(id, count, refresh);
+    }
   } else {
     if (!refresh) setListData([]);
     await getPlaylistAllSongs(id, count, refresh);
@@ -403,6 +479,7 @@ const handleOnlinePlaylist = async (id: number, getList: boolean, refresh: boole
 
 // 后台检查更新
 const backgroundCheck = async (id: number, cached: ListCacheData) => {
+  if (shouldStabilizeDynamicContent.value) return;
   try {
     const detail = await playlistDetail(id);
     if (currentRequestId.value !== id) return;
@@ -434,8 +511,11 @@ const getPlaylistAllSongs = async (
   let offset: number = 0;
   let expectedCount = count;
   let hasMore = false;
+  let pageIndex = 0;
   const limit: number = 500;
+  const loadedSongIds = new Set<string>();
   const listDataArray: SongType[] = [];
+  const maxPages = Math.max(4, Math.ceil(Math.max(expectedCount, 1) / 10) + 4);
   do {
     // 检查是否仍然是当前请求的歌单
     if (currentRequestId.value !== id) {
@@ -454,14 +534,35 @@ const getPlaylistAllSongs = async (
     }
     const songData = formatSongsList(result.songs);
     hasMore = Boolean(result.more) && songData.length > 0;
-    listDataArray.push(...songData);
-    if (!refresh) {
-      appendListData(songData);
+
+    if (songData.length === 0) {
+      console.warn("Playlist track page is empty, stop paging", id, offset, expectedCount);
+      break;
     }
-    // 更新数据
-    offset += limit;
+
+    const uniqueSongData = songData.filter((song) => {
+      const songId = song?.id === undefined || song?.id === null ? "" : String(song.id);
+      if (!songId) return true;
+      if (loadedSongIds.has(songId)) return false;
+      loadedSongIds.add(songId);
+      return true;
+    });
+
+    if (uniqueSongData.length === 0) {
+      console.warn("Playlist track page duplicated, stop paging", id, offset, expectedCount);
+      break;
+    }
+
+    listDataArray.push(...uniqueSongData);
+    if (!refresh) {
+      appendListData(uniqueSongData);
+    }
+    // 按接口真实返回量推进，避免 Android 本地接口只返回小页时提前结束
+    offset += songData.length;
+    pageIndex += 1;
   } while (
-    (offset < expectedCount || hasMore) &&
+    (listDataArray.length < expectedCount || hasMore) &&
+    pageIndex < maxPages &&
     isPlaylistPage.value &&
     currentRequestId.value === id
   );
@@ -633,6 +734,7 @@ const openPrivacy = async () => {
 };
 
 onBeforeRouteUpdate((to) => {
+  enableAndroidPlaylistLayout();
   const id = Number(to.query.id as string);
   if (id) {
     currentTab.value = "songs";
@@ -642,17 +744,38 @@ onBeforeRouteUpdate((to) => {
 });
 
 onActivated(() => {
+  enableAndroidPlaylistLayout();
   // 是否为首次进入
   if (oldPlaylistId.value === 0) {
     oldPlaylistId.value = playlistId.value;
   } else {
     oldPlaylistId.value = playlistId.value;
+    if (
+      shouldStabilizeDynamicContent.value &&
+      detailData.value?.id === playlistId.value &&
+      listData.value.length > 0
+    ) {
+      return;
+    }
     // 刷新歌单
     getPlaylistDetail(playlistId.value, { getList: true, refresh: false });
   }
 });
 
-onDeactivated(() => loadingMsgShow(false));
-onUnmounted(() => loadingMsgShow(false));
-onMounted(() => getPlaylistDetail(playlistId.value));
+onDeactivated(() => {
+  loadingMsgShow(false);
+  disableAndroidPlaylistLayout();
+});
+
+onUnmounted(() => {
+  loadingMsgShow(false);
+  disableAndroidPlaylistLayout();
+});
+
+onBeforeRouteLeave(() => disableAndroidPlaylistLayout());
+
+onMounted(() => {
+  enableAndroidPlaylistLayout();
+  getPlaylistDetail(playlistId.value);
+});
 </script>

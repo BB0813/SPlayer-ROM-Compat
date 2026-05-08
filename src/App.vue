@@ -6,12 +6,14 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   initializeAndroidPerformanceDiagnostics,
+  recordAndroidLayoutProbe,
   setAndroidPerformanceDiagnosticsEnabled,
 } from "@/platform/android/performance";
-import { syncAndroidSystemBars } from "@/platform/bridge/android";
+import { cleanupAndroidScrollLock, setupAndroidScrollLock } from "@/platform/android/scrollLock";
+import { getAndroidDisplayMetrics, syncAndroidSystemBars } from "@/platform/bridge/android";
 import {
   setAndroidNativePlayerPageVisible,
   syncAndroidNativePlayerPageFromStores,
@@ -23,6 +25,9 @@ const isDesktopLyric = location.hash.includes("desktop-lyric");
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
 const statusStore = useStatusStore();
+const route = useRoute();
+let lastAndroidNativePlayerLyricSyncAt = 0;
+let androidLayoutProbeTimer: number | null = null;
 
 const parseRgbValue = (value: string): [number, number, number] | null => {
   const parts = value
@@ -70,27 +75,161 @@ const syncSystemBarsFromTheme = () => {
   });
 };
 
-const syncAndroidViewportMetrics = () => {
+interface AndroidViewportMetrics {
+  viewportWidth: number;
+  viewportHeight: number;
+  screenWidth: number;
+  screenHeight: number;
+  physicalWidth: number;
+  physicalHeight: number;
+  density: number;
+  densityDpi: number;
+  fontScale: number;
+  smallestWidthDp: number;
+  shortEdge: number;
+  longEdge: number;
+}
+
+const readAndroidViewportMetrics = (): AndroidViewportMetrics => {
+  const visualViewport = window.visualViewport;
+  const viewportWidth = Math.round(
+    visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0,
+  );
+  const viewportHeight = Math.round(
+    visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0,
+  );
+  const displayMetrics = getAndroidDisplayMetrics();
+  const density = displayMetrics?.density || window.devicePixelRatio || 1;
+  const densityDpi = displayMetrics?.densityDpi || Math.round(density * 160);
+  const fontScale = displayMetrics?.fontScale || 1;
+  const screenWidth = Math.round(window.screen?.width || viewportWidth);
+  const screenHeight = Math.round(window.screen?.height || viewportHeight);
+  const physicalWidth = displayMetrics?.widthPixels || Math.round(screenWidth * density);
+  const physicalHeight = displayMetrics?.heightPixels || Math.round(screenHeight * density);
+  const shortEdge = Math.min(viewportWidth || screenWidth, viewportHeight || screenHeight);
+  const longEdge = Math.max(viewportWidth || screenWidth, viewportHeight || screenHeight);
+  const physicalShortEdge = Math.min(physicalWidth, physicalHeight);
+  const smallestWidthDp = Math.round(physicalShortEdge / Math.max(density, 1));
+
+  return {
+    viewportWidth,
+    viewportHeight,
+    screenWidth,
+    screenHeight,
+    physicalWidth,
+    physicalHeight,
+    density,
+    densityDpi,
+    fontScale,
+    smallestWidthDp,
+    shortEdge,
+    longEdge,
+  };
+};
+
+const androidViewportMetrics = ref<AndroidViewportMetrics>(readAndroidViewportMetrics());
+
+const resolveAndroidAutoUiScale = (metrics: AndroidViewportMetrics): number => {
+  const shortEdge = metrics.shortEdge || Math.min(metrics.screenWidth, metrics.screenHeight);
+  const longEdge = metrics.longEdge || Math.max(metrics.screenWidth, metrics.screenHeight);
+  const smallestWidthDp = metrics.smallestWidthDp || shortEdge;
+  const highDensityPhone = metrics.densityDpi >= 420 || metrics.density >= 2.625;
+
+  if (smallestWidthDp >= 840) return 112;
+  if (smallestWidthDp >= 700) return 108;
+  if (smallestWidthDp >= 600) return 104;
+  if (shortEdge <= 360) return highDensityPhone ? 90 : 88;
+  if (shortEdge <= 390) return highDensityPhone ? 94 : 92;
+  if (shortEdge <= 430) return highDensityPhone ? 98 : 96;
+  if (shortEdge <= 480) return 100;
+  if (shortEdge <= 600) return 102;
+  if (longEdge >= 1100) return 104;
+  return 100;
+};
+
+const applyAndroidViewportMetrics = (metrics: AndroidViewportMetrics) => {
   const root = document.documentElement;
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-  root.style.setProperty("--android-viewport-width", `${viewportWidth}px`);
-  root.style.setProperty("--android-viewport-height", `${viewportHeight}px`);
-  root.classList.toggle("android-small-width", viewportWidth > 0 && viewportWidth <= 380);
-  root.classList.toggle("android-compact-height", viewportHeight > 0 && viewportHeight <= 760);
+  root.style.setProperty("--android-viewport-width", `${metrics.viewportWidth}px`);
+  root.style.setProperty("--android-viewport-height", `${metrics.viewportHeight}px`);
+  root.style.setProperty("--android-screen-width", `${metrics.screenWidth}px`);
+  root.style.setProperty("--android-screen-height", `${metrics.screenHeight}px`);
+  root.style.setProperty("--android-physical-width", `${metrics.physicalWidth}px`);
+  root.style.setProperty("--android-physical-height", `${metrics.physicalHeight}px`);
+  root.style.setProperty("--android-density", metrics.density.toFixed(2));
+  root.style.setProperty("--android-density-dpi", `${metrics.densityDpi}`);
+  root.style.setProperty("--android-font-scale", metrics.fontScale.toFixed(2));
+  root.style.setProperty("--android-smallest-width-dp", `${metrics.smallestWidthDp}`);
+  const isTabletLayout = metrics.shortEdge >= 600 || metrics.smallestWidthDp >= 600;
+  const isLandscape = metrics.viewportWidth > metrics.viewportHeight;
+  const isHighDensity = metrics.densityDpi >= 420 || metrics.density >= 2.625;
+
+  root.classList.toggle("android-small-width", metrics.shortEdge > 0 && metrics.shortEdge <= 380);
+  root.classList.toggle("android-compact-height", metrics.longEdge > 0 && metrics.longEdge <= 760);
+  root.classList.toggle("android-phone-compact", metrics.shortEdge > 0 && metrics.shortEdge <= 390);
+  root.classList.toggle(
+    "android-phone-normal",
+    metrics.shortEdge > 390 && metrics.shortEdge <= 480,
+  );
+  root.classList.toggle("android-tablet-layout", isTabletLayout);
+  root.classList.toggle("android-tablet-landscape", isTabletLayout && isLandscape);
+  root.classList.toggle("android-tablet-portrait", isTabletLayout && !isLandscape);
+  root.classList.toggle("android-wide-layout", metrics.viewportWidth >= 900);
+  root.classList.toggle("android-high-density", isHighDensity);
+  root.classList.toggle("android-hidpi-tablet", isTabletLayout && isHighDensity);
+  root.classList.toggle("android-large-font", metrics.fontScale >= 1.15);
+  root.classList.toggle("android-landscape", isLandscape);
+};
+
+const syncAndroidViewportMetrics = () => {
+  const metrics = readAndroidViewportMetrics();
+  androidViewportMetrics.value = metrics;
+  applyAndroidViewportMetrics(metrics);
 };
 
 const cleanupAndroidViewportMetrics = () => {
   const root = document.documentElement;
-  root.classList.remove("android-small-width");
-  root.classList.remove("android-compact-height");
+  root.classList.remove(
+    "android-small-width",
+    "android-compact-height",
+    "android-phone-compact",
+    "android-phone-normal",
+    "android-tablet-layout",
+    "android-tablet-landscape",
+    "android-tablet-portrait",
+    "android-wide-layout",
+    "android-high-density",
+    "android-hidpi-tablet",
+    "android-large-font",
+    "android-landscape",
+  );
   root.style.removeProperty("--android-viewport-width");
   root.style.removeProperty("--android-viewport-height");
+  root.style.removeProperty("--android-screen-width");
+  root.style.removeProperty("--android-screen-height");
+  root.style.removeProperty("--android-physical-width");
+  root.style.removeProperty("--android-physical-height");
+  root.style.removeProperty("--android-density");
+  root.style.removeProperty("--android-density-dpi");
+  root.style.removeProperty("--android-font-scale");
+  root.style.removeProperty("--android-smallest-width-dp");
 };
 const scheduleSystemBarsSync = () => {
   void nextTick(() => {
     window.requestAnimationFrame(syncSystemBarsFromTheme);
   });
+};
+
+const scheduleAndroidLayoutProbe = (reason: string, delay = 280) => {
+  if (!isAndroidApp) return;
+  if (androidLayoutProbeTimer !== null) {
+    window.clearTimeout(androidLayoutProbeTimer);
+  }
+  androidLayoutProbeTimer = window.setTimeout(() => {
+    androidLayoutProbeTimer = null;
+    void nextTick(() => {
+      window.requestAnimationFrame(() => recordAndroidLayoutProbe(reason));
+    });
+  }, delay);
 };
 
 if (isAndroidApp) {
@@ -100,9 +239,29 @@ if (isAndroidApp) {
 
   onMounted(() => {
     syncAndroidViewportMetrics();
+    setupAndroidScrollLock();
     window.addEventListener("resize", handleAndroidViewportChange);
     window.addEventListener("orientationchange", handleAndroidViewportChange);
+    window.visualViewport?.addEventListener("resize", handleAndroidViewportChange);
+    scheduleAndroidLayoutProbe("mounted", 500);
   });
+
+  watch(
+    () =>
+      [
+        route.fullPath,
+        statusStore.playStatus,
+        statusStore.showPlayBar,
+        statusStore.showFullPlayer,
+        musicStore.playSong?.id,
+      ] as const,
+    ([fullPath, playStatus, showPlayBar, showFullPlayer, songId]) => {
+      scheduleAndroidLayoutProbe(
+        `route=${fullPath};play=${Number(playStatus)};bar=${Number(showPlayBar)};full=${Number(showFullPlayer)};song=${songId ?? "none"}`,
+      );
+    },
+    { immediate: true },
+  );
 
   watch(
     () =>
@@ -115,7 +274,12 @@ if (isAndroidApp) {
         settingStore.androidDisablePlaybackBackground,
         settingStore.androidNativePlayerPageEnabled,
         settingStore.androidUiScale,
+        settingStore.androidAutoUiScale,
         settingStore.androidCompactUi,
+        androidViewportMetrics.value.viewportWidth,
+        androidViewportMetrics.value.viewportHeight,
+        androidViewportMetrics.value.physicalWidth,
+        androidViewportMetrics.value.physicalHeight,
         statusStore.playStatus,
         statusStore.showFullPlayer,
       ] as const,
@@ -128,24 +292,37 @@ if (isAndroidApp) {
       disablePlaybackBackground,
       nativePlayerPageEnabled,
       androidUiScale,
+      androidAutoUiScale,
       androidCompactUi,
+      viewportWidth,
+      viewportHeight,
+      physicalWidth,
+      physicalHeight,
       playStatus,
       showFullPlayer,
     ]) => {
       const playbackPerformanceActive = performanceMode && playStatus;
       const allowRoutePerformanceReduction = playbackPerformanceActive && !showFullPlayer;
       const uiScaleValue = Number(androidUiScale);
-      const normalizedUiScale = Number.isFinite(uiScaleValue)
+      const manualUiScale = Number.isFinite(uiScaleValue)
         ? Math.min(110, Math.max(60, uiScaleValue))
         : 80;
+      const autoUiScale = resolveAndroidAutoUiScale(androidViewportMetrics.value);
+      const effectiveUiScale = androidAutoUiScale ? autoUiScale : manualUiScale;
+      const uiScale = effectiveUiScale / 100;
+      document.documentElement.style.setProperty("--android-ui-scale", uiScale.toFixed(2));
       document.documentElement.style.setProperty(
-        "--android-ui-scale",
-        (normalizedUiScale / 100).toFixed(2),
+        "--android-effective-ui-scale",
+        `${effectiveUiScale}`,
       );
+      document.documentElement.classList.toggle("android-auto-ui-scale", androidAutoUiScale);
+      document.documentElement.classList.toggle("android-manual-ui-scale", !androidAutoUiScale);
       document.documentElement.classList.toggle(
         "android-compact-ui",
-        androidCompactUi || normalizedUiScale !== 100,
+        androidCompactUi && androidViewportMetrics.value.smallestWidthDp < 600,
       );
+      document.documentElement.dataset.androidViewport = `${viewportWidth}x${viewportHeight}`;
+      document.documentElement.dataset.androidPhysical = `${physicalWidth}x${physicalHeight}`;
       document.documentElement.classList.toggle("android-performance-mode", performanceMode);
       document.documentElement.classList.toggle(
         "android-playback-active",
@@ -201,7 +378,27 @@ if (isAndroidApp) {
         statusStore.lyricIndex,
         settingStore.androidNativePlayerPageEnabled,
       ] as const,
-    () => {
+    (current, previous) => {
+      const [songId, cover, showFullPlayer, playStatus, playLoading, lyricIndex, nativeEnabled] =
+        current;
+      if (!nativeEnabled || !showFullPlayer) return;
+
+      const lyricOnly =
+        !!previous &&
+        songId === previous[0] &&
+        cover === previous[1] &&
+        showFullPlayer === previous[2] &&
+        playStatus === previous[3] &&
+        playLoading === previous[4] &&
+        nativeEnabled === previous[6] &&
+        lyricIndex !== previous[5];
+
+      if (lyricOnly && settingStore.androidPerformanceMode) {
+        const now = Date.now();
+        if (now - lastAndroidNativePlayerLyricSyncAt < 900) return;
+        lastAndroidNativePlayerLyricSyncAt = now;
+      }
+
       syncAndroidNativePlayerPageFromStores();
     },
     { immediate: true },
@@ -217,10 +414,19 @@ if (isAndroidApp) {
     document.documentElement.classList.remove("android-static-background");
     document.documentElement.classList.remove("android-native-player-page");
     document.documentElement.classList.remove("android-compact-ui");
+    document.documentElement.classList.remove("android-auto-ui-scale");
+    document.documentElement.classList.remove("android-manual-ui-scale");
     window.removeEventListener("resize", handleAndroidViewportChange);
     window.removeEventListener("orientationchange", handleAndroidViewportChange);
+    window.visualViewport?.removeEventListener("resize", handleAndroidViewportChange);
+    if (androidLayoutProbeTimer !== null) {
+      window.clearTimeout(androidLayoutProbeTimer);
+      androidLayoutProbeTimer = null;
+    }
+    cleanupAndroidScrollLock();
     cleanupAndroidViewportMetrics();
     document.documentElement.style.removeProperty("--android-ui-scale");
+    document.documentElement.style.removeProperty("--android-effective-ui-scale");
   });
 }
 </script>
