@@ -1,4 +1,4 @@
-﻿package top.imsyy.splayer.android
+package top.imsyy.splayer.android
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -16,6 +16,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -54,7 +55,11 @@ class MainActivity : AppCompatActivity() {
     pendingControlAction = resolveLaunchAction(intent)
     applyInitialSystemBars()
     rootView = FrameLayout(this)
-    webView = WebView(this)
+    webView = LockedSPlayerWebView(this).apply {
+      overScrollMode = View.OVER_SCROLL_NEVER
+      isHorizontalScrollBarEnabled = false
+      isVerticalScrollBarEnabled = false
+    }
     nativePlayerPageView = NativePlayerPageView(this)
     rootView.addView(
       webView,
@@ -91,6 +96,9 @@ class MainActivity : AppCompatActivity() {
       allowFileAccess = true
       allowContentAccess = true
       mediaPlaybackRequiresUserGesture = false
+      loadWithOverviewMode = false
+      useWideViewPort = false
+      textZoom = 100
       mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
       defaultTextEncodingName = "utf-8"
     }
@@ -468,4 +476,7 @@ class MainActivity : AppCompatActivity() {
     const val EXTRA_NOTIFICATION_TARGET = "splayer_notification_target"
   }
 }
+
+
+
 

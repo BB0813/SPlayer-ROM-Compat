@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v3.0.0--rc.3--Beta73-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v3.0.0--rc.3--Beta74-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Android%20%2F%20HarmonyOS-3DDC84?style=flat-square&logo=android&logoColor=white" alt="platform">
   <img src="https://img.shields.io/badge/ROM-Compat-8A2BE2?style=flat-square" alt="rom compat">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-red?style=flat-square" alt="license">
@@ -63,18 +63,18 @@
 
 本地构建后的 Release APK 位于：
 
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-arm64-v8a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-armeabi-v7a-release.apk`
-- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-x86_64-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-arm64-v8a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-armeabi-v7a-release.apk`
+- `android/dist/apk/release/SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-x86_64-release.apk`
 
 ---
 
-## v3.0.0-rc.3-Beta73 更新
+## v3.0.0-rc.3-Beta74 更新
 
-- 修复 GitHub Actions Android 分架构构建中 `getAndroidDisplayMetrics` 导出缺失的问题。
-- 同步 `src/platform/bridge/android.ts` 与 `src/platform/bridge/types.ts`，补齐 Android 显示指标桥接能力。
-- 继续确认 `src/platform/android/scrollLock.ts` 已在提交目录存在并被 Git 追踪，避免 Linux CI 导入缺文件。
-- 本阶段在提交目录直接运行 Android Web 构建准备，提前复现 CI 的 Vite 导入检查。
+- 修复 Beta73 安装后 WebView 全白屏的问题，避免 JS 调用旧原生壳缺失方法时启动期崩溃。
+- 同步 Android 原生桥接文件，补齐 `SPlayerSystemBridge.getDisplayMetrics()` 与 Web 端能力。
+- `getAndroidDisplayMetrics` 增加方法级可选调用和异常兜底，即使旧壳缺少新 bridge 也不会白屏。
+- 同步提交目录中漂移的 Android 原生运行时文件，并验证 Android Web 构建与 Kotlin 编译链路。
 
 ## 快速开始
 
@@ -133,15 +133,15 @@ Android 自动打包使用 `.github/workflows/android-release.yml`，桌面端 m
 
 | 触发方式   | 操作                                                    | 结果                                                                    |
 | ---------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Tag 发布   | 推送 `v3.0.0-rc.3-Beta73`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
+| Tag 发布   | 推送 `v3.0.0-rc.3-Beta74`、`v3.0.1` 或 `android-v3.0.1` | 自动执行格式检查、Lint、三 ABI 签名构建，并把 APK 上传到 GitHub Release |
 | 手动构建   | `Actions` → `Android Release` → `Run workflow`          | 生成三 ABI APK Artifact，不创建 GitHub Release                          |
 | 桌面端构建 | `Actions` → `Desktop Release (Manual Only)`             | 仅在明确需要桌面端包时手动执行                                          |
 
 Android Release 会生成以下独立 APK：
 
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-arm64-v8a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-armeabi-v7a-release.apk`
-- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta73-x86_64-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-arm64-v8a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-armeabi-v7a-release.apk`
+- `SPlayer-ROM-Compat-v3.0.0-rc.3-Beta74-x86_64-release.apk`
 
 CI 中可以直接看 job 与步骤名称确认是否为 Android 分架构构建：
 

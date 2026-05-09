@@ -1,4 +1,4 @@
-﻿package top.imsyy.splayer.android.api
+package top.imsyy.splayer.android.api
 
 import android.util.Base64
 import org.json.JSONObject
@@ -52,6 +52,12 @@ object AndroidNeteaseApiService {
     "/api/netease/user/subcount",
     "/api/netease/user/playlist",
     "/api/netease/likelist",
+    "/api/netease/playlist/catlist",
+    "/api/netease/playlist/highquality/tags",
+    "/api/netease/top/playlist",
+    "/api/netease/top/playlist/highquality",
+    "/api/netease/recommend/songs",
+    "/api/netease/recommend/resource",
   )
 
   private enum class CryptoMode {
@@ -87,6 +93,12 @@ object AndroidNeteaseApiService {
         "/api/netease/user/subcount" -> handleUserSubcount(request, requestUrl)
         "/api/netease/user/playlist" -> handleUserPlaylist(request, requestUrl)
         "/api/netease/likelist" -> handleLikelist(request, requestUrl)
+        "/api/netease/playlist/catlist" -> handlePlaylistCatlist(request, requestUrl)
+        "/api/netease/playlist/highquality/tags" -> handlePlaylistHighqualityTags(request, requestUrl)
+        "/api/netease/top/playlist" -> handleTopPlaylist(request, requestUrl)
+        "/api/netease/top/playlist/highquality" -> handleTopPlaylistHighquality(request, requestUrl)
+        "/api/netease/recommend/songs" -> handleRecommendSongs(request, requestUrl)
+        "/api/netease/recommend/resource" -> handleRecommendResource(request, requestUrl)
         else -> buildJsonResponse(404, errorBody("网易云内置接口未实现"))
       }
     } catch (error: Exception) {
@@ -293,6 +305,74 @@ object AndroidNeteaseApiService {
       "/api/song/like/get",
       JSONObject().put("uid", requestUrl.queryValue("uid") ?: "0"),
       CryptoMode.EAPI,
+    )
+  }
+
+  private fun handlePlaylistCatlist(request: JSONObject, requestUrl: URL): String {
+    return proxyBody(request, requestUrl, "/api/playlist/catalogue", JSONObject(), CryptoMode.EAPI)
+  }
+
+  private fun handlePlaylistHighqualityTags(request: JSONObject, requestUrl: URL): String {
+    return proxyBody(request, requestUrl, "/api/playlist/highquality/tags", JSONObject(), CryptoMode.WEAPI)
+  }
+
+  private fun handleTopPlaylist(request: JSONObject, requestUrl: URL): String {
+    val response = requestNetease(
+      request,
+      requestUrl,
+      "/api/playlist/list",
+      JSONObject()
+        .put("cat", normalizePlaylistCategory(requestUrl.queryValue("cat") ?: "全部"))
+        .put("order", requestUrl.queryValue("order") ?: "hot")
+        .put("limit", requestUrl.queryIntValue("limit", 50).coerceAtLeast(1))
+        .put("offset", requestUrl.queryIntValue("offset", 0).coerceAtLeast(0))
+        .put("total", true),
+      CryptoMode.WEAPI,
+    )
+    return buildRawJsonResponse(200, normalizeAvatarKey(response.body.ifBlank { "{}" }), response.cookies)
+  }
+
+  private fun handleTopPlaylistHighquality(request: JSONObject, requestUrl: URL): String {
+    val response = requestNetease(
+      request,
+      requestUrl,
+      "/api/playlist/highquality/list",
+      JSONObject()
+        .put("cat", normalizePlaylistCategory(requestUrl.queryValue("cat") ?: "全部"))
+        .put("limit", requestUrl.queryIntValue("limit", 50).coerceAtLeast(1))
+        .put("lasttime", requestUrl.queryLongValue("before", 0L).coerceAtLeast(0L))
+        .put("total", true),
+      CryptoMode.WEAPI,
+    )
+    return buildRawJsonResponse(200, normalizeAvatarKey(response.body.ifBlank { "{}" }), response.cookies)
+  }
+
+  private fun normalizePlaylistCategory(category: String): String {
+    val normalizedCategory = category.trim()
+    return when {
+      normalizedCategory.isBlank() -> "全部"
+      normalizedCategory == "全部歌单" -> "全部"
+      else -> normalizedCategory
+    }
+  }
+
+  private fun handleRecommendSongs(request: JSONObject, requestUrl: URL): String {
+    return proxyBody(
+      request,
+      requestUrl,
+      "/api/v3/discovery/recommend/songs",
+      JSONObject(),
+      CryptoMode.WEAPI,
+    )
+  }
+
+  private fun handleRecommendResource(request: JSONObject, requestUrl: URL): String {
+    return proxyBody(
+      request,
+      requestUrl,
+      "/api/v1/discovery/recommend/resource",
+      JSONObject(),
+      CryptoMode.WEAPI,
     )
   }
 
@@ -555,6 +635,14 @@ object AndroidNeteaseApiService {
       }
       .firstOrNull()
       ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+  }
+
+  private fun URL.queryIntValue(key: String, defaultValue: Int): Int {
+    return queryValue(key)?.toIntOrNull() ?: defaultValue
+  }
+
+  private fun URL.queryLongValue(key: String, defaultValue: Long): Long {
+    return queryValue(key)?.toLongOrNull() ?: defaultValue
   }
 
   private fun randomBase62(length: Int): String {

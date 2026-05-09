@@ -86,7 +86,7 @@ export interface AndroidSystemBridge {
   getManufacturer(): string;
   getModel(): string;
   getRomName(): string;
-  getDisplayMetrics(): string;
+  getDisplayMetrics?: () => string;
   isIgnoringBatteryOptimizations(): boolean;
   areNotificationsEnabled(): boolean;
   requestNotificationPermission(): boolean;

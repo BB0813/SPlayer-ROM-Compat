@@ -12,6 +12,7 @@ import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.provider.MediaStore
+import android.util.DisplayMetrics
 import android.webkit.JavascriptInterface
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -38,6 +39,17 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
   @JavascriptInterface
   fun getModel(): String = Build.MODEL ?: "unknown"
 
+  @JavascriptInterface
+  fun getDisplayMetrics(): String {
+    val metrics = activity.resources.displayMetrics
+    return JSONObject()
+      .put("widthPixels", metrics.widthPixels)
+      .put("heightPixels", metrics.heightPixels)
+      .put("density", metrics.density.toDouble())
+      .put("densityDpi", metrics.densityDpi)
+      .put("fontScale", activity.resources.configuration.fontScale.toDouble())
+      .toString()
+  }
   @JavascriptInterface
   fun getRomName(): String {
     val hyperOs = readSystemProperty("ro.mi.os.version.name")
@@ -797,3 +809,6 @@ class SPlayerSystemBridge(private val activity: AppCompatActivity) {
     private const val REQUEST_NOTIFICATION_PERMISSION = 2002
   }
 }
+
+
+

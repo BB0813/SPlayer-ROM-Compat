@@ -1,4 +1,4 @@
-﻿package top.imsyy.splayer.android.player
+package top.imsyy.splayer.android.player
 
 import android.app.PendingIntent
 import android.content.Context
@@ -52,6 +52,7 @@ object AndroidNativeAudioPlayer {
   private const val NOTIFICATION_ACTION_SECOND_REFRESH_DELAY_MS = 900L
   private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
+  private const val ENHANCED_NOTIFICATION_PROGRESS_UPDATE_INTERVAL_MS = 2500L
   private const val ENDED_EVENT_DELAY_MS = 250L
   private const val ENDED_EVENT_DEDUP_MS = 3000L
   private val notificationSeekPercentStops = intArrayOf(10, 30, 50, 70, 90)
@@ -99,6 +100,7 @@ object AndroidNativeAudioPlayer {
   private var currentArtworkUri: String = ""
   private var lastMediaMetadataKey: String = ""
   private var lastMediaMetadataLyricUpdateAt: Long = 0L
+  private var lastEnhancedNotificationProgressUpdateAt: Long = 0L
   private var lastEndedSrc: String = ""
   private var lastEndedAt: Long = 0L
   private var pendingEndedTask: Runnable? = null
@@ -108,7 +110,7 @@ object AndroidNativeAudioPlayer {
       val currentPlayer = player ?: return
       if (!currentPlayer.isPlaying) return
       emit("timeupdate", snapshot())
-      if (enhancedNotificationEnabled) {
+      if (enhancedNotificationEnabled && shouldUpdateEnhancedNotificationProgress()) {
         appContext?.let { updateEnhancedNotification(it) }
       }
       handler.postDelayed(this, PROGRESS_EVENT_INTERVAL_MS)
@@ -472,11 +474,13 @@ object AndroidNativeAudioPlayer {
       if (enhancedNotificationShown || force) {
         AndroidEnhancedNotificationManager.cancel(appContext)
         enhancedNotificationShown = false
+        lastEnhancedNotificationProgressUpdateAt = 0L
       }
       return
     }
 
     enhancedNotificationShown = true
+    if (force) lastEnhancedNotificationProgressUpdateAt = SystemClock.elapsedRealtime()
 
     val currentPlayer = player
     val duration = currentPlayer?.duration?.takeIf { it > 0L } ?: 0L
@@ -514,6 +518,7 @@ object AndroidNativeAudioPlayer {
 
   fun cancelEnhancedNotification(context: Context) {
     enhancedNotificationShown = false
+    lastEnhancedNotificationProgressUpdateAt = 0L
     AndroidEnhancedNotificationManager.cancel(context.applicationContext)
   }
 
@@ -654,7 +659,7 @@ object AndroidNativeAudioPlayer {
       if (shouldRefreshNativeMediaMetadata(applyResult)) {
         updateCurrentMediaItemMetadata()
       }
-      if (applyResult.changed) {
+      if (shouldRefreshEnhancedNotification(applyResult)) {
         appContext?.let { updateEnhancedNotification(it, true) }
       }
       true
@@ -704,6 +709,21 @@ object AndroidNativeAudioPlayer {
     }
 
     return MetadataApplyResult(mediaFieldsChanged, lyricLineChanged)
+  }
+
+  private fun shouldRefreshEnhancedNotification(result: MetadataApplyResult): Boolean {
+    if (!result.changed) return false
+    if (result.mediaFieldsChanged) return true
+    return notificationSubtitleMode == NOTIFICATION_SUBTITLE_LYRIC
+  }
+
+  private fun shouldUpdateEnhancedNotificationProgress(): Boolean {
+    val now = SystemClock.elapsedRealtime()
+    if (now - lastEnhancedNotificationProgressUpdateAt < ENHANCED_NOTIFICATION_PROGRESS_UPDATE_INTERVAL_MS) {
+      return false
+    }
+    lastEnhancedNotificationProgressUpdateAt = now
+    return true
   }
 
   private fun shouldRefreshNativeMediaMetadata(result: MetadataApplyResult): Boolean {
@@ -832,6 +852,7 @@ object AndroidNativeAudioPlayer {
     currentLyricLine = ""
     currentArtworkUri = ""
     enhancedNotificationShown = false
+    lastEnhancedNotificationProgressUpdateAt = 0L
     errorCode = 0
     cancelPendingEndedEvent()
   }
@@ -1006,6 +1027,10 @@ object AndroidNativeAudioPlayer {
   private const val NOTIFICATION_SUBTITLE_ALBUM = "album"
   private const val NOTIFICATION_SUBTITLE_LYRIC = "lyric"
 }
+
+
+
+
 
 
 

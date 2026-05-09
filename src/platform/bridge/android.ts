@@ -128,10 +128,12 @@ export const scanAndroidMediaStore = async (): Promise<AndroidMediaTrack[]> => {
 };
 
 export const getAndroidDisplayMetrics = (): AndroidDisplayMetrics | null => {
-  const raw = getAndroidSystemBridge()?.getDisplayMetrics();
-  if (!raw) return null;
+  const system = getAndroidSystemBridge();
+  if (!system?.getDisplayMetrics) return null;
 
   try {
+    const raw = system.getDisplayMetrics();
+    if (!raw) return null;
     return JSON.parse(raw) as AndroidDisplayMetrics;
   } catch {
     return null;
