@@ -1,4 +1,4 @@
-<!-- 图片组件 -->
+﻿<!-- 图片组件 -->
 <template>
   <div
     ref="imgContainer"
@@ -9,14 +9,14 @@
   >
     <!-- 加载图片 -->
     <Transition name="fade">
-      <img v-if="!isLoaded" :src="defaultSrc" class="loading" alt="loading" />
+      <img v-if="shouldRenderLoading" :src="defaultSrc" class="loading" alt="loading" />
     </Transition>
     <!-- 真实图片 -->
     <img
       v-if="imgSrc"
+      :key="imgSrc"
       ref="imgRef"
       :src="imgSrc"
-      :key="imgSrc"
       :alt="alt || 'image'"
       :class="['cover', { loaded: isLoaded }]"
       :decoding="decodeAsync ? 'async' : 'auto'"
@@ -30,6 +30,10 @@
 </template>
 
 <script setup lang="ts">
+import { enqueueAndroidImageLoad } from "@/composables/useAndroidImageLoadQueue";
+import { useSettingStore, useStatusStore } from "@/stores";
+import { isAndroidApp } from "@/utils/env";
+
 const props = withDefaults(
   defineProps<{
     /** 图片地址 */
@@ -74,10 +78,14 @@ const emit = defineEmits<{
   "update:show": [show: boolean];
 }>();
 
+const settingStore = useSettingStore();
+const statusStore = useStatusStore();
+
 // 图片数据
 const imgRef = ref<HTMLImageElement>();
 const imgSrc = ref<string>();
-const imgContainer = ref<HTMLImageElement>();
+const pendingImgSrc = ref<string>();
+const imgContainer = ref<HTMLElement>();
 
 // 是否加载完成
 const isLoaded = ref<boolean>(false);
@@ -86,9 +94,73 @@ const lastShowState = ref<boolean | null>(null);
 // 加载竞态 token，防止旧图片回调覆盖新状态
 const loadToken = ref<number>(0);
 const currentToken = ref<number>(0);
+let cancelQueuedImageLoad: (() => void) | null = null;
 
 // 是否可视
 const isCanLook = useElementVisibility(imgContainer);
+const shouldReleaseOnHide = computed(
+  () =>
+    props.releaseOnHide ||
+    (isAndroidApp &&
+      settingStore.androidPerformanceMode &&
+      statusStore.playStatus &&
+      !statusStore.showFullPlayer),
+);
+const shouldQueueImageLoad = computed(
+  () =>
+    isAndroidApp &&
+    settingStore.androidPerformanceMode &&
+    statusStore.playStatus &&
+    !statusStore.showFullPlayer,
+);
+const shouldRenderLoading = computed(
+  () => !isLoaded.value && (!shouldReleaseOnHide.value || isCanLook.value),
+);
+
+const cancelPendingImageLoad = () => {
+  if (!cancelQueuedImageLoad) return;
+  cancelQueuedImageLoad();
+  cancelQueuedImageLoad = null;
+  pendingImgSrc.value = undefined;
+};
+
+const applyImageSource = (src: string | undefined) => {
+  if (imgSrc.value === src) return;
+  loadToken.value += 1;
+  currentToken.value = loadToken.value;
+  isLoaded.value = false;
+  imgSrc.value = src;
+};
+
+const releaseImageSource = () => {
+  cancelPendingImageLoad();
+  if (imgSrc.value === undefined && !isLoaded.value) return;
+  loadToken.value += 1;
+  currentToken.value = loadToken.value;
+  isLoaded.value = false;
+  imgSrc.value = undefined;
+};
+
+const setImageSource = (src: string | undefined) => {
+  if (imgSrc.value === src && pendingImgSrc.value === undefined) return;
+  cancelPendingImageLoad();
+
+  if (!src || !shouldQueueImageLoad.value || src === props.defaultSrc) {
+    applyImageSource(src);
+    return;
+  }
+
+  // 播放态排队加载封面，避免大量图片同时解码
+  releaseImageSource();
+  pendingImgSrc.value = src;
+  cancelQueuedImageLoad = enqueueAndroidImageLoad(() => {
+    if (pendingImgSrc.value !== src) return;
+    if (props.observeVisibility && !isCanLook.value) return;
+    pendingImgSrc.value = undefined;
+    cancelQueuedImageLoad = null;
+    applyImageSource(src);
+  });
+};
 
 // 图片加载完成
 const imageLoaded = (e: Event) => {
@@ -106,7 +178,7 @@ const imageError = (e: Event) => {
   isLoaded.value = false;
   // 避免默认图也反复触发导致死循环
   if (imgSrc.value !== props.defaultSrc) {
-    imgSrc.value = props.defaultSrc;
+    setImageSource(props.defaultSrc);
   }
   emit("error", e);
 };
@@ -122,15 +194,11 @@ watch(
       emit("update:show", show);
     }
     if (show) {
-      // 进入可视区再加载，避免重复赋值
-      if (imgSrc.value !== props.src) {
-        loadToken.value += 1;
-        currentToken.value = loadToken.value;
-        imgSrc.value = props.src;
-      }
-    } else if (props.releaseOnHide) {
+      // 进入可视区再加载
+      setImageSource(props.src);
+    } else if (shouldReleaseOnHide.value) {
       // 释放图片以回收内存
-      if (imgSrc.value !== undefined) imgSrc.value = undefined;
+      releaseImageSource();
     }
   },
   { immediate: true },
@@ -140,30 +208,21 @@ watch(
 watch(
   () => props.src,
   (val) => {
-    isLoaded.value = false;
-    // 不同值时才进行赋值，减少重绘
-    if (props.observeVisibility) {
-      if (isCanLook.value) {
-        if (imgSrc.value !== val) {
-          loadToken.value += 1;
-          currentToken.value = loadToken.value;
-          imgSrc.value = val;
-        }
-      } else {
-        if (props.releaseOnHide) {
-          if (imgSrc.value !== undefined) imgSrc.value = undefined;
-        }
-      }
-    } else {
-      if (imgSrc.value !== val) {
-        loadToken.value += 1;
-        currentToken.value = loadToken.value;
-        imgSrc.value = val;
-      }
+    if (!props.observeVisibility || isCanLook.value) {
+      setImageSource(val);
+      return;
     }
+    if (shouldReleaseOnHide.value) releaseImageSource();
   },
   { immediate: true },
 );
+
+// 播放态切换时释放已离屏图片
+watch(shouldReleaseOnHide, (releaseOnHide) => {
+  if (releaseOnHide && props.observeVisibility && !isCanLook.value) {
+    releaseImageSource();
+  }
+});
 
 onUnmounted(() => {
   try {
@@ -171,7 +230,7 @@ onUnmounted(() => {
   } catch {
     /* empty */
   }
-  imgSrc.value = undefined;
+  releaseImageSource();
   imgRef.value = undefined;
   imgContainer.value = undefined;
 });

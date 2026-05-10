@@ -15,6 +15,7 @@ declare module 'vue' {
     AboutSetting: typeof import('./src/components/Setting/AboutSetting.vue')['default']
     AMLLServer: typeof import('./src/components/Modal/Setting/AMLLServer.vue')['default']
     AMLyric: typeof import('./src/components/Player/PlayerLyric/AMLyric.vue')['default']
+    AndroidLazySection: typeof import('./src/components/UI/AndroidLazySection.vue')['default']
     AndroidUiScaleControl: typeof import('./src/components/Setting/components/AndroidUiScaleControl.vue')['default']
     ArtistList: typeof import('./src/components/List/ArtistList.vue')['default']
     AutoClose: typeof import('./src/components/Modal/AutoClose.vue')['default']

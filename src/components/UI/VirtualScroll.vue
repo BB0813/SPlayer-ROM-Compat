@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div ref="wrapperRef" class="virtual-scroll-wrapper" :style="{ height: containerHeightStyle }">
     <n-scrollbar
       ref="scrollbarRef"
@@ -66,6 +66,8 @@ interface Props {
   getItemKey?: (item: any, index: number) => string | number;
   /** 是否关闭列表项位移动画 */
   disableItemTransition?: boolean;
+  /** 外部滚动事件节流间隔 */
+  scrollEmitThrottle?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -73,6 +75,7 @@ const props = withDefaults(defineProps<Props>(), {
   bufferSize: 5,
   paddingBottom: 0,
   disableItemTransition: false,
+  scrollEmitThrottle: 0,
   getItemKey: (item: any, index: number) => {
     return item?.key ?? item?.id ?? index;
   },
@@ -311,6 +314,7 @@ const measureItemHeights = () => {
 
 let rafId: number | null = null;
 let pendingScrollTarget: HTMLElement | null = null;
+let lastScrollEmitAt = 0;
 
 const processScroll = () => {
   rafId = null;
@@ -327,13 +331,26 @@ const processScroll = () => {
   }
 };
 
+const emitExternalScroll = (event: Event) => {
+  const throttle = Number(props.scrollEmitThrottle) || 0;
+  if (throttle <= 0) {
+    emit("scroll", event);
+    return;
+  }
+
+  const now = performance.now();
+  if (now - lastScrollEmitAt < throttle) return;
+  lastScrollEmitAt = now;
+  emit("scroll", event);
+};
+
 // 处理滚动事件
 const handleScroll = (event: Event) => {
   const target = event.target as HTMLElement;
   if (!target) return;
 
   // 触发外部事件
-  emit("scroll", event);
+  emitExternalScroll(event);
 
   // 合并多次滚动到一个 rAF
   pendingScrollTarget = target;
