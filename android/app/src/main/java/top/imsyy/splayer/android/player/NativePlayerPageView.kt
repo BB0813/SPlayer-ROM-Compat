@@ -43,6 +43,21 @@ class NativePlayerPageView(context: Context) : FrameLayout(context) {
   private var currentDuration = 0.0
   private var currentThemeColor = Color.rgb(88, 126, 255)
   private var userSeeking = false
+  private var currentPlaying = false
+  private var currentLoading = false
+  private val progressTicker =
+    object : Runnable {
+      override fun run() {
+        if (visibility != VISIBLE || !currentPlaying || currentLoading || currentDuration <= 0.0) return
+        if (!userSeeking) {
+          val nativeDuration = AndroidNativeAudioPlayer.getDuration().takeIf { it > 0.0 } ?: currentDuration
+          val nativeCurrent = AndroidNativeAudioPlayer.getCurrentTime().coerceAtLeast(0.0)
+          currentDuration = nativeDuration
+          updateProgress(nativeCurrent.coerceAtMost(nativeDuration), nativeDuration)
+        }
+        mainHandler.postDelayed(this, 500L)
+      }
+    }
 
   private val content =
     LinearLayout(context).apply {
@@ -173,6 +188,8 @@ class NativePlayerPageView(context: Context) : FrameLayout(context) {
       val cover = song.optCleanString("cover", "")
       val playing = state.optBoolean("playing", false)
       val loading = state.optBoolean("loading", false)
+      currentPlaying = playing
+      currentLoading = loading
 
       songTitle.text = title
       songSubtitle.text = "$artist · $album"
@@ -189,6 +206,16 @@ class NativePlayerPageView(context: Context) : FrameLayout(context) {
       applyTheme(themeColor)
       loadCover(cover)
       setPlayerVisible(state.optBoolean("visible", visibility == VISIBLE))
+      syncProgressTicker()
+      true
+    }.getOrDefault(false)
+  }
+
+  fun updateLyricState(lyricJson: String?): Boolean {
+    if (lyricJson.isNullOrBlank()) return false
+
+    return runCatching {
+      updateLyrics(JSONObject(lyricJson))
       true
     }.getOrDefault(false)
   }
@@ -199,6 +226,9 @@ class NativePlayerPageView(context: Context) : FrameLayout(context) {
       bringToFront()
       requestFocus()
       post { updateAdaptiveSizes() }
+      syncProgressTicker()
+    } else {
+      stopProgressTicker()
     }
     return true
   }
@@ -215,8 +245,20 @@ class NativePlayerPageView(context: Context) : FrameLayout(context) {
   }
 
   override fun onDetachedFromWindow() {
+    stopProgressTicker()
     coverExecutor.shutdownNow()
     super.onDetachedFromWindow()
+  }
+
+  private fun syncProgressTicker() {
+    stopProgressTicker()
+    if (visibility == VISIBLE && currentPlaying && !currentLoading && currentDuration > 0.0) {
+      mainHandler.postDelayed(progressTicker, 500L)
+    }
+  }
+
+  private fun stopProgressTicker() {
+    mainHandler.removeCallbacks(progressTicker)
   }
 
   private fun buildLayout() {

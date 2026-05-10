@@ -28,7 +28,10 @@ export interface AndroidPlayerBridge {
   setNotificationConfig(configJson?: string): boolean;
   updateMetadata(metadataJson?: string): boolean;
   updateNativePlayerState?(stateJson?: string): boolean;
+  updateNativePlayerLyricState?(lyricJson?: string): boolean;
   setNativePlayerVisible?(visible: boolean): boolean;
+  updateNativeMiniPlayerState?(stateJson?: string): boolean;
+  setNativeMiniPlayerVisible?(visible: boolean): boolean;
 }
 
 export interface AndroidMediaTrack {
@@ -130,6 +133,34 @@ export interface AndroidNativePlayerLyricLine {
   words?: AndroidNativePlayerLyricWord[];
 }
 
+export interface AndroidNativeMiniPlayerBarState {
+  visible: boolean;
+  playing: boolean;
+  loading: boolean;
+  currentTime: number;
+  duration: number;
+  progress: number;
+  themeColor: string;
+  song: {
+    id?: number | string;
+    name: string;
+    artist: string;
+    album: string;
+    cover: string;
+    type?: string;
+  };
+  queue?: {
+    current: number;
+    total: number;
+  };
+}
+
+export interface AndroidNativePlayerPageLyricState {
+  index: number;
+  offset: number;
+  lines: AndroidNativePlayerLyricLine[];
+}
+
 export interface AndroidNativePlayerPageState {
   visible: boolean;
   playing: boolean;
@@ -146,11 +177,7 @@ export interface AndroidNativePlayerPageState {
     cover: string;
     type?: string;
   };
-  lyric: {
-    index: number;
-    offset: number;
-    lines: AndroidNativePlayerLyricLine[];
-  };
+  lyric: AndroidNativePlayerPageLyricState;
 }
 
 export interface AndroidSystemInfo {

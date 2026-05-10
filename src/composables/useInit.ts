@@ -21,6 +21,7 @@ import { onMounted, watch } from "vue";
 
 const FINAL_FOCUS_DELAY_MS = 500;
 const ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS = 15000;
+const ANDROID_ENHANCED_LYRIC_METADATA_SYNC_INTERVAL_MS = 5000;
 const ANDROID_MEMORY_PRESSURE_TIP_INTERVAL_MS = 60 * 1000;
 let lastAndroidMemoryPressureTipAt = 0;
 
@@ -92,16 +93,13 @@ export const useInit = () => {
         () => {
           const usesLyricSubtitle = settingStore.androidNotificationSubtitleMode === "lyric";
           const usesEnhancedNotification = settingStore.androidEnhancedNotificationEnabled;
-          if (!usesLyricSubtitle && !usesEnhancedNotification) return;
+          if (!usesLyricSubtitle) return;
 
           const now = Date.now();
-          if (
-            usesLyricSubtitle &&
-            !usesEnhancedNotification &&
-            now - lastAndroidLyricMetadataSyncAt < ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS
-          ) {
-            return;
-          }
+          const syncInterval = usesEnhancedNotification
+            ? ANDROID_ENHANCED_LYRIC_METADATA_SYNC_INTERVAL_MS
+            : ANDROID_LYRIC_METADATA_SYNC_INTERVAL_MS;
+          if (now - lastAndroidLyricMetadataSyncAt < syncInterval) return;
 
           lastAndroidLyricMetadataSyncAt = now;
           syncAndroidNowPlayingFromStores();
@@ -178,8 +176,8 @@ const restoreAndroidNativePlaybackState = (): boolean => {
   if (!nativeSrc) return false;
 
   const statusStore = useStatusStore();
-  const duration = Number(nativePlayer.getDuration());
-  const currentTime = Number(nativePlayer.getCurrentTime());
+  const duration = Number(nativePlayer.getDuration()) * 1000;
+  const currentTime = Number(nativePlayer.getCurrentTime()) * 1000;
   const paused = nativePlayer.isPaused();
 
   statusStore.currentTime = Number.isFinite(currentTime) ? currentTime : 0;
@@ -225,6 +223,9 @@ const initEventListener = () => {
       case "closePlayer":
         statusStore.showFullPlayer = false;
         break;
+      case "openPlayList":
+        statusStore.playListShow = !statusStore.playListShow;
+        break;
       case "enableAndroidConservativeMode": {
         settingStore.androidPerformanceMode = true;
         settingStore.androidReducePlaybackAnimations = true;
@@ -234,7 +235,7 @@ const initEventListener = () => {
         const now = Date.now();
         if (now - lastAndroidMemoryPressureTipAt > ANDROID_MEMORY_PRESSURE_TIP_INTERVAL_MS) {
           lastAndroidMemoryPressureTipAt = now;
-          window.$message?.warning("检测到系统内存压力，已切换 Android 保守模式", {
+          window.$message?.warning("妫€娴嬪埌绯荤粺鍐呭瓨鍘嬪姏锛屽凡鍒囨崲 Android 淇濆畧妯″紡", {
             duration: 2500,
           });
         }
@@ -286,7 +287,7 @@ const keyDownEvent = debounce((event: KeyboardEvent) => {
     if (mainKey !== key) match = false;
 
     if (match && shortcutKey) {
-      console.log(shortcutKey, `快捷键触发：${shortcut.name}`);
+      console.log(shortcutKey, `蹇嵎閿Е鍙戯細${shortcut.name}`);
       switch (shortcutKey) {
         case "playOrPause":
           player.playOrPause();

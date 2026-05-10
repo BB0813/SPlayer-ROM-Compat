@@ -1,5 +1,5 @@
-﻿<template>
-  <div class="home-online">
+<template>
+  <div :class="['home-online', { 'android-playback-lite': isAndroidPlaybackLite }]">
     <div v-if="isLogin()" class="main-rec">
       <div class="main-rec-grid">
         <n-flex :size="20" class="rec-list" justify="space-between" vertical>
@@ -25,7 +25,7 @@
         <PersonalFM />
       </div>
     </div>
-    <div v-for="(item, index) in sortedRecData" :key="index" class="rec-public">
+    <div v-for="(item, index) in displayedRecData" :key="item.type" class="rec-public">
       <n-flex
         class="title"
         align="center"
@@ -37,20 +37,29 @@
           <SvgIcon v-if="item.path" :size="26" name="Right" />
         </n-h3>
       </n-flex>
-      <ArtistList
-        v-if="item.type === 'artist'"
-        :data="item.list"
-        :loading="recListLoading"
-        :hiddenCover="settingStore.hiddenCovers.home"
-      />
-      <CoverList
-        v-else
-        :data="item.list"
-        :type="item.type"
-        :loading="recListLoading"
-        :loading-num="coverLoadingNum"
-        :hiddenCover="settingStore.hiddenCovers.home"
-      />
+      <AndroidLazySection
+        :enabled="shouldUseSectionLazy"
+        :eager="index < androidEagerSectionCount"
+        :placeholder-height="getAndroidSectionPlaceholderHeight(item.type)"
+      >
+        <ArtistList
+          v-if="item.type === 'artist'"
+          :data="item.list"
+          :loading="recListLoading"
+          :hiddenCover="settingStore.hiddenCovers.home"
+          :max-items="androidArtistMaxItems"
+        />
+        <CoverList
+          v-else
+          :data="item.list"
+          :type="item.type"
+          :loading="recListLoading"
+          :loading-num="coverLoadingNum"
+          :hiddenCover="settingStore.hiddenCovers.home"
+          :max-items="androidCoverMaxItems"
+          :disable-dynamic-play-state="isAndroidPlaybackLite"
+        />
+      </AndroidLazySection>
     </div>
   </div>
 </template>
@@ -68,6 +77,7 @@ import { sleep } from "@/utils/helper";
 import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { isLogin } from "@/utils/auth";
 import SvgIcon from "@/components/Global/SvgIcon.vue";
+import AndroidLazySection from "@/components/UI/AndroidLazySection.vue";
 
 interface RecItemTypeBase {
   name: string;
@@ -93,11 +103,14 @@ interface RecDataType {
   album: RecItemCover;
 }
 
+type RecSection = RecItemArtist | RecItemCover;
+type RecSectionType = RecSection["type"];
+
 const router = useRouter();
 const dataStore = useDataStore();
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
-const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
+const { isAndroidPlaybackLite, shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
 
 // 日推标题
 const dailySongsTitle = computed(() => {
@@ -150,20 +163,59 @@ const recData = ref<RecDataType>({
 });
 
 // 根据设置过滤和排序推荐数据
-const sortedRecData = computed(() => {
-  const sections = settingStore.homePageSections
+const sortedRecData = computed<RecSection[]>(() => {
+  const configuredSections = Array.isArray(settingStore.homePageSections)
+    ? settingStore.homePageSections
+    : [];
+  const visibleSections = configuredSections
+    .slice()
     .filter((section) => section.visible)
     .sort((a, b) => a.order - b.order)
     .map((section) => {
       const key = section.key as keyof RecDataType;
       return recData.value[key];
     })
-    .filter((item) => item);
-  return sections;
+    .filter((item): item is RecSection => !!item);
+
+  return visibleSections.length > 0 ? visibleSections : Object.values(recData.value);
+});
+const stableRecData = shallowRef<RecSection[]>([]);
+const syncStableRecData = () => {
+  stableRecData.value = sortedRecData.value.map(
+    (item) => ({ ...item, list: item.list.slice() }) as RecSection,
+  );
+};
+const displayedRecData = computed(() => {
+  if (shouldStabilizeDynamicContent.value && stableRecData.value.length > 0) {
+    return stableRecData.value;
+  }
+  return sortedRecData.value;
 });
 
+watch(
+  [sortedRecData, shouldStabilizeDynamicContent],
+  ([, isStabilized]) => {
+    if (!isStabilized || stableRecData.value.length === 0) syncStableRecData();
+  },
+  { immediate: true },
+);
+
 const recListLoading = computed(() => isLoadingRecData.value || !hasRecData.value);
-const coverLoadingNum = computed(() => (shouldStabilizeDynamicContent.value ? 9 : undefined));
+const shouldUseSectionLazy = computed(() => isAndroidPlaybackLite.value);
+const androidEagerSectionCount = computed(() =>
+  shouldUseSectionLazy.value ? 2 : Number.MAX_SAFE_INTEGER,
+);
+const androidCoverMaxItems = computed(() => (isAndroidPlaybackLite.value ? 6 : undefined));
+const androidArtistMaxItems = computed(() => (isAndroidPlaybackLite.value ? 6 : undefined));
+const coverLoadingNum = computed(() => {
+  if (isAndroidPlaybackLite.value) return 6;
+  return shouldStabilizeDynamicContent.value ? 9 : undefined;
+});
+const getAndroidSectionPlaceholderHeight = (type: RecSectionType) => {
+  if (type === "artist") return 190;
+  if (type === "video") return 180;
+  return 220;
+};
 const isLoadingRecData = ref(false);
 const hasRecData = computed(() => {
   return Object.values(recData.value).some((item) => item.list.length > 0);
@@ -246,6 +298,7 @@ const getAllRecData = async (force = false) => {
 };
 
 onActivated(() => {
+  if (shouldStabilizeDynamicContent.value && hasRecData.value) return;
   void getAllRecData();
 });
 
@@ -256,14 +309,20 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .home-online {
+  display: flow-root;
   width: 100%;
   min-width: 0;
+  min-height: max(420px, calc(100dvh - var(--mobile-stable-dock-content-height, 0px) - 96px));
   overflow-x: hidden;
   overflow-x: clip;
 }
 
 .rec-public {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .main-rec {

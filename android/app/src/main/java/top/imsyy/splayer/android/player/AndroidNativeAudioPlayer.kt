@@ -50,6 +50,7 @@ object AndroidNativeAudioPlayer {
   private const val NOTIFICATION_SEEK_STEP_MS = 15000L
   private const val NOTIFICATION_ACTION_REFRESH_DELAY_MS = 300L
   private const val NOTIFICATION_ACTION_SECOND_REFRESH_DELAY_MS = 900L
+  private const val NOTIFICATION_ACTION_FINAL_REFRESH_DELAY_MS = 1800L
   private const val PROGRESS_EVENT_INTERVAL_MS = 1000L
   private const val MEDIA_METADATA_LYRIC_UPDATE_INTERVAL_MS = 15000L
   private const val ENHANCED_NOTIFICATION_PROGRESS_UPDATE_INTERVAL_MS = 2500L
@@ -918,6 +919,14 @@ object AndroidNativeAudioPlayer {
     handler.postDelayed(
       { updateEnhancedNotification(appContext, true) },
       NOTIFICATION_ACTION_REFRESH_DELAY_MS,
+    )
+    handler.postDelayed(
+      { updateEnhancedNotification(appContext, true) },
+      NOTIFICATION_ACTION_SECOND_REFRESH_DELAY_MS,
+    )
+    handler.postDelayed(
+      { updateEnhancedNotification(appContext, true) },
+      NOTIFICATION_ACTION_FINAL_REFRESH_DELAY_MS,
     )
   }
 

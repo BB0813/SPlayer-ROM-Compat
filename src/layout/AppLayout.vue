@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div id="app-layout">
     <Transition name="fade">
       <div
@@ -86,12 +86,14 @@
           :native-scrollbar="false"
           :style="{
             '--layout-height': contentHeight,
+            '--mobile-stable-dock-height': mobileStableDockHeight,
+            '--mobile-stable-dock-content-height': mobileStableDockContentHeight,
           }"
           :content-style="{
             display: 'grid',
             gridTemplateRows: '1fr',
             minHeight: '100%',
-            padding: isMobile ? '0 var(--android-content-padding, 10px)' : '0 24px',
+            padding: isMobile ? mobileContentPadding : '0 24px',
           }"
           position="absolute"
           embedded
@@ -103,7 +105,7 @@
               :css="!shouldReduceMotion"
               :duration="shouldReduceMotion ? 0 : undefined"
             >
-              <KeepAlive v-if="keepAliveEnabled" :max="20" :exclude="['layout']">
+              <KeepAlive v-if="keepAliveEnabled" :max="keepAliveMax" :exclude="['layout']">
                 <component :is="Component" class="router-view" />
               </KeepAlive>
               <component v-else :is="Component" class="router-view" />
@@ -149,13 +151,29 @@ const {
   shouldReduceMotion,
   shouldDisableDynamicBackground,
   keepAliveEnabled,
+  keepAliveMax,
 } = useAndroidRoutePerformance();
 
 const showMobileTabBar = computed(() => isMobile.value);
+const hasPlayBar = computed(() => musicStore.isHasPlayer && statusStore.showPlayBar);
+const mobileStableDockHeight = computed(() => {
+  if (!isMobile.value) return "0px";
+  if (!hasPlayBar.value) {
+    return "calc(var(--mobile-tabbar-outer-height) + var(--mobile-tabbar-bottom-lift) + var(--safe-area-bottom))";
+  }
+  return "var(--mobile-dock-height)";
+});
+const mobileStableDockContentHeight = computed(() => {
+  if (!isMobile.value) return "0px";
+  return `calc(${mobileStableDockHeight.value} + var(--android-dock-clearance, 0px))`;
+});
+const mobileContentPadding = computed(
+  () =>
+    "0 var(--android-content-padding-right, 10px) var(--android-content-bottom-extra, 12px) var(--android-content-padding-left, 10px)",
+);
 const backTopBottom = computed(() => {
   if (!isMobile.value) return 120;
-  if (musicStore.isHasPlayer && statusStore.showPlayBar) return 148;
-  return 84;
+  return hasPlayBar.value ? 176 : 104;
 });
 
 const contentRef = ref<HTMLElement | null>(null);
@@ -198,13 +216,31 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 #app-layout {
+  box-sizing: border-box;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
   --player-bar-height: 80px;
   --mobile-tabbar-height: 0px;
   --mobile-tabbar-outer-height: 0px;
+  --mobile-dock-gap: 16px;
+  --mobile-tabbar-bottom-lift: 14px;
+  --mobile-tabbar-bottom: calc(var(--safe-area-bottom) + var(--mobile-tabbar-bottom-lift));
+  --mobile-player-bottom: calc(
+    var(--mobile-tabbar-outer-height) + var(--mobile-dock-gap) + var(--mobile-tabbar-bottom)
+  );
+  --mobile-dock-height: calc(var(--player-bar-height) + var(--mobile-player-bottom));
+  --mobile-dock-content-height: calc(
+    var(--mobile-dock-height) + var(--android-dock-clearance, 0px)
+  );
+  --android-edge-padding: 0px;
+  --android-content-padding-left: var(--safe-area-left);
+  --android-content-padding-right: var(--safe-area-right);
   --android-content-padding: 10px;
+  --android-content-bottom-extra: 10px;
   width: 100%;
+  max-width: 100%;
   height: 100%;
   min-height: 100dvh;
   flex-direction: column;
@@ -216,7 +252,7 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 100%;
   height: 100dvh;
   z-index: -1;
   pointer-events: none;
@@ -259,7 +295,7 @@ onMounted(() => {
     transition: bottom 0.3s;
     .router-view {
       position: relative;
-      height: 100%;
+      min-height: 100%;
       &.n-result {
         display: flex;
         flex-direction: column;
@@ -294,57 +330,54 @@ onMounted(() => {
     }
   }
 }
-@media (max-width: 768px) {
-  #app-layout {
-    --player-bar-height: max(68px, calc(76px * var(--android-ui-scale, 1)));
-    --mobile-tabbar-height: max(52px, calc(58px * var(--android-ui-scale, 1)));
-    --mobile-tabbar-outer-height: calc(
-      var(--mobile-tabbar-height) + max(6px, calc(8px * var(--android-ui-scale, 1)))
-    );
-    --android-content-padding: max(8px, calc(10px * var(--android-ui-scale, 1)));
-  }
 
+@media (max-width: 768px) {
   #main {
     #main-content {
-      top: calc(max(56px, calc(64px * var(--android-ui-scale, 1))) + var(--safe-area-top));
+      bottom: var(
+        --mobile-stable-dock-content-height,
+        calc(var(--mobile-stable-dock-height, 0px) + var(--android-dock-clearance, 0px))
+      ) !important;
+      height: auto;
+      min-height: 0;
+      transition: none;
+
+      :deep(.n-layout-scroll-container) {
+        overscroll-behavior: contain;
+        overflow-x: hidden !important;
+      }
+    }
+
+    &.show-player,
+    &.show-mobile-tabbar,
+    &.show-player.show-mobile-tabbar {
+      #main-content {
+        bottom: var(
+          --mobile-stable-dock-content-height,
+          calc(var(--mobile-stable-dock-height, 0px) + var(--android-dock-clearance, 0px))
+        ) !important;
+      }
     }
   }
 }
 
 @media (max-width: 420px) {
   #app-layout {
-    --player-bar-height: max(64px, calc(72px * var(--android-ui-scale, 1)));
-    --mobile-tabbar-height: max(48px, calc(54px * var(--android-ui-scale, 1)));
+    --player-bar-height: var(--android-player-bar-compact-height, 86px);
+    --mobile-tabbar-height: var(--android-tabbar-compact-height, 62px);
     --mobile-tabbar-outer-height: calc(
-      var(--mobile-tabbar-height) + max(5px, calc(6px * var(--android-ui-scale, 1)))
+      var(--mobile-tabbar-height) + var(--android-tabbar-padding, 8px)
     );
-    --android-content-padding: max(6px, calc(8px * var(--android-ui-scale, 1)));
+    --android-edge-padding: var(--android-edge-padding-compact, 12px);
+    --android-content-padding-left: max(var(--safe-area-left), var(--android-edge-padding));
+    --android-content-padding-right: max(var(--safe-area-right), var(--android-edge-padding));
+    --android-content-padding: var(--android-edge-padding);
   }
 
   #main {
     #main-content {
-      top: calc(max(54px, calc(60px * var(--android-ui-scale, 1))) + var(--safe-area-top));
+      top: calc(clamp(52px, calc(60px * var(--android-ui-scale, 1)), 60px) + var(--safe-area-top));
     }
-  }
-}
-
-:global(:root.android-app.android-small-width) #app-layout,
-:global(:root.android-app.android-compact-height) #app-layout {
-  --player-bar-height: max(58px, calc(68px * var(--android-ui-scale, 1)));
-  --mobile-tabbar-height: max(44px, calc(50px * var(--android-ui-scale, 1)));
-  --mobile-tabbar-outer-height: calc(
-    var(--mobile-tabbar-height) + max(4px, calc(5px * var(--android-ui-scale, 1)))
-  );
-  --android-content-padding: max(5px, calc(7px * var(--android-ui-scale, 1)));
-}
-@media (max-height: 760px), (max-width: 380px) {
-  #app-layout {
-    --player-bar-height: max(58px, calc(68px * var(--android-ui-scale, 1)));
-    --mobile-tabbar-height: max(44px, calc(50px * var(--android-ui-scale, 1)));
-    --mobile-tabbar-outer-height: calc(
-      var(--mobile-tabbar-height) + max(4px, calc(5px * var(--android-ui-scale, 1)))
-    );
-    --android-content-padding: max(5px, calc(7px * var(--android-ui-scale, 1)));
   }
 }
 </style>

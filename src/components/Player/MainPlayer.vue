@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="!useNativeMiniPlayerBar"
     ref="playerRef"
     :class="[
       'main-player',
@@ -10,10 +11,20 @@
         'android-playback-lite': isAndroidPlaybackLite,
       },
     ]"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
   >
-    <PlayerSlider />
+    <PlayerSlider v-if="!useLitePlayerBar" />
+    <div v-else class="android-lite-progress" aria-hidden="true">
+      <span :style="{ width: androidLiteProgressWidth }" />
+    </div>
     <!-- 播放信息 -->
-    <div :class="['play-data', { 'hidden-cover': settingStore.hiddenCovers.player }]">
+    <div
+      :class="['play-data', { 'hidden-cover': settingStore.hiddenCovers.player }]"
+      @click.stop="openFullPlayerFromBar"
+    >
       <Transition name="fade">
         <div
           v-if="!settingStore.hiddenCovers.player"
@@ -44,17 +55,21 @@
           <div class="data">
             <!-- 歌名 -->
             <TextContainer
+              v-if="!useLitePlayerBar"
               :key="musicStore.playSong.name"
-              :text="
-                settingStore.hideBracketedContent
-                  ? removeBrackets(musicStore.playSong.name)
-                  : musicStore.playSong.name
-              "
+              :text="displaySongName"
               :speed="0.2"
               class="name"
               style="cursor: pointer"
               @click.stop="settingStore.hiddenCovers.player && (statusStore.showFullPlayer = true)"
             />
+            <span
+              v-else
+              class="name android-lite-name text-hidden"
+              @click.stop="settingStore.hiddenCovers.player && (statusStore.showFullPlayer = true)"
+            >
+              {{ displaySongName }}
+            </span>
             <!-- 播放速率 -->
             <n-tag
               v-if="statusStore.playRate !== 1"
@@ -80,7 +95,7 @@
               <SvgIcon name="FormatList" :size="20" :depth="2" class="more" />
             </n-dropdown>
           </div>
-          <div class="lyric-container">
+          <div v-if="shouldRenderBarLyric" class="lyric-container">
             <Transition
               :name="settingStore.lyricTransition === 'fade' ? 'fade' : 'lyric-slide'"
               :mode="settingStore.lyricTransition === 'fade' ? 'out-in' : undefined"
@@ -135,8 +150,12 @@
     </div>
     <!-- 播放控制 -->
     <n-flex :size="8" align="center" justify="center" class="play-control">
-      <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-        <div class="play-icon" @click.stop="player.toggleShuffle()">
+      <template
+        v-if="
+          !useLitePlayerBar && musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode
+        "
+      >
+        <div class="play-icon mode-icon" @click.stop="player.toggleShuffle()">
           <SvgIcon
             :name="statusStore.shuffleIcon"
             :size="20"
@@ -147,7 +166,7 @@
       <!-- 上一首 -->
       <div
         v-if="statusStore.personalFmMode"
-        class="play-icon"
+        class="play-icon transport-icon"
         v-debounce="
           () =>
             songManager.personalFMTrash(musicStore.personalFMSong?.id, () =>
@@ -158,7 +177,7 @@
         <SvgIcon class="icon" :size="18" name="ThumbDown" />
       </div>
       <!-- 播放暂停 -->
-      <div v-else class="play-icon" v-debounce="() => player.nextOrPrev('prev')">
+      <div v-else class="play-icon transport-icon" v-debounce="() => player.nextOrPrev('prev')">
         <SvgIcon :size="26" name="SkipPrev" />
       </div>
       <!-- 播放参数 -->
@@ -184,12 +203,16 @@
         </template>
       </n-button>
       <!-- 下一首 -->
-      <div class="play-icon" v-debounce="() => player.nextOrPrev('next')">
+      <div class="play-icon transport-icon" v-debounce="() => player.nextOrPrev('next')">
         <SvgIcon :size="26" name="SkipNext" />
       </div>
       <!-- 播放模式 -->
-      <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-        <div class="play-icon" @click.stop="player.toggleRepeat()">
+      <template
+        v-if="
+          !useLitePlayerBar && musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode
+        "
+      >
+        <div class="play-icon mode-icon" @click.stop="player.toggleRepeat()">
           <SvgIcon
             :name="statusStore.repeatIcon"
             :size="20"
@@ -199,7 +222,7 @@
       </template>
     </n-flex>
     <!-- 右侧菜单 -->
-    <Transition name="fade" mode="out-in">
+    <Transition v-if="!useLitePlayerBar" name="fade" mode="out-in">
       <n-flex
         :key="statusStore.personalFmMode ? 'fm' : 'normal'"
         :size="[8, 0]"
@@ -247,7 +270,6 @@ import { useSongManager } from "@/core/player/SongManager";
 import { useDataStore, useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { toLikeSong } from "@/utils/auth";
 import { useTimeFormat } from "@/composables/useTimeFormat";
-import { useSwipe } from "@vueuse/core";
 import { useMobile } from "@/composables/useMobile";
 import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { copyData, coverLoaded, renderIcon, getShareUrl } from "@/utils/helper";
@@ -269,7 +291,7 @@ const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 const { isMobile } = useMobile();
-const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
+const { isAndroidPerformanceEnabled, isAndroidPlaybackLite } = useAndroidRoutePerformance();
 
 const player = usePlayerController();
 const songManager = useSongManager();
@@ -277,15 +299,270 @@ const { timeDisplay, toggleTimeFormat } = useTimeFormat();
 
 const playerRef = ref<HTMLElement | null>(null);
 
-const { direction } = useSwipe(playerRef, {
-  threshold: 50,
-  onSwipeEnd: () => {
-    if (direction.value === "left") {
-      player.nextOrPrev("next");
-    } else if (direction.value === "right") {
-      player.nextOrPrev("prev");
+const useLitePlayerBar = computed(() => isMobile.value && isAndroidPerformanceEnabled.value);
+const useNativeMiniPlayerBar = computed(
+  () =>
+    useLitePlayerBar.value &&
+    settingStore.androidNativeMiniPlayerBarEnabled &&
+    musicStore.isHasPlayer &&
+    statusStore.showPlayBar &&
+    !statusStore.showFullPlayer,
+);
+const shouldRenderBarLyric = computed(() => !useLitePlayerBar.value);
+const displaySongName = computed(() =>
+  settingStore.hideBracketedContent
+    ? removeBrackets(musicStore.playSong.name)
+    : musicStore.playSong.name,
+);
+const androidLiteProgressWidth = computed(
+  () => `${Math.min(100, Math.max(0, statusStore.progress || 0))}%`,
+);
+
+let dragOpenActive = false;
+let dragOpenLocked: "h" | "v" | null = null;
+let dragOpenParent: HTMLElement | null = null;
+let dragOpenMain: HTMLElement | null = null;
+let dragOpenRaf = 0;
+let dragOpenPending = 0;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartTop = 0;
+let dragLastDy = 0;
+let dragOpenTravel = 0;
+let dragOpenResetTimer = 0;
+let dragOpenCloseTimer = 0;
+let pointerId = -1;
+let pointerActiveTarget: HTMLElement | null = null;
+let horizontalSettled = false;
+let horizontalDirection: "left" | "right" | null = null;
+let suppressNextCardClick = false;
+
+const OPEN_THRESHOLD = 100;
+
+const isPhoneCardGestureEnabled = () => {
+  if (!isMobile.value) return false;
+  if (typeof document === "undefined") return false;
+  return !document.documentElement.classList.contains("android-tablet-layout");
+};
+
+const setDragOpenFlag = (value: boolean) => {
+  (window as unknown as { __splayerDragOpen?: boolean }).__splayerDragOpen = value;
+};
+
+const cancelDragOpenTimers = () => {
+  if (dragOpenResetTimer) {
+    window.clearTimeout(dragOpenResetTimer);
+    dragOpenResetTimer = 0;
+  }
+  if (dragOpenCloseTimer) {
+    window.clearTimeout(dragOpenCloseTimer);
+    dragOpenCloseTimer = 0;
+  }
+};
+
+const writeDragOpen = (dy: number) => {
+  const progress = Math.max(0, Math.min(1, dy / dragOpenTravel));
+  const translate = (1 - progress) * dragStartTop;
+  const scale = 0.92 + 0.08 * progress;
+  if (dragOpenParent) {
+    dragOpenParent.style.transform = `translate3d(0, ${translate}px, 0) scale(${scale})`;
+  }
+  if (dragOpenMain) {
+    dragOpenMain.style.opacity = String(1 - progress);
+    dragOpenMain.style.transform = `scale(${1 - 0.1 * progress})`;
+  }
+};
+
+const scheduleDragOpenFlush = (dy: number) => {
+  dragOpenPending = dy;
+  if (dragOpenRaf) return;
+  dragOpenRaf = requestAnimationFrame(() => {
+    dragOpenRaf = 0;
+    writeDragOpen(dragOpenPending);
+  });
+};
+
+const initDragOpen = () => {
+  cancelDragOpenTimers();
+  const parent = document.querySelector(".full-player") as HTMLElement | null;
+  const main = document.getElementById("main");
+  if (parent) {
+    dragOpenParent = parent;
+    parent.style.transformOrigin = "50% 0";
+    parent.style.willChange = "transform";
+    parent.style.transition = "none";
+    parent.style.transform = `translate3d(0, ${dragStartTop}px, 0) scale(0.92)`;
+    parent.style.borderRadius = "28px";
+    parent.style.backfaceVisibility = "hidden";
+    parent.style.backdropFilter = "blur(48px)";
+    parent.style.contain = "paint";
+    parent.style.pointerEvents = "none";
+  }
+  if (main) {
+    dragOpenMain = main;
+    main.style.transition = "none";
+    main.style.willChange = "transform, opacity";
+    main.style.opacity = "1";
+    main.style.transform = "scale(1)";
+  }
+};
+
+const resetDragOpen = () => {
+  cancelDragOpenTimers();
+  if (dragOpenRaf) {
+    cancelAnimationFrame(dragOpenRaf);
+    dragOpenRaf = 0;
+  }
+  if (dragOpenParent) {
+    dragOpenParent.style.transformOrigin = "";
+    dragOpenParent.style.willChange = "";
+    dragOpenParent.style.transition = "";
+    dragOpenParent.style.transform = "";
+    dragOpenParent.style.borderRadius = "";
+    dragOpenParent.style.backfaceVisibility = "";
+    dragOpenParent.style.backdropFilter = "";
+    dragOpenParent.style.contain = "";
+    dragOpenParent.style.pointerEvents = "";
+  }
+  if (dragOpenMain) {
+    dragOpenMain.style.transition = "";
+    dragOpenMain.style.transform = "";
+    dragOpenMain.style.opacity = "";
+    dragOpenMain.style.willChange = "";
+  }
+  dragOpenParent = null;
+  dragOpenMain = null;
+  dragOpenActive = false;
+  dragOpenLocked = null;
+  setDragOpenFlag(false);
+};
+
+const finishDragOpen = (dy: number) => {
+  const shouldOpen = dy > OPEN_THRESHOLD;
+  suppressNextCardClick = true;
+  if (dragOpenRaf) {
+    cancelAnimationFrame(dragOpenRaf);
+    dragOpenRaf = 0;
+  }
+  if (shouldOpen) {
+    if (dragOpenParent) {
+      dragOpenParent.style.transition = "transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)";
+      dragOpenParent.style.transform = "";
     }
-  },
+    if (dragOpenMain) {
+      dragOpenMain.style.transition =
+        "opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)";
+      dragOpenMain.style.opacity = "";
+      dragOpenMain.style.transform = "";
+    }
+    dragOpenResetTimer = window.setTimeout(() => {
+      dragOpenResetTimer = 0;
+      resetDragOpen();
+    }, 320);
+  } else {
+    if (dragOpenParent) {
+      dragOpenParent.style.transition = "transform 0.24s cubic-bezier(0.4, 0, 1, 1)";
+      dragOpenParent.style.transform = `translate3d(0, ${dragStartTop}px, 0) scale(0.92)`;
+    }
+    if (dragOpenMain) {
+      dragOpenMain.style.transition =
+        "opacity 0.24s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1)";
+      dragOpenMain.style.opacity = "1";
+      dragOpenMain.style.transform = "scale(1)";
+    }
+    dragOpenCloseTimer = window.setTimeout(() => {
+      dragOpenCloseTimer = 0;
+      statusStore.showFullPlayer = false;
+      dragOpenResetTimer = window.setTimeout(() => {
+        dragOpenResetTimer = 0;
+        resetDragOpen();
+      }, 360);
+    }, 240);
+  }
+  window.setTimeout(() => {
+    suppressNextCardClick = false;
+  }, 360);
+};
+
+const onPointerDown = (event: PointerEvent) => {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  cancelDragOpenTimers();
+  pointerId = event.pointerId;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
+  dragLastDy = 0;
+  dragOpenActive = false;
+  dragOpenLocked = null;
+  horizontalSettled = false;
+  horizontalDirection = null;
+  pointerActiveTarget = event.currentTarget as HTMLElement;
+};
+
+const onPointerMove = (event: PointerEvent) => {
+  if (event.pointerId !== pointerId) return;
+  const dx = event.clientX - dragStartX;
+  const dy = dragStartY - event.clientY;
+  dragLastDy = dy;
+  if (!isPhoneCardGestureEnabled() || (statusStore.showFullPlayer && !dragOpenActive)) return;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+  if (!dragOpenLocked) {
+    if (Math.max(absX, absY) < 8) return;
+    if (absY > absX) {
+      if (dy <= 0) {
+        dragOpenLocked = "h";
+        return;
+      }
+      dragOpenLocked = "v";
+      pointerActiveTarget?.setPointerCapture?.(event.pointerId);
+      const rect = playerRef.value?.getBoundingClientRect();
+      dragStartTop = rect ? rect.top : window.innerHeight - 80;
+      dragOpenTravel = Math.max(window.innerHeight * 0.55, 360);
+      setDragOpenFlag(true);
+      dragOpenActive = true;
+      statusStore.showFullPlayer = true;
+      requestAnimationFrame(() => {
+        if (!dragOpenActive) return;
+        initDragOpen();
+        writeDragOpen(Math.max(dy, 0));
+      });
+      return;
+    }
+    dragOpenLocked = "h";
+    horizontalDirection = dx > 0 ? "right" : "left";
+    return;
+  }
+  if (dragOpenLocked === "h") {
+    horizontalDirection = dx > 0 ? "right" : "left";
+    horizontalSettled = absX > 50;
+    return;
+  }
+  if (dragOpenActive) scheduleDragOpenFlush(Math.max(dy, 0));
+};
+
+const onPointerEnd = (event: PointerEvent) => {
+  if (event.pointerId !== pointerId) return;
+  pointerId = -1;
+  if (pointerActiveTarget) {
+    pointerActiveTarget.releasePointerCapture?.(event.pointerId);
+    pointerActiveTarget = null;
+  }
+  if (dragOpenActive) {
+    finishDragOpen(Math.max(dragLastDy, 0));
+    return;
+  }
+  if (dragOpenLocked === "h" && horizontalSettled && horizontalDirection) {
+    suppressNextCardClick = true;
+    if (horizontalDirection === "left") player.nextOrPrev("next");
+    else player.nextOrPrev("prev");
+    window.setTimeout(() => {
+      suppressNextCardClick = false;
+    }, 320);
+  }
+};
+
+onBeforeUnmount(() => {
+  resetDragOpen();
 });
 
 const songMoreOptions = computed<DropdownOption[]>(() => {
@@ -446,6 +723,11 @@ const instantLyrics = computed(() => {
     : contentStr;
 });
 
+const openFullPlayerFromBar = () => {
+  if (!isMobile.value || suppressNextCardClick) return;
+  statusStore.showFullPlayer = true;
+};
+
 const showCreatorTip = () => window.$message.info("电台创作者暂不支持跳转");
 </script>
 
@@ -468,6 +750,7 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
   align-items: center;
   transition: bottom 0.3s;
   z-index: 10;
+  touch-action: pan-x;
   &.show {
     bottom: 0;
   }
@@ -480,6 +763,37 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
     margin: 0;
     --n-rail-height: 3px;
     --n-handle-size: 14px;
+  }
+  .android-lite-progress {
+    position: absolute;
+    width: 100%;
+    height: 16px;
+    top: -8px;
+    left: 0;
+    margin: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 999px;
+      background-color: rgba(var(--primary), 0.16);
+    }
+
+    span {
+      position: relative;
+      display: block;
+      height: 3px;
+      border-radius: 999px;
+      background-color: var(--primary-hex);
+      transition: width 0.35s linear;
+    }
   }
   .play-data {
     position: relative;
@@ -727,9 +1041,12 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
 <style lang="scss" scoped>
 @media (max-width: 768px) {
   .main-player.with-mobile-tabbar.show {
-    bottom: calc(
-      var(--mobile-tabbar-outer-height, 64px) + var(--mobile-dock-gap, 8px) +
-        var(--safe-area-bottom, 0px)
+    bottom: var(
+      --mobile-player-bottom,
+      calc(
+        var(--mobile-tabbar-outer-height, 64px) + var(--mobile-tabbar-bottom-lift, 8px) +
+          var(--mobile-dock-gap, 8px) + var(--safe-area-bottom, 0px)
+      )
     );
   }
 
@@ -843,9 +1160,12 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
 }
 
 :root.android-app .main-player.with-mobile-tabbar.show {
-  bottom: calc(
-    var(--mobile-tabbar-outer-height, 64px) + var(--mobile-dock-gap, 8px) +
-      var(--safe-area-bottom, 0px)
+  bottom: var(
+    --mobile-player-bottom,
+    calc(
+      var(--mobile-tabbar-outer-height, 64px) + var(--mobile-tabbar-bottom-lift, 8px) +
+        var(--mobile-dock-gap, 8px) + var(--safe-area-bottom, 0px)
+    )
   );
 }
 
@@ -924,5 +1244,115 @@ const showCreatorTip = () => window.$message.info("电台创作者暂不支持�
   width: 42px;
   height: 42px;
   margin: 0;
+}
+
+:root.android-app .main-player.with-mobile-tabbar {
+  left: var(--android-content-padding-left, max(10px, calc(14px * var(--android-ui-scale, 1))));
+  right: var(--android-content-padding-right, max(10px, calc(14px * var(--android-ui-scale, 1))));
+  width: auto;
+  height: var(--android-player-card-height, 76px);
+  min-height: var(--android-player-card-height, 76px);
+  padding: 0 max(10px, calc(12px * var(--android-ui-scale, 1)));
+  border-radius: var(--android-radius-dock, 22px);
+  background-color: color-mix(in srgb, var(--surface-container-hex) 92%, rgba(0, 0, 0, 0.08) 8%);
+  border: 1px solid rgba(var(--primary), 0.12);
+  box-shadow: var(--android-shadow-dock, 0 8px 24px rgba(0, 0, 0, 0.16));
+  backdrop-filter: blur(18px);
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: max(8px, calc(10px * var(--android-ui-scale, 1)));
+  overflow: hidden;
+  z-index: 13;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .player-slider,
+:root.android-app .main-player.with-mobile-tabbar .android-lite-progress {
+  left: 0;
+  top: auto;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  --n-rail-height: 2px;
+  --n-handle-size: 0px;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .android-lite-progress::before {
+  display: none;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .android-lite-progress span {
+  height: 2px;
+  border-radius: 0 999px 999px 0;
+  background-color: rgba(var(--primary), 0.92);
+  box-shadow: none;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .player-slider .n-slider-rail {
+  background-color: transparent !important;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .player-slider .n-slider-rail__fill {
+  height: 2px;
+  border-radius: 0 999px 999px 0;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-data {
+  height: 100%;
+  padding-top: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-data .cover {
+  border-radius: var(--android-radius-control, 16px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-data .data .name {
+  max-width: 100%;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-data .data .android-lite-name {
+  display: block;
+  min-width: 0;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-control .mode-icon {
+  display: none !important;
+}
+
+:root.android-app .main-player.with-mobile-tabbar .play-control .transport-icon {
+  display: flex !important;
+}
+
+:root.android-app .main-player.with-mobile-tabbar.android-playback-lite {
+  backdrop-filter: none;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  contain: layout paint style;
+}
+
+:root.android-app .main-player.with-mobile-tabbar.android-playback-lite,
+:root.android-app .main-player.with-mobile-tabbar.android-playback-lite * {
+  transition: none !important;
+}
+
+:root.android-app
+  .main-player.with-mobile-tabbar.android-playback-lite
+  .android-lite-progress
+  span {
+  transition: width 0.6s linear !important;
+}
+
+@media (max-width: 420px) {
+  :root.android-app .main-player.with-mobile-tabbar {
+    height: var(--android-player-card-compact-height, 72px);
+    min-height: var(--android-player-card-compact-height, 72px);
+    padding: 0 max(10px, calc(12px * var(--android-ui-scale, 1)));
+    border-radius: var(--android-radius-dock, 20px);
+  }
+
+  :root.android-app .main-player.with-mobile-tabbar .player-slider {
+    left: 0;
+    width: 100%;
+  }
 }
 </style>

@@ -27,7 +27,13 @@ export const useAndroidRoutePerformance = () => {
     return false;
   });
 
-  const shouldStabilizeDynamicContent = computed(() => shouldFreezeRoutes.value);
+  const shouldStabilizeDynamicContent = computed(
+    () => isAndroidPlaybackLite.value && !statusStore.showFullPlayer,
+  );
+
+  const shouldPauseDecorativeAnimations = computed(
+    () => isAndroidPlaybackLite.value && !statusStore.showFullPlayer,
+  );
 
   const shouldUseLowFrequencyLyrics = computed(
     () => isAndroidPlaybackLite.value && settingStore.androidLowFrequencyLyrics,
@@ -37,7 +43,10 @@ export const useAndroidRoutePerformance = () => {
     () => isAndroidPlaybackLite.value && settingStore.androidDisablePlaybackBackground,
   );
 
-  const keepAliveEnabled = computed(() => settingStore.useKeepAlive);
+  const keepAliveEnabled = computed(
+    () => settingStore.useKeepAlive || isAndroidPerformanceEnabled.value,
+  );
+  const keepAliveMax = computed(() => (isAndroidPerformanceEnabled.value ? 8 : 20));
 
   return {
     isAndroidPerformanceEnabled,
@@ -45,8 +54,10 @@ export const useAndroidRoutePerformance = () => {
     shouldReduceMotion,
     shouldFreezeRoutes,
     shouldStabilizeDynamicContent,
+    shouldPauseDecorativeAnimations,
     shouldUseLowFrequencyLyrics,
     shouldDisableDynamicBackground,
     keepAliveEnabled,
+    keepAliveMax,
   };
 };

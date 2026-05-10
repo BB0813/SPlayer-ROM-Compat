@@ -1,4 +1,4 @@
-﻿import type { VNodeChild } from "vue";
+import type { VNodeChild } from "vue";
 import { computed, h, markRaw, ref } from "vue";
 import { NTooltip, type SelectOption } from "naive-ui";
 import {
@@ -31,7 +31,7 @@ import { useSettingStore } from "@/stores";
 import type { SettingConfig } from "@/types/settings";
 import { copyData } from "@/utils/helper";
 import { collectCookieSnapshot } from "@/utils/cookie";
-import { checkIsolationSupport, isAndroidApp, isElectron } from "@/utils/env";
+import { checkIsolationSupport, isAndroidApp, isElectron, isMobile } from "@/utils/env";
 import { uniqBy } from "lodash-es";
 import AndroidUiScaleControl from "../components/AndroidUiScaleControl.vue";
 
@@ -64,6 +64,7 @@ export const usePlaySettings = (): SettingConfig => {
   const androidNotificationPermissionGranted = ref(false);
   const androidMediaTrackCount = ref(0);
   const androidMediaLastScanAt = ref("");
+  const showAndroidSettings = computed(() => isAndroidApp || isMobile);
 
   const audioEngineData = {
     element: {
@@ -217,15 +218,21 @@ export const usePlaySettings = (): SettingConfig => {
       ? "已开启诊断日志"
       : "未开启诊断日志";
     const nativePageText = settingStore.androidNativePlayerPageEnabled
-      ? "原生播放页预览开启"
-      : "原生播放页预览关闭";
-    return `${modeText} | ${strategyText} | ${diagnosticsText} | ${nativePageText}`;
+      ? "原生播放页接管开启"
+      : "原生播放页接管关闭";
+    const nativeBarText = settingStore.androidNativeMiniPlayerBarEnabled
+      ? "原生底部卡片开启"
+      : "原生底部卡片关闭";
+    return `${modeText} | ${strategyText} | ${diagnosticsText} | ${nativePageText} | ${nativeBarText}`;
   });
 
   const androidUiScaleSummary = computed(() => {
     const scale = settingStore.androidUiScale || 80;
+    const scaleText = settingStore.androidAutoUiScale
+      ? "已按本机分辨率自动匹配"
+      : `当前手动缩放为 ${scale}%`;
     const compactText = settingStore.androidCompactUi ? "紧凑布局已开启" : "紧凑布局已关闭";
-    return `当前 Android 界面缩放为 ${scale}%，${compactText}；缩放会影响列表、设置页、底栏和通用控件密度。`;
+    return `${scaleText}，${compactText}；缩放会影响列表、设置页、底栏和通用控件密度。`;
   });
 
   const androidRomPrimaryActionLabel = computed(() => {
@@ -796,7 +803,7 @@ export const usePlaySettings = (): SettingConfig => {
       },
       {
         title: "Android 性能与稳定性",
-        show: () => isAndroidApp,
+        show: showAndroidSettings,
         tags: [{ text: "推荐", type: "success" }],
         items: [
           {
@@ -981,7 +988,7 @@ export const usePlaySettings = (): SettingConfig => {
       },
       {
         title: "Android 专项适配",
-        show: () => isAndroidApp,
+        show: showAndroidSettings,
         items: [
           {
             key: "androidSystemSummary",
@@ -1011,9 +1018,23 @@ export const usePlaySettings = (): SettingConfig => {
             }),
           },
           {
+            key: "androidAutoUiScale",
+            label: "自动适配本机分辨率",
+            type: "switch",
+            description:
+              "开启后会读取 Android 视口、屏幕像素和密度，按短边宽度自动匹配界面缩放；旋转、分屏或 ROM 缩放变化后会自动重算。",
+            value: computed({
+              get: () => settingStore.androidAutoUiScale,
+              set: (value) => {
+                settingStore.androidAutoUiScale = value;
+              },
+            }),
+          },
+          {
             key: "androidUiScale",
-            label: "Android 界面缩放",
+            label: "Android 手动界面缩放",
             type: "custom",
+            show: computed(() => !settingStore.androidAutoUiScale),
             description: () =>
               `${androidUiScaleSummary.value} 当前为自定义百分比，可以在 60% 到 110% 之间连续调整。`,
             component: markRaw(AndroidUiScaleControl),
@@ -1045,14 +1066,28 @@ export const usePlaySettings = (): SettingConfig => {
           },
           {
             key: "androidNativePlayerPageEnabled",
-            label: "原生播放页预览",
+            label: "原生播放页接管（兼容模式）",
             type: "switch",
             description:
-              "开启后 Android 全屏播放页由原生层接管，Web 全屏播放页不再重复渲染；当前为 Beta8 预览，用于验证原生歌词页迁移方向。",
+              "默认关闭以使用 Web 卡片式播放器。开启后 Android 全屏播放页由原生层接管，适合低性能设备临时降载，但会关闭卡片跟手展开体验。",
             value: computed({
               get: () => settingStore.androidNativePlayerPageEnabled,
               set: (value) => {
                 settingStore.androidNativePlayerPageEnabled = value;
+              },
+            }),
+          },
+          {
+            key: "androidNativeMiniPlayerBarEnabled",
+            label: "原生底部播放卡片（降载模式）",
+            type: "switch",
+            show: computed(() => settingStore.androidPerformanceMode),
+            description:
+              "默认关闭以显示 Web 卡片式播放器。开启后底部迷你播放器由原生 View 接管，适合排查卡顿，但不提供 PR #15 的卡片展开手势。",
+            value: computed({
+              get: () => settingStore.androidNativeMiniPlayerBarEnabled,
+              set: (value) => {
+                settingStore.androidNativeMiniPlayerBarEnabled = value;
               },
             }),
           },

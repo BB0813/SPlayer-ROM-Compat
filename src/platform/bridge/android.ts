@@ -2,6 +2,8 @@ import type {
   AndroidBridge,
   AndroidDisplayMetrics,
   AndroidMediaTrack,
+  AndroidNativeMiniPlayerBarState,
+  AndroidNativePlayerPageLyricState,
   AndroidNativePlayerPageState,
   AndroidPlayerEventPayload,
   AndroidRomCompatReport,
@@ -215,8 +217,24 @@ export const syncAndroidNativePlayerState = (state: AndroidNativePlayerPageState
   return getAndroidPlayerBridge()?.updateNativePlayerState?.(JSON.stringify(state)) ?? false;
 };
 
+export const syncAndroidNativePlayerLyricState = (
+  lyric: AndroidNativePlayerPageLyricState,
+): boolean => {
+  return getAndroidPlayerBridge()?.updateNativePlayerLyricState?.(JSON.stringify(lyric)) ?? false;
+};
+
 export const setAndroidNativePlayerVisible = (visible: boolean): boolean => {
   return getAndroidPlayerBridge()?.setNativePlayerVisible?.(visible) ?? false;
+};
+
+export const syncAndroidNativeMiniPlayerState = (
+  state: AndroidNativeMiniPlayerBarState,
+): boolean => {
+  return getAndroidPlayerBridge()?.updateNativeMiniPlayerState?.(JSON.stringify(state)) ?? false;
+};
+
+export const setAndroidNativeMiniPlayerVisible = (visible: boolean): boolean => {
+  return getAndroidPlayerBridge()?.setNativeMiniPlayerVisible?.(visible) ?? false;
 };
 
 export interface AndroidSystemBarsConfig {

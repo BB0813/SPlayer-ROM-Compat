@@ -7,12 +7,14 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import java.util.concurrent.CountDownLatch
 import top.imsyy.splayer.android.player.AndroidNativeAudioPlayer
+import top.imsyy.splayer.android.player.NativeMiniPlayerBarView
 import top.imsyy.splayer.android.player.NativePlayerPageView
 import top.imsyy.splayer.android.player.PlaybackService
 
 class SPlayerPlayerBridge(
   private val context: Context,
   private val nativePlayerPageView: NativePlayerPageView? = null,
+  private val nativeMiniPlayerBarView: NativeMiniPlayerBarView? = null,
 ) {
   companion object {
     private const val TAG = "SPlayerBridge"
@@ -158,9 +160,30 @@ class SPlayerPlayerBridge(
   }
 
   @JavascriptInterface
+  fun updateNativePlayerLyricState(lyricJson: String?): Boolean {
+    return runOnMainThread {
+      nativePlayerPageView?.updateLyricState(lyricJson) ?: false
+    }
+  }
+
+  @JavascriptInterface
   fun setNativePlayerVisible(visible: Boolean): Boolean {
     return runOnMainThread {
       nativePlayerPageView?.setPlayerVisible(visible) ?: false
+    }
+  }
+
+  @JavascriptInterface
+  fun updateNativeMiniPlayerState(stateJson: String?): Boolean {
+    return runOnMainThread {
+      nativeMiniPlayerBarView?.updateState(stateJson) ?: false
+    }
+  }
+
+  @JavascriptInterface
+  fun setNativeMiniPlayerVisible(visible: Boolean): Boolean {
+    return runOnMainThread {
+      nativeMiniPlayerBarView?.setPlayerVisible(visible) ?: false
     }
   }
 

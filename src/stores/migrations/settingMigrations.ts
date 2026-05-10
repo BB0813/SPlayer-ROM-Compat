@@ -4,7 +4,7 @@ import { defaultAMLLDbServer } from "@/utils/meta";
 import { isAndroidApp } from "@/utils/env";
 import type { SettingState } from "../setting";
 
-export const CURRENT_SETTING_SCHEMA_VERSION = 28;
+export const CURRENT_SETTING_SCHEMA_VERSION = 38;
 
 export type MigrationFunction = (state: Partial<SettingState>) => Partial<SettingState>;
 
@@ -275,5 +275,108 @@ export const settingMigrations: Record<number, MigrationFunction> = {
       androidUiScale,
       androidCompactUi: state.androidCompactUi ?? true,
     };
+  },
+  29: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale =
+      !Number.isFinite(currentScale) || currentScale >= 100
+        ? 80
+        : Math.min(110, Math.max(60, Math.round(currentScale)));
+    return {
+      androidUiScale,
+      androidCompactUi: true,
+    };
+  },
+  30: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale =
+      !Number.isFinite(currentScale) || currentScale >= 85
+        ? 80
+        : Math.min(110, Math.max(60, Math.round(currentScale)));
+    return {
+      androidUiScale,
+      androidCompactUi: true,
+    };
+  },
+  31: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale = Number.isFinite(currentScale)
+      ? Math.min(110, Math.max(60, Math.round(currentScale)))
+      : 80;
+    return {
+      androidUiScale,
+      androidCompactUi: true,
+    };
+  },
+  32: (state) => {
+    if (!isAndroidApp) return {};
+    const currentScale = Number(state.androidUiScale ?? 80);
+    const androidUiScale =
+      !Number.isFinite(currentScale) || currentScale >= 95
+        ? 80
+        : Math.min(110, Math.max(60, Math.round(currentScale)));
+    return {
+      androidUiScale,
+      androidCompactUi: true,
+    };
+  },
+  33: () => {
+    return isAndroidApp
+      ? {
+          androidAutoUiScale: true,
+          androidCompactUi: true,
+        }
+      : {};
+  },
+  34: () => {
+    return isAndroidApp
+      ? {
+          androidPerformanceMode: true,
+          androidReducePlaybackAnimations: true,
+          androidLowFrequencyLyrics: true,
+          androidDisablePlaybackBackground: true,
+          androidFreezePlaybackRoutes: false,
+        }
+      : {};
+  },
+  35: () => {
+    return isAndroidApp
+      ? {
+          androidLowFrequencyLyrics: false,
+          androidCompactUi: false,
+          androidUiScale: 90,
+          androidNativePlayerPageEnabled: false,
+        }
+      : {};
+  },
+  36: () => {
+    return isAndroidApp
+      ? {
+          androidNativePlayerPageEnabled: true,
+          androidPerformanceMode: true,
+          androidReducePlaybackAnimations: true,
+          androidDisablePlaybackBackground: true,
+          androidFreezePlaybackRoutes: false,
+        }
+      : {};
+  },
+  37: () => {
+    return isAndroidApp
+      ? {
+          androidNativeMiniPlayerBarEnabled: true,
+          androidPerformanceMode: true,
+        }
+      : {};
+  },
+  38: () => {
+    return isAndroidApp
+      ? {
+          androidNativePlayerPageEnabled: false,
+          androidNativeMiniPlayerBarEnabled: false,
+        }
+      : {};
   },
 };

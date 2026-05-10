@@ -1,5 +1,10 @@
 <template>
-  <div :class="['mobile-tabbar', { 'with-player': hasPlayer }]">
+  <div
+    :class="[
+      'mobile-tabbar',
+      { 'with-player': hasPlayer, 'android-playback-lite': isAndroidPlaybackLite },
+    ]"
+  >
     <n-flex :wrap="false" justify="space-between" align="center" class="mobile-tabbar-inner">
       <n-button
         v-for="tab in tabs"
@@ -13,7 +18,7 @@
         @click="router.push({ name: tab.routeName })"
       >
         <div class="tab-content">
-          <SvgIcon :name="tab.icon" :size="20" />
+          <SvgIcon :name="tab.icon" :size="22" />
           <span class="tab-label">{{ tab.label }}</span>
         </div>
       </n-button>
@@ -23,6 +28,7 @@
 
 <script setup lang="ts">
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
 import { isLogin } from "@/utils/auth";
 
 interface MobileTabItem {
@@ -37,6 +43,7 @@ const route = useRoute();
 const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
+const { isAndroidPlaybackLite } = useAndroidRoutePerformance();
 
 const hasPlayer = computed(() => musicStore.isHasPlayer && statusStore.showPlayBar);
 
@@ -81,32 +88,56 @@ const activeKey = computed(() => {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--safe-area-bottom, 0px);
+  bottom: var(
+    --mobile-tabbar-bottom,
+    calc(var(--safe-area-bottom, 0px) + var(--mobile-tabbar-bottom-lift, 8px))
+  );
   z-index: 12;
-  padding: 0 max(8px, calc(10px * var(--android-ui-scale, 1)))
-    max(6px, calc(8px * var(--android-ui-scale, 1)));
+  padding: 0 var(--android-content-padding-right, max(8px, calc(10px * var(--android-ui-scale, 1))))
+    var(--android-tabbar-padding, 8px)
+    var(--android-content-padding-left, max(8px, calc(10px * var(--android-ui-scale, 1))));
   pointer-events: none;
 
   &.with-player {
-    bottom: var(--safe-area-bottom, 0px);
+    bottom: var(
+      --mobile-tabbar-bottom,
+      calc(var(--safe-area-bottom, 0px) + var(--mobile-tabbar-bottom-lift, 8px))
+    );
+  }
+
+  &.android-playback-lite {
+    .mobile-tabbar-inner {
+      backdrop-filter: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      contain: layout paint style;
+    }
+
+    .tab-button,
+    .tab-content {
+      transition: none !important;
+    }
   }
 
   .mobile-tabbar-inner {
+    box-sizing: border-box;
+    width: 100%;
+    height: var(--mobile-tabbar-height, 58px);
     min-height: var(--mobile-tabbar-height, 58px);
-    border-radius: max(14px, calc(18px * var(--android-ui-scale, 1)));
-    padding: max(5px, calc(6px * var(--android-ui-scale, 1)));
-    background-color: color-mix(in srgb, var(--surface-container-hex) 88%, rgba(0, 0, 0, 0.12) 12%);
+    border-radius: var(--android-radius-dock, 20px);
+    padding: var(--android-tabbar-padding, 8px);
+    background-color: color-mix(in srgb, var(--surface-container-hex) 92%, rgba(0, 0, 0, 0.08) 8%);
     border: 1px solid rgba(var(--primary), 0.12);
     backdrop-filter: blur(18px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--android-shadow-dock, 0 6px 18px rgba(0, 0, 0, 0.12));
+    overflow: visible;
     pointer-events: auto;
   }
 
   .tab-button {
     flex: 1;
     min-width: 0;
-    height: calc(var(--mobile-tabbar-height, 58px) - 12px);
-    border-radius: max(12px, calc(14px * var(--android-ui-scale, 1)));
+    height: var(--android-tab-button-height, 44px);
+    border-radius: var(--android-radius-control, 16px);
     color: rgba(var(--text-color), 0.68);
 
     &.active {
@@ -120,13 +151,13 @@ const activeKey = computed(() => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: max(2px, calc(3px * var(--android-ui-scale, 1)));
+    gap: clamp(3px, calc(4px * var(--android-ui-scale, 1)), 5px);
     width: 100%;
     min-width: 0;
   }
 
   .tab-label {
-    font-size: max(10px, calc(11px * var(--android-ui-scale, 1)));
+    font-size: var(--android-font-caption, 12px);
     line-height: 1;
     white-space: nowrap;
   }
@@ -134,11 +165,12 @@ const activeKey = computed(() => {
 
 @media (max-width: 420px) {
   .mobile-tabbar {
-    padding: 0 max(6px, calc(8px * var(--android-ui-scale, 1)))
-      max(5px, calc(6px * var(--android-ui-scale, 1)));
+    padding: 0 var(--android-content-padding-right, var(--android-tabbar-padding, 8px))
+      max(5px, calc(6px * var(--android-ui-scale, 1)))
+      var(--android-content-padding-left, var(--android-tabbar-padding, 8px));
 
     .tab-label {
-      font-size: 10px;
+      font-size: var(--android-font-caption, 11px);
     }
   }
 }

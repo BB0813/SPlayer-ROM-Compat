@@ -39,10 +39,10 @@ const isTextOverflowing = ref(false);
 
 const { width: textContainerWidth } = useElementSize(textContainerRef);
 const { width: textWidth } = useElementSize(textRef);
-const { shouldStabilizeDynamicContent } = useAndroidRoutePerformance();
+const { shouldPauseDecorativeAnimations } = useAndroidRoutePerformance();
 
 const isScrollEnabled = computed(() => {
-  return isTextOverflowing.value && !shouldStabilizeDynamicContent.value;
+  return isTextOverflowing.value && !shouldPauseDecorativeAnimations.value;
 });
 
 // 检查文本是否超出宽度
@@ -51,6 +51,7 @@ const checkTextWidth = () => {
     isTextOverflowing.value = textWidth.value > textContainerWidth.value;
   }
   updateScroll();
+  if (shouldPauseDecorativeAnimations.value) return;
   // 触发一次重绘，解决某些情况下宽度计算不准确的问题
   if (scrollWrapperRef.value) {
     scrollWrapperRef.value.style.display = "none";
@@ -120,6 +121,10 @@ watch(
 
 watch(isScrollEnabled, () => {
   updateScroll();
+});
+
+watch(shouldPauseDecorativeAnimations, (paused) => {
+  if (paused) stopScrolling();
 });
 
 onMounted(() => {

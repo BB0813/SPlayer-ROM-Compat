@@ -1,9 +1,11 @@
-﻿import type {
+import type {
   AndroidNativePlayerLyricLine,
+  AndroidNativePlayerPageLyricState,
   AndroidNativePlayerPageState,
 } from "@/platform/bridge/types";
 import {
   setAndroidNativePlayerVisible,
+  syncAndroidNativePlayerLyricState,
   syncAndroidNativePlayerState,
 } from "@/platform/bridge/android";
 import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
@@ -52,6 +54,38 @@ const normalizeLyricLines = (
   }));
 };
 
+const buildNativeLyricStateFromStores = (): AndroidNativePlayerPageLyricState => {
+  const musicStore = useMusicStore();
+  const settingStore = useSettingStore();
+  const statusStore = useStatusStore();
+  const lyricLines =
+    settingStore.showWordLyrics && musicStore.songLyric.yrcData?.length
+      ? musicStore.songLyric.yrcData
+      : musicStore.songLyric.lrcData;
+  const lyricIndex = Math.max(0, statusStore.lyricIndex);
+  const lyricStartIndex = Math.max(0, lyricIndex - NATIVE_LYRIC_CONTEXT_RADIUS);
+
+  return {
+    index: lyricIndex - lyricStartIndex,
+    offset: statusStore.getSongOffset(musicStore.playSong?.id),
+    lines: normalizeLyricLines((lyricLines || []) as NativeLyricLineSource[], lyricIndex),
+  };
+};
+
+export const buildAndroidNativePlayerPageLyricState =
+  (): AndroidNativePlayerPageLyricState | null => {
+    if (!isAndroidApp) return null;
+
+    const musicStore = useMusicStore();
+    const settingStore = useSettingStore();
+    const statusStore = useStatusStore();
+    if (!settingStore.androidNativePlayerPageEnabled) return null;
+    if (!statusStore.showFullPlayer) return null;
+    if (!musicStore.isHasPlayer) return null;
+
+    return buildNativeLyricStateFromStores();
+  };
+
 export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageState | null => {
   if (!isAndroidApp) return null;
 
@@ -77,20 +111,12 @@ export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageStat
       : typeof currentSong.album === "object"
         ? currentSong.album?.name || "未知专辑"
         : String(currentSong.album || "未知专辑");
-  const lyricLines =
-    settingStore.showWordLyrics && musicStore.songLyric.yrcData?.length
-      ? musicStore.songLyric.yrcData
-      : musicStore.songLyric.lrcData;
-
-  const lyricIndex = Math.max(0, statusStore.lyricIndex);
-  const lyricStartIndex = Math.max(0, lyricIndex - NATIVE_LYRIC_CONTEXT_RADIUS);
-
   return {
     visible: statusStore.showFullPlayer,
     playing: statusStore.playStatus,
     loading: statusStore.playLoading,
-    currentTime: statusStore.currentTime,
-    duration: statusStore.duration,
+    currentTime: statusStore.currentTime / 1000,
+    duration: statusStore.duration / 1000,
     progress: statusStore.progress,
     themeColor: statusStore.mainColor,
     song: {
@@ -101,11 +127,7 @@ export const buildAndroidNativePlayerPageState = (): AndroidNativePlayerPageStat
       cover: normalizeImageUrl(musicStore.getSongCover("m") || musicStore.playSong.cover || ""),
       type: currentSong.type,
     },
-    lyric: {
-      index: lyricIndex - lyricStartIndex,
-      offset: statusStore.getSongOffset(musicStore.playSong?.id),
-      lines: normalizeLyricLines((lyricLines || []) as NativeLyricLineSource[], lyricIndex),
-    },
+    lyric: buildNativeLyricStateFromStores(),
   };
 };
 
@@ -113,6 +135,12 @@ export const syncAndroidNativePlayerPageFromStores = (): boolean => {
   const state = buildAndroidNativePlayerPageState();
   if (!state) return false;
   return syncAndroidNativePlayerState(state);
+};
+
+export const syncAndroidNativePlayerPageLyricFromStores = (): boolean => {
+  const lyric = buildAndroidNativePlayerPageLyricState();
+  if (!lyric) return false;
+  return syncAndroidNativePlayerLyricState(lyric);
 };
 
 export const setAndroidNativePlayerPageVisible = (visible: boolean): boolean => {

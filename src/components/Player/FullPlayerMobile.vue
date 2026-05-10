@@ -1,7 +1,8 @@
 <template>
   <div
-    class="full-player-mobile"
+    :class="['full-player-mobile', { 'landscape-fit': isLandscapeFit }]"
     ref="mobileStart"
+    :style="mobileViewportStyle"
     data-allow-horizontal-pan
     data-android-touch-free
     :data-page-index="pageIndex"
@@ -156,7 +157,7 @@
     </div>
 
     <n-text v-if="canOpenLyricPage" class="page-tip" depth="3">
-      {{ pageIndex === 0 ? "左滑查看歌词" : "右滑返回播放" }}
+      {{ pageTipText }}
     </n-text>
 
     <div class="pagination" v-if="canOpenLyricPage">
@@ -188,20 +189,65 @@ const { timeDisplay, toggleTimeFormat } = useTimeFormat();
 const mobileStart = ref<HTMLElement | null>(null);
 const pageIndex = ref(0);
 
+const viewportSize = ref({ width: 0, height: 0 });
+
+const readViewportSize = () => {
+  if (typeof window === "undefined") return { width: 0, height: 0 };
+  const visualViewport = window.visualViewport;
+  return {
+    width: Math.round(visualViewport?.width || window.innerWidth || 0),
+    height: Math.round(visualViewport?.height || window.innerHeight || 0),
+  };
+};
+
+const updateViewportSize = () => {
+  viewportSize.value = readViewportSize();
+};
+
+const isLandscapeFit = computed(() => {
+  const { width, height } = viewportSize.value;
+  return width > 0 && height > 0 && width > height;
+});
+
+const mobileViewportStyle = computed<Record<string, string>>(() => {
+  const height = viewportSize.value.height;
+  return {
+    "--player-mobile-viewport-height": height > 0 ? `${height}px` : "100dvh",
+  };
+});
+
 const canOpenLyricPage = computed(() => musicStore.playSong.type !== "radio");
+const pageTipText = computed(() =>
+  pageIndex.value === 0
+    ? "\u5de6\u6ed1\u67e5\u770b\u6b4c\u8bcd"
+    : "\u53f3\u6ed1\u8fd4\u56de\u64ad\u653e\u9875",
+);
 
 const artistName = computed(() => {
   const artists = musicStore.playSong.artists;
   if (Array.isArray(artists)) {
     return artists.map((artist) => artist.name).join(" / ");
   }
-  return artists || "未知艺术家";
+  return artists || "\u672a\u77e5\u827a\u672f\u5bb6";
 });
 
 watch(canOpenLyricPage, (value) => {
   if (!value) {
     pageIndex.value = 0;
   }
+});
+
+onMounted(() => {
+  updateViewportSize();
+  window.addEventListener("resize", updateViewportSize, { passive: true });
+  window.addEventListener("orientationchange", updateViewportSize, { passive: true });
+  window.visualViewport?.addEventListener("resize", updateViewportSize, { passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateViewportSize);
+  window.removeEventListener("orientationchange", updateViewportSize);
+  window.visualViewport?.removeEventListener("resize", updateViewportSize);
 });
 
 type SwipeAxis = "x" | "y";
@@ -356,7 +402,7 @@ const releasePointer = (target: HTMLElement | null, pointerId: number | null) =>
   try {
     if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
   } catch {
-    // 忽略 ROM WebView 的释放差异
+    pointerCaptured = false;
   }
 };
 
@@ -459,7 +505,7 @@ const contentTransform = computed(() => {
 .full-player-mobile {
   width: 100%;
   touch-action: pan-y;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   height: 100dvh;
   min-height: 100svh;
   position: relative;
@@ -511,6 +557,7 @@ const contentTransform = computed(() => {
       flex-shrink: 0;
       position: relative;
       overflow-x: hidden;
+      overscroll-behavior: none;
       touch-action: pan-y;
     }
     .info-page {
@@ -518,9 +565,9 @@ const contentTransform = computed(() => {
       flex-direction: column;
       align-items: center;
       padding: 0 24px calc(40px + env(safe-area-inset-bottom, 0px)) 24px;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
       .cover-section {
         flex: 1;
         width: 100%;
@@ -555,8 +602,10 @@ const contentTransform = computed(() => {
       }
       .info-group {
         width: 100%;
+        max-height: 42svh;
         display: flex;
         flex-direction: column;
+        flex-shrink: 0;
         .song-info-bar {
           width: 100%;
           display: flex;
@@ -753,7 +802,6 @@ const contentTransform = computed(() => {
         flex: 1;
         min-height: 0;
         position: relative;
-        // Android 歌词页纵向滚动交给浏览器，横向切页交给父级
         touch-action: pan-y;
         overscroll-behavior: contain;
       }
@@ -1003,6 +1051,624 @@ const contentTransform = computed(() => {
       .lyric-page {
         padding-left: max(40px, 8vw);
         padding-right: max(40px, 8vw);
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+:global(.android-app.android-landscape),
+:global(.android-app.android-tablet-landscape) {
+  .full-player-mobile {
+    .top-bar {
+      height: calc(52px + env(safe-area-inset-top, 0px));
+      padding: env(safe-area-inset-top, 0px) 28px 0;
+    }
+
+    .mobile-content {
+      .info-page {
+        display: grid;
+        grid-template-columns: minmax(280px, 42%) minmax(0, 1fr);
+        grid-template-rows: 1fr;
+        align-items: center;
+        column-gap: clamp(28px, 5vw, 72px);
+        padding: calc(48px + env(safe-area-inset-top, 0px)) clamp(34px, 6vw, 86px)
+          calc(52px + env(safe-area-inset-bottom, 0px));
+        overflow: hidden;
+
+        .cover-section {
+          grid-column: 1;
+          grid-row: 1;
+          height: 100%;
+          margin: 0;
+          align-items: center;
+          justify-content: center;
+
+          :deep(.player-cover) {
+            width: min(34vw, 58svh, 360px);
+
+            &.record {
+              width: min(32vw, 54svh, 340px);
+
+              .cover-img {
+                width: min(32vw, 54svh, 340px);
+                height: min(32vw, 54svh, 340px);
+                min-width: min(32vw, 54svh, 340px);
+              }
+
+              .pointer {
+                width: min(10vw, 14svh, 82px);
+                top: max(-80px, -12svh);
+              }
+            }
+          }
+        }
+
+        .info-group {
+          grid-column: 2;
+          grid-row: 1;
+          width: min(100%, 660px);
+          max-width: 660px;
+          align-self: center;
+          justify-self: stretch;
+
+          .song-info-bar {
+            margin-bottom: clamp(14px, 2.4svh, 22px);
+
+            .info-actions {
+              padding-top: 4px;
+            }
+          }
+
+          .progress-section {
+            margin-bottom: clamp(18px, 4svh, 30px);
+          }
+
+          .control-section {
+            max-width: min(440px, 100%);
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+
+    .page-tip {
+      bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .pagination {
+      bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+:global(.android-app:not(.android-landscape):not(.android-tablet-landscape)) {
+  .full-player-mobile {
+    .page-tip {
+      bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+      font-size: 12px;
+      background-color: rgba(var(--main-cover-color), 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .pagination {
+      bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+.full-player-mobile.landscape-fit {
+  .top-bar {
+    height: calc(48px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 24px 0;
+  }
+
+  .mobile-content {
+    .info-page {
+      display: grid;
+      grid-template-columns: minmax(220px, 40%) minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      align-items: center;
+      column-gap: clamp(22px, 4vw, 58px);
+      padding: calc(44px + env(safe-area-inset-top, 0px)) clamp(28px, 5vw, 72px)
+        calc(34px + env(safe-area-inset-bottom, 0px));
+      overflow: hidden;
+
+      .cover-section {
+        grid-column: 1;
+        grid-row: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        margin: 0;
+        align-items: center;
+        justify-content: center;
+
+        :deep(.player-cover) {
+          width: min(30vw, 48svh, 320px);
+
+          &.record {
+            width: min(28vw, 46svh, 300px);
+
+            .cover-img {
+              width: min(28vw, 46svh, 300px);
+              height: min(28vw, 46svh, 300px);
+              min-width: min(28vw, 46svh, 300px);
+            }
+
+            .pointer {
+              width: min(9vw, 12svh, 72px);
+              top: max(-72px, -11svh);
+            }
+          }
+        }
+      }
+
+      .info-group {
+        grid-column: 2;
+        grid-row: 1;
+        width: min(100%, 640px);
+        max-width: 640px;
+        max-height: none;
+        align-self: center;
+        justify-self: stretch;
+        gap: 0;
+
+        .song-info-bar {
+          margin-bottom: clamp(10px, 2svh, 18px);
+
+          .info-actions {
+            padding-top: 2px;
+          }
+        }
+
+        .progress-section {
+          margin-bottom: clamp(12px, 3svh, 22px);
+        }
+
+        .control-section {
+          max-width: min(420px, 100%);
+          margin-bottom: 0;
+          padding-inline: 4px;
+
+          .mode-btn {
+            width: 36px;
+            height: 36px;
+          }
+
+          .ctrl-btn {
+            width: 44px;
+            height: 44px;
+          }
+
+          .play-btn {
+            width: 54px;
+            height: 54px;
+            min-height: 54px;
+          }
+        }
+      }
+    }
+  }
+
+  .page-tip {
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .pagination {
+    bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (orientation: portrait), (max-aspect-ratio: 1/1) {
+  .full-player-mobile:not(.landscape-fit) {
+    .mobile-content {
+      .info-page {
+        justify-content: flex-start;
+        padding: 0 clamp(20px, 5vw, 28px) calc(22px + env(safe-area-inset-bottom, 0px));
+
+        .cover-section {
+          flex: 0 0 auto;
+          min-height: 0;
+          margin-top: clamp(50px, 7svh, 68px);
+          margin-bottom: clamp(18px, 3svh, 28px);
+
+          :deep(.player-cover) {
+            width: min(66vw, 34svh, 300px);
+
+            &.record {
+              width: min(62vw, 32svh, 288px);
+
+              .cover-img {
+                width: min(62vw, 32svh, 288px);
+                height: min(62vw, 32svh, 288px);
+                min-width: min(62vw, 32svh, 288px);
+              }
+
+              .pointer {
+                width: min(15vw, 8svh, 68px);
+                top: max(-70px, -8svh);
+              }
+            }
+          }
+        }
+
+        .info-group {
+          max-height: none;
+
+          .song-info-bar {
+            margin-bottom: clamp(12px, 2.4svh, 18px);
+
+            .info-actions {
+              padding-top: clamp(8px, 1.8svh, 14px);
+              gap: 14px;
+            }
+          }
+
+          .progress-section {
+            margin-bottom: clamp(12px, 2.4svh, 18px);
+          }
+
+          .control-section {
+            max-width: min(390px, 100%);
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+
+    .page-tip {
+      bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .pagination {
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+@media (max-height: 700px) and (orientation: portrait) {
+  .full-player-mobile:not(.landscape-fit) {
+    .mobile-content {
+      .info-page {
+        .cover-section {
+          margin-top: 44px;
+          margin-bottom: 14px;
+
+          :deep(.player-cover.record) {
+            width: min(56vw, 29svh, 248px);
+
+            .cover-img {
+              width: min(56vw, 29svh, 248px);
+              height: min(56vw, 29svh, 248px);
+              min-width: min(56vw, 29svh, 248px);
+            }
+          }
+        }
+
+        .info-group {
+          .song-info-bar,
+          .progress-section {
+            margin-bottom: 10px;
+          }
+
+          .control-section {
+            .mode-btn {
+              width: 36px;
+              height: 36px;
+            }
+
+            .ctrl-btn {
+              width: 44px;
+              height: 44px;
+            }
+
+            .play-btn {
+              width: 54px;
+              height: 54px;
+              min-height: 54px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (orientation: landscape) {
+  :global(.android-app) {
+    .full-player-mobile {
+      .top-bar {
+        height: calc(48px + env(safe-area-inset-top, 0px));
+        padding: env(safe-area-inset-top, 0px) 24px 0;
+      }
+
+      .mobile-content {
+        .info-page {
+          display: grid;
+          grid-template-columns: minmax(220px, 40%) minmax(0, 1fr);
+          grid-template-rows: minmax(0, 1fr);
+          align-items: center;
+          column-gap: clamp(22px, 4vw, 58px);
+          padding: calc(44px + env(safe-area-inset-top, 0px)) clamp(28px, 5vw, 72px)
+            calc(34px + env(safe-area-inset-bottom, 0px));
+          overflow: hidden;
+
+          .cover-section {
+            grid-column: 1;
+            grid-row: 1;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            margin: 0;
+            align-items: center;
+            justify-content: center;
+
+            :deep(.player-cover) {
+              width: min(30vw, 48svh, 320px);
+
+              &.record {
+                width: min(28vw, 46svh, 300px);
+
+                .cover-img {
+                  width: min(28vw, 46svh, 300px);
+                  height: min(28vw, 46svh, 300px);
+                  min-width: min(28vw, 46svh, 300px);
+                }
+
+                .pointer {
+                  width: min(9vw, 12svh, 72px);
+                  top: max(-72px, -11svh);
+                }
+              }
+            }
+          }
+
+          .info-group {
+            grid-column: 2;
+            grid-row: 1;
+            width: min(100%, 640px);
+            max-width: 640px;
+            max-height: none;
+            align-self: center;
+            justify-self: stretch;
+            gap: 0;
+
+            .song-info-bar {
+              margin-bottom: clamp(10px, 2svh, 18px);
+
+              .info-actions {
+                padding-top: 2px;
+              }
+            }
+
+            .progress-section {
+              margin-bottom: clamp(12px, 3svh, 22px);
+            }
+
+            .control-section {
+              max-width: min(420px, 100%);
+              margin-bottom: 0;
+              padding-inline: 4px;
+
+              .mode-btn {
+                width: 36px;
+                height: 36px;
+              }
+
+              .ctrl-btn {
+                width: 44px;
+                height: 44px;
+              }
+
+              .play-btn {
+                width: 54px;
+                height: 54px;
+                min-height: 54px;
+              }
+            }
+          }
+        }
+      }
+
+      .page-tip {
+        bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .pagination {
+        bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+  }
+}
+@media (max-height: 680px) and (orientation: landscape) {
+  :global(.android-app.android-landscape),
+  :global(.android-app.android-tablet-landscape) {
+    .full-player-mobile {
+      .mobile-content {
+        .info-page {
+          padding-top: calc(42px + env(safe-area-inset-top, 0px));
+          padding-bottom: calc(42px + env(safe-area-inset-bottom, 0px));
+          column-gap: clamp(22px, 4vw, 56px);
+
+          .cover-section {
+            :deep(.player-cover.record) {
+              width: min(30vw, 50svh, 300px);
+
+              .cover-img {
+                width: min(30vw, 50svh, 300px);
+                height: min(30vw, 50svh, 300px);
+                min-width: min(30vw, 50svh, 300px);
+              }
+            }
+          }
+
+          .info-group {
+            .song-info-bar {
+              margin-bottom: 12px;
+            }
+
+            .progress-section {
+              margin-bottom: 16px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+@media (orientation: portrait), (max-aspect-ratio: 1/1) {
+  .full-player-mobile:not(.landscape-fit) {
+    height: var(--player-mobile-viewport-height, 100dvh);
+    min-height: var(--player-mobile-viewport-height, 100svh);
+    max-height: var(--player-mobile-viewport-height, 100dvh);
+
+    .mobile-content {
+      height: var(--player-mobile-viewport-height, 100dvh);
+      min-height: 0;
+
+      .info-page {
+        --player-mobile-top-space: clamp(36px, 5.2svh, 50px);
+        --player-mobile-cover-size: min(70vw, 34svh, 318px);
+        --player-mobile-pointer-size: min(15vw, 7.4svh, 68px);
+        --player-mobile-section-gap: clamp(8px, 1.7svh, 14px);
+        --player-mobile-bottom-space: calc(48px + env(safe-area-inset-bottom, 0px));
+        display: flex;
+        height: var(--player-mobile-viewport-height, 100dvh);
+        min-height: 0;
+        padding: var(--player-mobile-top-space) clamp(18px, 5vw, 26px)
+          var(--player-mobile-bottom-space);
+        box-sizing: border-box;
+        justify-content: flex-start;
+        overflow: hidden;
+
+        .cover-section {
+          flex: 0 0 auto;
+          min-height: 0;
+          margin: 0 0 var(--player-mobile-section-gap);
+
+          :deep(.player-cover) {
+            width: var(--player-mobile-cover-size);
+
+            &.record {
+              width: var(--player-mobile-cover-size);
+
+              .cover-img {
+                width: var(--player-mobile-cover-size);
+                height: var(--player-mobile-cover-size);
+                min-width: var(--player-mobile-cover-size);
+              }
+
+              .pointer {
+                width: var(--player-mobile-pointer-size);
+                top: calc(var(--player-mobile-pointer-size) * -1.03);
+              }
+            }
+          }
+        }
+
+        .info-group {
+          flex: 0 1 auto;
+          min-height: 0;
+          max-height: none;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+
+          .song-info-bar {
+            margin-bottom: var(--player-mobile-section-gap);
+
+            .info-actions {
+              padding-top: 6px;
+              gap: 12px;
+            }
+          }
+
+          .progress-section {
+            margin: 0 0 var(--player-mobile-section-gap);
+          }
+
+          .control-section {
+            max-width: min(392px, 100%);
+            min-height: 54px;
+            margin: 0 auto;
+            padding: 0 6px;
+
+            .mode-btn,
+            .placeholder {
+              width: 38px;
+              height: 38px;
+            }
+
+            .ctrl-btn {
+              width: 46px;
+              height: 46px;
+            }
+
+            .play-btn {
+              width: 56px;
+              height: 56px;
+              min-height: 56px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-height: 700px) and (orientation: portrait) {
+  .full-player-mobile:not(.landscape-fit) {
+    .mobile-content {
+      .info-page {
+        --player-mobile-top-space: clamp(34px, 5.2svh, 46px);
+        --player-mobile-cover-size: min(54vw, 27svh, 242px);
+        --player-mobile-pointer-size: min(13vw, 6.4svh, 54px);
+        --player-mobile-section-gap: 9px;
+        --player-mobile-bottom-space: calc(42px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+  }
+}
+
+@media (max-height: 620px) and (orientation: portrait) {
+  .full-player-mobile:not(.landscape-fit) {
+    .mobile-content {
+      .info-page {
+        --player-mobile-top-space: 30px;
+        --player-mobile-cover-size: min(50vw, 24svh, 212px);
+        --player-mobile-pointer-size: min(12vw, 5.8svh, 48px);
+        --player-mobile-section-gap: 7px;
+        --player-mobile-bottom-space: calc(34px + env(safe-area-inset-bottom, 0px));
+
+        .info-group {
+          .song-info-bar {
+            margin-bottom: 7px;
+          }
+
+          .progress-section {
+            margin-bottom: 7px;
+          }
+
+          .control-section {
+            min-height: 50px;
+
+            .ctrl-btn {
+              width: 42px;
+              height: 42px;
+            }
+
+            .play-btn {
+              width: 52px;
+              height: 52px;
+              min-height: 52px;
+            }
+          }
+        }
       }
     }
   }

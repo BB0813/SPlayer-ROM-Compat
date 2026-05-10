@@ -17,11 +17,17 @@ import { getAndroidDisplayMetrics, syncAndroidSystemBars } from "@/platform/brid
 import {
   setAndroidNativePlayerPageVisible,
   syncAndroidNativePlayerPageFromStores,
+  syncAndroidNativePlayerPageLyricFromStores,
 } from "@/platform/android/nativePlayerPage";
-import { useMusicStore, useSettingStore, useStatusStore } from "@/stores";
+import {
+  setAndroidNativeMiniPlayerBarVisible,
+  syncAndroidNativeMiniPlayerBarFromStores,
+} from "@/platform/android/nativeMiniPlayerBar";
+import { useDataStore, useMusicStore, useSettingStore, useStatusStore } from "@/stores";
 import { isAndroidApp } from "@/utils/env";
 
 const isDesktopLyric = location.hash.includes("desktop-lyric");
+const dataStore = useDataStore();
 const musicStore = useMusicStore();
 const settingStore = useSettingStore();
 const statusStore = useStatusStore();
@@ -136,15 +142,15 @@ const resolveAndroidAutoUiScale = (metrics: AndroidViewportMetrics): number => {
   const highDensityPhone = metrics.densityDpi >= 420 || metrics.density >= 2.625;
 
   if (smallestWidthDp >= 840) return 112;
-  if (smallestWidthDp >= 700) return 108;
-  if (smallestWidthDp >= 600) return 104;
-  if (shortEdge <= 360) return highDensityPhone ? 90 : 88;
-  if (shortEdge <= 390) return highDensityPhone ? 94 : 92;
-  if (shortEdge <= 430) return highDensityPhone ? 98 : 96;
-  if (shortEdge <= 480) return 100;
-  if (shortEdge <= 600) return 102;
-  if (longEdge >= 1100) return 104;
-  return 100;
+  if (smallestWidthDp >= 700) return 110;
+  if (smallestWidthDp >= 600) return 106;
+  if (shortEdge <= 360) return highDensityPhone ? 96 : 94;
+  if (shortEdge <= 390) return highDensityPhone ? 98 : 96;
+  if (shortEdge <= 430) return highDensityPhone ? 100 : 98;
+  if (shortEdge <= 480) return 102;
+  if (shortEdge <= 600) return 104;
+  if (longEdge >= 1100) return 106;
+  return 102;
 };
 
 const applyAndroidViewportMetrics = (metrics: AndroidViewportMetrics) => {
@@ -291,6 +297,7 @@ if (isAndroidApp) {
         settingStore.androidLowFrequencyLyrics,
         settingStore.androidDisablePlaybackBackground,
         settingStore.androidNativePlayerPageEnabled,
+        settingStore.androidNativeMiniPlayerBarEnabled,
         settingStore.androidUiScale,
         settingStore.androidAutoUiScale,
         settingStore.androidCompactUi,
@@ -299,7 +306,9 @@ if (isAndroidApp) {
         androidViewportMetrics.value.physicalWidth,
         androidViewportMetrics.value.physicalHeight,
         statusStore.playStatus,
+        statusStore.showPlayBar,
         statusStore.showFullPlayer,
+        musicStore.isHasPlayer,
       ] as const,
     ([
       performanceMode,
@@ -309,6 +318,7 @@ if (isAndroidApp) {
       lowFrequencyLyrics,
       disablePlaybackBackground,
       nativePlayerPageEnabled,
+      nativeMiniPlayerBarEnabled,
       androidUiScale,
       androidAutoUiScale,
       androidCompactUi,
@@ -317,7 +327,9 @@ if (isAndroidApp) {
       physicalWidth,
       physicalHeight,
       playStatus,
+      showPlayBar,
       showFullPlayer,
+      hasPlayer,
     ]) => {
       const playbackPerformanceActive = performanceMode && playStatus;
       const allowRoutePerformanceReduction = playbackPerformanceActive && !showFullPlayer;
@@ -366,6 +378,14 @@ if (isAndroidApp) {
         "android-native-player-page",
         nativePlayerPageEnabled,
       );
+      document.documentElement.classList.toggle(
+        "android-native-player-bar",
+        nativeMiniPlayerBarEnabled &&
+          performanceMode &&
+          hasPlayer &&
+          showPlayBar &&
+          !showFullPlayer,
+      );
       setAndroidPerformanceDiagnosticsEnabled(diagnosticsEnabled);
     },
     { immediate: true },
@@ -388,36 +408,123 @@ if (isAndroidApp) {
   watch(
     () =>
       [
-        musicStore.playSong?.id,
-        musicStore.playSong?.cover,
+        musicStore.isHasPlayer,
+        statusStore.showPlayBar,
         statusStore.showFullPlayer,
-        statusStore.playStatus,
-        statusStore.playLoading,
-        statusStore.lyricIndex,
-        settingStore.androidNativePlayerPageEnabled,
+        settingStore.androidPerformanceMode,
+        settingStore.androidNativeMiniPlayerBarEnabled,
       ] as const,
+    ([hasPlayer, showPlayBar, showFullPlayer, performanceMode, nativeMiniPlayerBarEnabled]) => {
+      setAndroidNativeMiniPlayerBarVisible(
+        hasPlayer &&
+          showPlayBar &&
+          !showFullPlayer &&
+          performanceMode &&
+          nativeMiniPlayerBarEnabled,
+      );
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () =>
+      ({
+        songId: musicStore.playSong?.id,
+        cover: musicStore.playSong?.cover,
+        showFullPlayer: statusStore.showFullPlayer,
+        playStatus: statusStore.playStatus,
+        playLoading: statusStore.playLoading,
+        lyricIndex: statusStore.lyricIndex,
+        currentTime: statusStore.currentTime,
+        duration: statusStore.duration,
+        nativeEnabled: settingStore.androidNativePlayerPageEnabled,
+      }) as const,
     (current, previous) => {
-      const [songId, cover, showFullPlayer, playStatus, playLoading, lyricIndex, nativeEnabled] =
-        current;
-      if (!nativeEnabled || !showFullPlayer) return;
-
-      const lyricOnly =
-        !!previous &&
-        songId === previous[0] &&
-        cover === previous[1] &&
-        showFullPlayer === previous[2] &&
-        playStatus === previous[3] &&
-        playLoading === previous[4] &&
-        nativeEnabled === previous[6] &&
-        lyricIndex !== previous[5];
-
-      if (lyricOnly && settingStore.androidPerformanceMode) {
-        const now = Date.now();
-        if (now - lastAndroidNativePlayerLyricSyncAt < 900) return;
-        lastAndroidNativePlayerLyricSyncAt = now;
+      if (!current.nativeEnabled || !current.showFullPlayer) return;
+      if (!previous) {
+        syncAndroidNativePlayerPageFromStores();
+        return;
       }
 
+      const sameStableState =
+        current.songId === previous.songId &&
+        current.cover === previous.cover &&
+        current.showFullPlayer === previous.showFullPlayer &&
+        current.playStatus === previous.playStatus &&
+        current.playLoading === previous.playLoading &&
+        current.nativeEnabled === previous.nativeEnabled;
+      const lyricOnly =
+        sameStableState &&
+        current.lyricIndex !== previous.lyricIndex &&
+        current.currentTime === previous.currentTime &&
+        current.duration === previous.duration;
+      const progressOnly =
+        sameStableState &&
+        current.lyricIndex === previous.lyricIndex &&
+        (current.currentTime !== previous.currentTime || current.duration !== previous.duration);
+
+      if (lyricOnly) {
+        if (settingStore.androidPerformanceMode) {
+          const now = Date.now();
+          if (now - lastAndroidNativePlayerLyricSyncAt < 900) return;
+          lastAndroidNativePlayerLyricSyncAt = now;
+        }
+        syncAndroidNativePlayerPageLyricFromStores();
+        return;
+      }
+      if (progressOnly && settingStore.androidPerformanceMode) return;
+
       syncAndroidNativePlayerPageFromStores();
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () =>
+      ({
+        hasPlayer: musicStore.isHasPlayer,
+        songId: musicStore.playSong?.id,
+        cover: musicStore.playSong?.cover,
+        showPlayBar: statusStore.showPlayBar,
+        showFullPlayer: statusStore.showFullPlayer,
+        playStatus: statusStore.playStatus,
+        playLoading: statusStore.playLoading,
+        playIndex: statusStore.playIndex,
+        playListLength: dataStore.playList.length,
+        currentTime: statusStore.currentTime,
+        duration: statusStore.duration,
+        nativeMiniEnabled: settingStore.androidNativeMiniPlayerBarEnabled,
+        performanceMode: settingStore.androidPerformanceMode,
+      }) as const,
+    (current, previous) => {
+      if (!current.nativeMiniEnabled || !current.performanceMode || !current.hasPlayer) {
+        setAndroidNativeMiniPlayerBarVisible(false);
+        return;
+      }
+      if (!previous) {
+        syncAndroidNativeMiniPlayerBarFromStores();
+        return;
+      }
+
+      const sameStableState =
+        current.hasPlayer === previous.hasPlayer &&
+        current.songId === previous.songId &&
+        current.cover === previous.cover &&
+        current.showPlayBar === previous.showPlayBar &&
+        current.showFullPlayer === previous.showFullPlayer &&
+        current.playStatus === previous.playStatus &&
+        current.playLoading === previous.playLoading &&
+        current.playIndex === previous.playIndex &&
+        current.playListLength === previous.playListLength &&
+        current.nativeMiniEnabled === previous.nativeMiniEnabled &&
+        current.performanceMode === previous.performanceMode;
+      const progressOnly =
+        sameStableState &&
+        (current.currentTime !== previous.currentTime || current.duration !== previous.duration);
+
+      if (progressOnly) return;
+
+      syncAndroidNativeMiniPlayerBarFromStores();
     },
     { immediate: true },
   );
@@ -431,6 +538,8 @@ if (isAndroidApp) {
     document.documentElement.classList.remove("android-low-frequency-lyrics");
     document.documentElement.classList.remove("android-static-background");
     document.documentElement.classList.remove("android-native-player-page");
+    document.documentElement.classList.remove("android-native-player-bar");
+    setAndroidNativeMiniPlayerBarVisible(false);
     document.documentElement.classList.remove("android-compact-ui");
     document.documentElement.classList.remove("android-auto-ui-scale");
     document.documentElement.classList.remove("android-manual-ui-scale");

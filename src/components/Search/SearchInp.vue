@@ -244,7 +244,7 @@ onMounted(() => {
     }
   }
   @media (max-width: 768px) {
-    width: min(calc(100% - 162px), calc(100dvw - 216px));
+    width: min(calc(100% - var(--mobile-nav-action-reserve, 162px)), calc(100dvw - 216px));
     min-width: 92px;
     max-width: 200px;
     .search-input {
@@ -264,7 +264,7 @@ onMounted(() => {
   }
 
   @media (max-width: 360px) {
-    width: min(calc(100% - 154px), calc(100dvw - 206px));
+    width: min(calc(100% - var(--mobile-nav-action-reserve, 154px)), calc(100dvw - 206px));
     min-width: 86px;
     max-width: 132px;
 

@@ -316,14 +316,14 @@ const listHeaderHeight = computed(() => {
   return Math.max(34, Math.round(40 * androidUiScaleRatio.value));
 });
 const listBottomPadding = computed(() => {
+  if (!isAndroidApp) return 80;
   if (isAndroidTabletLandscapeList.value) {
-    return Math.min(110, Math.max(84, Math.round(96 * androidUiScaleRatio.value)));
+    return Math.min(220, Math.max(178, Math.round(198 * androidUiScaleRatio.value)));
   }
   if (isAndroidTabletPortraitList.value) {
-    return Math.min(120, Math.max(92, Math.round(104 * androidUiScaleRatio.value)));
+    return Math.min(232, Math.max(188, Math.round(208 * androidUiScaleRatio.value)));
   }
-  if (!shouldUseAndroidCompactList.value) return 80;
-  return Math.max(64, Math.round(80 * androidUiScaleRatio.value));
+  return Math.min(224, Math.max(180, Math.round(202 * androidUiScaleRatio.value)));
 });
 const androidVirtualBufferSize = computed(() => (isAndroidTabletList.value ? 8 : 5));
 
@@ -792,6 +792,17 @@ onBeforeUnmount(() => {
       pointer-events: none;
     }
   }
+}
+
+:global(.android-app) .list-menu {
+  right: max(18px, var(--android-content-padding-right, 18px));
+  bottom: calc(
+    var(
+        --mobile-stable-dock-content-height,
+        var(--mobile-dock-content-height, var(--mobile-dock-height, 168px))
+      ) +
+      12px
+  );
 }
 
 // 拖拽排序

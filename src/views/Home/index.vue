@@ -31,12 +31,15 @@ const greetings = computed(() => {
 
 <style lang="scss" scoped>
 .home {
+  display: flow-root;
   width: 100%;
   max-width: 1500px;
   min-width: 0;
+  min-height: max(420px, calc(100dvh - var(--mobile-stable-dock-content-height, 0px) - 96px));
   margin: 0 auto;
   overflow-x: hidden;
   overflow-x: clip;
+  box-sizing: border-box;
   .welcome {
     margin-top: 8px;
     margin-bottom: 20px;

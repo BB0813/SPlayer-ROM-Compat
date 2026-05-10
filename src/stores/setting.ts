@@ -66,10 +66,14 @@ export interface SettingState {
   androidDisablePlaybackBackground: boolean;
   /** Android 评论失败静默兜底 */
   androidSilentCommentErrors: boolean;
-  /** Android 原生播放页预览 */
+  /** Android 原生播放页接管 */
   androidNativePlayerPageEnabled: boolean;
+  /** Android 原生底部播放卡片 */
+  androidNativeMiniPlayerBarEnabled: boolean;
   /** Android 界面缩放百分比 */
   androidUiScale: number;
+  /** Android 自动适配分辨率 */
+  androidAutoUiScale: boolean;
   /** Android 紧凑布局 */
   androidCompactUi: boolean;
 
@@ -541,14 +545,16 @@ export const useSettingStore = defineStore("setting", {
     androidEnhancedNotificationExclusive: false,
     androidPerformanceMode: isAndroidApp,
     androidPerformanceDiagnostics: false,
-    androidReducePlaybackAnimations: false,
+    androidReducePlaybackAnimations: isAndroidApp,
     androidFreezePlaybackRoutes: false,
     androidLowFrequencyLyrics: false,
-    androidDisablePlaybackBackground: false,
+    androidDisablePlaybackBackground: isAndroidApp,
     androidSilentCommentErrors: isAndroidApp,
     androidNativePlayerPageEnabled: false,
-    androidUiScale: isAndroidApp ? 80 : 100,
-    androidCompactUi: isAndroidApp,
+    androidNativeMiniPlayerBarEnabled: false,
+    androidUiScale: isAndroidApp ? 90 : 100,
+    androidAutoUiScale: isAndroidApp,
+    androidCompactUi: false,
     taskbarLyricUseThemeColor: false,
     checkUpdateOnStart: true,
     preventSleep: false,

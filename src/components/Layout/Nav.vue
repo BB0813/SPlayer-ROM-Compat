@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <n-layout-header class="nav">
     <n-flex class="page-control" align="center">
       <Logo v-if="!isDesktop" :size="40" @click="router.push('/')" />
@@ -31,8 +31,13 @@
     <n-flex :wrap="false" justify="end" class="nav-main">
       <SearchInp v-if="settingStore.useOnlineService" />
       <div v-if="isDesktop" class="nav-drag" />
-      <n-flex align="center" :wrap="false">
+      <n-flex align="center" :wrap="false" class="nav-actions">
         <User v-if="settingStore.useOnlineService && !isSmallScreen" />
+        <User
+          v-if="settingStore.useOnlineService && isSmallScreen"
+          compact
+          class="mobile-user-entry"
+        />
         <n-dropdown :options="setOptions" trigger="click" @select="setSelect">
           <n-button :focusable="false" title="更多设置" tertiary circle>
             <template #icon>
@@ -143,7 +148,7 @@ import type { DropdownOption } from "naive-ui";
 import { useSettingStore, useStatusStore } from "@/stores";
 import { renderIcon } from "@/utils/helper";
 import { openSetting, openThemeConfig, openScalingModal, openUpdateApp } from "@/utils/modal";
-import { isDev, isElectron } from "@/utils/env";
+import { isAndroidApp, isDev, isElectron } from "@/utils/env";
 import { useMobile } from "@/composables/useMobile";
 
 const router = useRouter();
@@ -238,6 +243,14 @@ const setOptions = computed<DropdownOption[]>(() => {
     type: "divider",
   });
 
+  if (isAndroidApp) {
+    options.push({
+      key: "android-setting",
+      label: "Android 显示与性能",
+      icon: renderIcon("Settings"),
+    });
+  }
+
   if (isElectron) {
     options.push({
       key: "restart",
@@ -274,6 +287,9 @@ const setSelect = (key: string) => {
       break;
     case "zoom":
       openScalingModal();
+      break;
+    case "android-setting":
+      openSetting("play", "androidAutoUiScale");
       break;
     case "setting":
       openSetting();
@@ -408,16 +424,19 @@ onUnmounted(() => {
 </style>
 
 <style lang="scss" scoped>
-:global(:root.android-app) .nav {
-  max-width: 100vw;
-  overflow: hidden;
-}
-
 @media (max-width: 768px) {
   .nav {
     gap: 8px;
-    height: calc(64px + var(--safe-area-top, 0px));
-    padding: var(--safe-area-top, 0px) max(8px, calc(12px * var(--android-ui-scale, 1))) 0;
+    height: calc(
+      clamp(56px, calc(64px * var(--android-ui-scale, 1)), 64px) + var(--safe-area-top, 0px)
+    );
+    padding: var(--safe-area-top, 0px)
+      var(
+        --android-content-padding-right,
+        clamp(7px, calc(12px * var(--android-ui-scale, 1)), 12px)
+      )
+      0
+      var(--android-content-padding-left, clamp(7px, calc(12px * var(--android-ui-scale, 1)), 12px));
 
     .page-control {
       gap: 4px;
@@ -425,11 +444,35 @@ onUnmounted(() => {
 
     .nav-main {
       margin-left: 6px;
+      --mobile-nav-action-reserve: calc(
+        var(--android-touch-target, 48px) + var(--android-touch-target, 48px) +
+          var(--android-touch-target, 48px) + var(--android-space-xs, 8px) +
+          var(--android-space-xs, 8px) + 6px
+      );
     }
 
     .n-button {
-      width: 44px;
-      height: 44px;
+      width: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 48px);
+      height: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 48px);
+    }
+
+    .nav-actions {
+      position: relative;
+      z-index: 102;
+      gap: var(
+        --android-space-xs,
+        clamp(4px, calc(6px * var(--android-ui-scale, 1)), 6px)
+      ) !important;
+      flex-shrink: 0;
+    }
+
+    .mobile-user-entry {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-shrink: 0;
+      min-width: var(--android-touch-target, 44px);
+      -webkit-app-region: no-drag;
     }
   }
 }
@@ -437,11 +480,24 @@ onUnmounted(() => {
 @media (max-width: 420px) {
   .nav {
     gap: 6px;
-    height: calc(60px + var(--safe-area-top, 0px));
-    padding: var(--safe-area-top, 0px) max(6px, calc(10px * var(--android-ui-scale, 1))) 0;
+    height: calc(
+      clamp(52px, calc(60px * var(--android-ui-scale, 1)), 60px) + var(--safe-area-top, 0px)
+    );
+    padding: var(--safe-area-top, 0px)
+      var(
+        --android-content-padding-right,
+        clamp(5px, calc(10px * var(--android-ui-scale, 1)), 10px)
+      )
+      0
+      var(--android-content-padding-left, clamp(5px, calc(10px * var(--android-ui-scale, 1)), 10px));
 
     .nav-main {
       margin-left: 4px;
+      --mobile-nav-action-reserve: calc(
+        var(--android-touch-target, 46px) + var(--android-touch-target, 46px) +
+          var(--android-touch-target, 46px) + var(--android-space-xs, 7px) +
+          var(--android-space-xs, 7px) + 4px
+      );
     }
   }
 }

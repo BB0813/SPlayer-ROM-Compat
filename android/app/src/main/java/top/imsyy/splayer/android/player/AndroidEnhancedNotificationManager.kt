@@ -119,7 +119,7 @@ object AndroidEnhancedNotificationManager {
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setOnlyAlertOnce(true)
       .setSilent(true)
-      .setOngoing(state.isPlaying && state.useMediaCategory)
+      .setOngoing(state.isPlaying)
       .setShowWhen(false)
       .build()
 

@@ -36,12 +36,14 @@ import top.imsyy.splayer.android.bridge.SPlayerPlayerBridge
 import top.imsyy.splayer.android.bridge.SPlayerStoreBridge
 import top.imsyy.splayer.android.bridge.SPlayerSystemBridge
 import top.imsyy.splayer.android.player.AndroidNativeAudioPlayer
+import top.imsyy.splayer.android.player.NativeMiniPlayerBarView
 import top.imsyy.splayer.android.player.NativePlayerPageView
 
 class MainActivity : AppCompatActivity() {
   private lateinit var rootView: FrameLayout
   private lateinit var webView: WebView
   private lateinit var nativePlayerPageView: NativePlayerPageView
+  private lateinit var nativeMiniPlayerBarView: NativeMiniPlayerBarView
   private var pendingControlAction: String? = null
   private var webViewDestroyedByRenderProcess = false
   private var webPageReady = false
@@ -61,11 +63,20 @@ class MainActivity : AppCompatActivity() {
       isVerticalScrollBarEnabled = false
     }
     nativePlayerPageView = NativePlayerPageView(this)
+    nativeMiniPlayerBarView = NativeMiniPlayerBarView(this)
     rootView.addView(
       webView,
       FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.MATCH_PARENT,
         FrameLayout.LayoutParams.MATCH_PARENT,
+      ),
+    )
+    rootView.addView(
+      nativeMiniPlayerBarView,
+      FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.WRAP_CONTENT,
+        Gravity.BOTTOM,
       ),
     )
     rootView.addView(
@@ -165,7 +176,10 @@ class MainActivity : AppCompatActivity() {
       }
     webView.addJavascriptInterface(SPlayerStoreBridge(this), "splayerAndroidStore")
     webView.addJavascriptInterface(SPlayerApiBridge(this), "splayerAndroidApi")
-    webView.addJavascriptInterface(SPlayerPlayerBridge(this, nativePlayerPageView), "splayerAndroidPlayer")
+    webView.addJavascriptInterface(
+      SPlayerPlayerBridge(this, nativePlayerPageView, nativeMiniPlayerBarView),
+      "splayerAndroidPlayer",
+    )
     webView.addJavascriptInterface(SPlayerSystemBridge(this), "splayerAndroidSystem")
     webView.addJavascriptInterface(SPlayerMediaBridge(this), "splayerAndroidMedia")
     webView.loadUrl(resolveWebUrl(BuildConfig.SPLAYER_WEB_URL))
@@ -252,6 +266,9 @@ class MainActivity : AppCompatActivity() {
     webPageReady = false
     if (::nativePlayerPageView.isInitialized) {
       nativePlayerPageView.setPlayerVisible(false)
+    }
+    if (::nativeMiniPlayerBarView.isInitialized) {
+      nativeMiniPlayerBarView.setPlayerVisible(false)
     }
     runCatching {
       webView.stopLoading()

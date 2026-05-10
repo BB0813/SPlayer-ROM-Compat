@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition :name="settingStore.playerExpandAnimation" mode="out-in">
       <div
-        v-if="statusStore.showFullPlayer && !useAndroidNativePlayerPage"
+        v-if="shouldRenderWebFullPlayer"
         :style="{
           cursor: statusStore.playerMetaShow || showComment ? 'auto' : 'none',
           '--lyric-blend-mode': settingStore.lyricsBlendMode,
@@ -101,11 +101,14 @@ const musicStore = useMusicStore();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 
+const { isTablet } = useMobile();
+
 const useAndroidNativePlayerPage = computed(
   () => isAndroidApp && settingStore.androidNativePlayerPageEnabled,
 );
-
-const { isTablet } = useMobile();
+const shouldRenderWebFullPlayer = computed(
+  () => statusStore.showFullPlayer && !useAndroidNativePlayerPage.value,
+);
 
 /** 封面主颜色 */
 const mainCoverColor = useCssVar("--main-cover-color", document.documentElement);

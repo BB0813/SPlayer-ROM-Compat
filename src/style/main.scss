@@ -96,10 +96,10 @@
   height: 100dvh !important;
 }
 :root.android-app {
-  --android-edge-padding: clamp(8px, calc(12px * var(--android-ui-scale, 1)), 12px);
+  --android-edge-padding: var(--android-edge-padding-base);
   --android-safe-x: var(--android-edge-padding);
-  --android-safe-top-extra: clamp(2px, calc(4px * var(--android-ui-scale, 1)), 6px);
-  --android-safe-bottom-extra: clamp(10px, calc(14px * var(--android-ui-scale, 1)), 18px);
+  --android-safe-top-extra: clamp(3px, calc(5px * var(--android-ui-scale, 1)), 8px);
+  --android-safe-bottom-extra: clamp(12px, calc(16px * var(--android-ui-scale, 1)), 22px);
   --safe-area-top: max(env(safe-area-inset-top, 0px), var(--android-safe-top-extra));
   --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--android-safe-bottom-extra));
   --safe-area-left: env(safe-area-inset-left, 0px);
@@ -513,11 +513,87 @@ audio {
 }
 
 :root.android-app {
-  --android-ui-scale: 0.8;
-  --android-compact-font-size: max(13px, calc(14px * var(--android-ui-scale, 1)));
-  --android-compact-small-font-size: max(11px, calc(12px * var(--android-ui-scale, 1)));
-  --android-compact-card-padding: max(12px, calc(16px * var(--android-ui-scale, 1)));
-  --android-compact-gap: max(8px, calc(12px * var(--android-ui-scale, 1)));
+  --android-ui-scale: 1;
+  --android-font-body: clamp(15px, calc(16px * var(--android-ui-scale, 1)), 18px);
+  --android-font-small: clamp(12px, calc(13px * var(--android-ui-scale, 1)), 15px);
+  --android-font-caption: clamp(11px, calc(12px * var(--android-ui-scale, 1)), 13px);
+  --android-font-title: clamp(18px, calc(21px * var(--android-ui-scale, 1)), 24px);
+  --android-space-xs: clamp(6px, calc(8px * var(--android-ui-scale, 1)), 10px);
+  --android-space-sm: clamp(8px, calc(10px * var(--android-ui-scale, 1)), 12px);
+  --android-space-md: clamp(12px, calc(14px * var(--android-ui-scale, 1)), 18px);
+  --android-space-lg: clamp(16px, calc(20px * var(--android-ui-scale, 1)), 24px);
+  --android-radius-control: clamp(12px, calc(14px * var(--android-ui-scale, 1)), 18px);
+  --android-radius-card: clamp(16px, calc(18px * var(--android-ui-scale, 1)), 22px);
+  --android-radius-dock: clamp(18px, calc(22px * var(--android-ui-scale, 1)), 26px);
+  --android-touch-target: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 52px);
+  --android-control-height: clamp(42px, calc(46px * var(--android-ui-scale, 1)), 50px);
+  --android-player-bar-height: clamp(84px, calc(92px * var(--android-ui-scale, 1)), 98px);
+  --android-player-card-height: clamp(72px, calc(76px * var(--android-ui-scale, 1)), 82px);
+  --android-player-card-compact-height: clamp(68px, calc(72px * var(--android-ui-scale, 1)), 76px);
+  --android-player-bar-compact-height: clamp(82px, calc(88px * var(--android-ui-scale, 1)), 94px);
+  --android-tabbar-height: clamp(62px, calc(68px * var(--android-ui-scale, 1)), 72px);
+  --android-tabbar-compact-height: clamp(60px, calc(66px * var(--android-ui-scale, 1)), 70px);
+  --android-tabbar-padding: clamp(7px, calc(8px * var(--android-ui-scale, 1)), 10px);
+  --android-tab-button-height: calc(
+    var(--android-tabbar-height) - var(--android-tabbar-padding) - var(--android-tabbar-padding)
+  );
+  --android-dock-gap: clamp(14px, calc(18px * var(--android-ui-scale, 1)), 24px);
+  --android-tabbar-lift: clamp(14px, calc(18px * var(--android-ui-scale, 1)), 22px);
+  --android-dock-clearance: clamp(10px, calc(14px * var(--android-ui-scale, 1)), 20px);
+  --android-edge-padding-base: clamp(10px, calc(13px * var(--android-ui-scale, 1)), 16px);
+  --android-edge-padding-compact: clamp(8px, calc(11px * var(--android-ui-scale, 1)), 13px);
+  --android-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --android-shadow-dock: 0 6px 18px rgba(0, 0, 0, 0.12);
+  --android-shadow-search: 0 3px 10px rgba(0, 0, 0, 0.06);
+  --android-compact-font-size: var(--android-font-body);
+  --android-compact-small-font-size: var(--android-font-small);
+  --android-compact-card-padding: var(--android-space-md);
+  --android-compact-gap: var(--android-space-sm);
+}
+
+:root.android-app.android-tablet-layout {
+  --android-font-body: clamp(16px, calc(17px * var(--android-ui-scale, 1)), 19px);
+  --android-font-small: clamp(13px, calc(14px * var(--android-ui-scale, 1)), 16px);
+  --android-font-caption: clamp(12px, calc(13px * var(--android-ui-scale, 1)), 14px);
+  --android-space-md: clamp(14px, 1.6vw, 20px);
+  --android-space-lg: clamp(18px, 2vw, 28px);
+  --android-edge-padding-base: clamp(18px, 2.2vw, 28px);
+  --android-player-bar-height: clamp(88px, calc(94px * var(--android-ui-scale, 1)), 104px);
+  --android-tabbar-height: clamp(66px, calc(70px * var(--android-ui-scale, 1)), 76px);
+}
+
+:root.android-app {
+  .n-button:not(.n-button--circle) {
+    --n-height: var(--android-control-height) !important;
+    --n-font-size: var(--android-font-body) !important;
+    --n-border-radius: var(--android-radius-control) !important;
+    min-height: var(--android-touch-target);
+    touch-action: manipulation;
+  }
+
+  .n-button--circle {
+    min-width: var(--android-touch-target) !important;
+    min-height: var(--android-touch-target) !important;
+    touch-action: manipulation;
+  }
+
+  .n-base-selection,
+  .n-input,
+  .n-input-number {
+    --n-height: var(--android-control-height) !important;
+    --n-font-size: var(--android-font-body) !important;
+    --n-border-radius: var(--android-radius-control) !important;
+  }
+
+  .n-slider {
+    min-height: var(--android-touch-target);
+    padding-block: var(--android-space-xs);
+    touch-action: pan-x;
+  }
+
+  .n-card {
+    --n-border-radius: var(--android-radius-card) !important;
+  }
 }
 
 :root.android-app {
@@ -601,7 +677,7 @@ audio {
   .n-base-select-option,
   .n-cascader-option,
   .n-menu-item-content {
-    min-height: max(40px, calc(44px * var(--android-ui-scale, 1))) !important;
+    min-height: var(--android-touch-target) !important;
     box-sizing: border-box;
     touch-action: manipulation;
   }
@@ -609,7 +685,7 @@ audio {
   .n-dropdown-option-body,
   .n-base-select-option__content,
   .n-cascader-option__label {
-    font-size: var(--android-compact-font-size, 14px);
+    font-size: var(--android-font-body);
     line-height: 1.45;
   }
 
@@ -626,27 +702,26 @@ audio {
   }
 
   .n-button:not(.n-button--circle) {
-    --n-height: max(36px, calc(40px * var(--android-ui-scale, 1))) !important;
-    --n-font-size: var(--android-compact-font-size) !important;
-    --n-padding: 0 max(12px, calc(16px * var(--android-ui-scale, 1))) !important;
+    --n-height: var(--android-control-height) !important;
+    --n-font-size: var(--android-font-body) !important;
+    --n-padding: 0 var(--android-space-md) !important;
   }
 
   .n-base-selection,
   .n-input,
   .n-input-number {
-    --n-height: max(36px, calc(40px * var(--android-ui-scale, 1))) !important;
-    --n-font-size: var(--android-compact-font-size) !important;
+    --n-height: var(--android-control-height) !important;
+    --n-font-size: var(--android-font-body) !important;
   }
 
   .n-tag {
-    --n-height: max(20px, calc(24px * var(--android-ui-scale, 1))) !important;
-    --n-font-size: var(--android-compact-small-font-size) !important;
+    --n-height: clamp(24px, calc(28px * var(--android-ui-scale, 1)), 32px) !important;
+    --n-font-size: var(--android-font-small) !important;
   }
 
   .n-tabs {
-    --n-tab-font-size: var(--android-compact-font-size) !important;
-    --n-tab-padding: max(4px, calc(6px * var(--android-ui-scale, 1)))
-      max(10px, calc(14px * var(--android-ui-scale, 1))) !important;
+    --n-tab-font-size: var(--android-font-body) !important;
+    --n-tab-padding: var(--android-space-xs) var(--android-space-md) !important;
   }
 
   .album-list,
@@ -755,6 +830,105 @@ audio {
 :root.android-performance-mode.android-playback-active {
   #main.android-playback-lite {
     transition: none !important;
+  }
+
+  .text-container {
+    .scroll-wrapper {
+      transform: none !important;
+      transition: none !important;
+      will-change: auto !important;
+    }
+
+    .clone {
+      display: none !important;
+    }
+  }
+
+  .n-skeleton,
+  .cover-loading,
+  .loading-img,
+  .count-down {
+    animation: none !important;
+  }
+
+  .song-data-card,
+  .song-card,
+  .song-content,
+  .cover-list,
+  .cover-item,
+  .artist-item,
+  .setting-item-wrapper,
+  .n-card,
+  .n-list,
+  .n-list-item,
+  .n-button,
+  .n-tag,
+  .n-avatar,
+  .n-progress,
+  .n-slider,
+  .n-slider-handle,
+  .n-tabs-tab,
+  .mobile-tabbar,
+  .mobile-tabbar-inner,
+  .tab-button,
+  .main-player {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .n-modal-mask,
+  .n-drawer-mask,
+  .n-popover,
+  .n-popselect-menu,
+  .mobile-tabbar-inner,
+  .main-player,
+  .cover-mask,
+  .cover-shadow,
+  .blur,
+  .mask,
+  .search-mask {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .cover-shadow {
+    opacity: 0 !important;
+  }
+
+  .song-data-card,
+  .song-card,
+  .song-list .song-node,
+  .cover-list .cover-item,
+  .artist-list .artist-item,
+  .setting-item-wrapper,
+  .n-list-item {
+    contain: layout paint style;
+    content-visibility: auto;
+    contain-intrinsic-size: 96px;
+  }
+
+  .song-content,
+  .cover,
+  .cover-img,
+  .search-input,
+  .mobile-tabbar-inner,
+  .main-player {
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  .cover-img,
+  .cover-img img,
+  .cover img,
+  .song-card img,
+  .song-data-card img {
+    transform: none !important;
+    filter: none !important;
+    will-change: auto !important;
+  }
+
+  .search-mask {
+    background-color: rgba(0, 0, 0, 0.06) !important;
   }
 }
 
@@ -978,9 +1152,19 @@ audio {
   }
 }
 
-// 鏉ユ簮锛歴rc/views/Home/HomeOnline.vue
+// 来源：src/views/Home/HomeOnline.vue
+:root.android-app .home,
+:root.android-app .home-online {
+  display: flow-root;
+  width: 100%;
+  min-width: 0;
+  min-height: max(420px, calc(100dvh - var(--mobile-stable-dock-content-height, 0px) - 96px));
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 :root.android-app .home-online.android-playback-lite {
-  contain: layout paint style;
+  contain: paint style;
 
   .rec-public,
   .main-rec {
@@ -1113,7 +1297,7 @@ audio {
       padding: max(8px, calc(12px * var(--android-ui-scale, 1)));
 
       .name {
-        font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+        font-size: var(--android-font-body);
       }
 
       .tip,
@@ -1286,7 +1470,7 @@ audio {
 
 :root.android-app .search {
   .search-input {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--android-shadow-search);
   }
 
   .search-mask {
@@ -1310,11 +1494,11 @@ audio {
 
   .label {
     .name {
-      font-size: max(14px, calc(16px * var(--android-ui-scale, 1)));
+      font-size: var(--android-font-body);
     }
 
     .tip {
-      font-size: var(--android-compact-small-font-size);
+      font-size: var(--android-font-small);
       line-height: 1.45;
     }
   }
@@ -1325,18 +1509,18 @@ audio {
 @media (max-width: 768px) {
   :root.android-app.android-compact-ui .setting-item-wrapper {
     .n-card__content {
-      gap: max(8px, calc(12px * var(--android-ui-scale, 1)));
+      gap: var(--android-space-sm);
     }
 
     .control-wrapper {
-      gap: max(8px, calc(10px * var(--android-ui-scale, 1)));
+      gap: var(--android-space-sm);
     }
 
     .set.n-slider {
-      min-height: 48px;
-      margin-bottom: 14px;
-      padding-top: 12px;
-      padding-bottom: 18px;
+      min-height: var(--android-touch-target);
+      margin-bottom: var(--android-space-md);
+      padding-top: var(--android-space-sm);
+      padding-bottom: var(--android-space-md);
     }
   }
 }
@@ -1344,11 +1528,11 @@ audio {
 // 来源：src/components/Setting/UniversalSetting.vue
 
 :root.android-app.android-compact-ui .group-title {
-  padding-top: max(20px, calc(30px * var(--android-ui-scale, 1)));
+  padding-top: var(--android-space-lg);
 
   .n-h {
-    font-size: max(17px, calc(20px * var(--android-ui-scale, 1)));
-    margin: 0 0 max(8px, calc(12px * var(--android-ui-scale, 1)));
+    font-size: var(--android-font-title);
+    margin: 0 0 var(--android-space-sm);
   }
 }
 
@@ -1358,27 +1542,31 @@ audio {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
-  --android-edge-padding: clamp(8px, calc(12px * var(--android-ui-scale, 1)), 12px);
+  --android-edge-padding: var(--android-edge-padding-base);
   --android-safe-x: var(--android-edge-padding);
-  --android-safe-top-extra: clamp(2px, calc(4px * var(--android-ui-scale, 1)), 6px);
-  --android-safe-bottom-extra: clamp(10px, calc(14px * var(--android-ui-scale, 1)), 18px);
-  --android-content-bottom-extra: clamp(10px, calc(14px * var(--android-ui-scale, 1)), 16px);
+  --android-safe-top-extra: clamp(3px, calc(5px * var(--android-ui-scale, 1)), 8px);
+  --android-safe-bottom-extra: clamp(12px, calc(16px * var(--android-ui-scale, 1)), 22px);
+  --android-content-bottom-extra: var(--android-space-md);
   --safe-area-top: max(env(safe-area-inset-top, 0px), var(--android-safe-top-extra));
   --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--android-safe-bottom-extra));
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --android-content-padding-left: max(var(--safe-area-left), var(--android-edge-padding));
   --android-content-padding-right: max(var(--safe-area-right), var(--android-edge-padding));
-  --player-bar-height: clamp(80px, calc(90px * var(--android-ui-scale, 1)), 92px);
-  --mobile-tabbar-height: clamp(60px, calc(66px * var(--android-ui-scale, 1)), 68px);
-  --mobile-tabbar-outer-height: calc(
-    var(--mobile-tabbar-height) + clamp(6px, calc(8px * var(--android-ui-scale, 1)), 8px)
+  --player-bar-height: var(--android-player-bar-height);
+  --mobile-tabbar-height: var(--android-tabbar-height);
+  --mobile-tabbar-outer-height: calc(var(--mobile-tabbar-height) + var(--android-tabbar-padding));
+  --mobile-dock-gap: var(--android-dock-gap);
+  --mobile-tabbar-bottom-lift: var(--android-tabbar-lift);
+  --mobile-tabbar-bottom: calc(var(--safe-area-bottom) + var(--mobile-tabbar-bottom-lift));
+  --mobile-player-bottom: calc(
+    var(--mobile-tabbar-outer-height) + var(--mobile-dock-gap) + var(--mobile-tabbar-bottom)
   );
-  --mobile-dock-gap: clamp(8px, calc(10px * var(--android-ui-scale, 1)), 12px);
-  --mobile-tabbar-bottom-lift: clamp(14px, calc(18px * var(--android-ui-scale, 1)), 22px);
   --mobile-dock-height: calc(
-    var(--player-bar-height) + var(--mobile-tabbar-outer-height) + var(--mobile-dock-gap) +
-      var(--mobile-tabbar-bottom-lift) + var(--safe-area-bottom)
+    var(--android-player-card-height, var(--player-bar-height)) + var(--mobile-player-bottom)
+  );
+  --mobile-dock-content-height: calc(
+    var(--mobile-dock-height) + var(--android-dock-clearance, 0px)
   );
   --android-content-padding: var(--android-edge-padding);
 }
@@ -1427,7 +1615,9 @@ audio {
 
 :root.android-app #main-content {
   top: calc(clamp(52px, calc(60px * var(--android-ui-scale, 1)), 60px) + var(--safe-area-top));
-  bottom: var(--mobile-stable-dock-height, 0px) !important;
+  bottom: calc(
+    var(--mobile-stable-dock-height, 0px) + var(--android-dock-clearance, 0px)
+  ) !important;
   height: auto;
   min-height: 0;
   transition: none;
@@ -1437,12 +1627,10 @@ audio {
 
 :root.android-app.android-small-width #app-layout,
 :root.android-app.android-compact-height #app-layout {
-  --player-bar-height: clamp(78px, calc(86px * var(--android-ui-scale, 1)), 88px);
-  --mobile-tabbar-height: clamp(58px, calc(64px * var(--android-ui-scale, 1)), 66px);
-  --mobile-tabbar-outer-height: calc(
-    var(--mobile-tabbar-height) + clamp(5px, calc(7px * var(--android-ui-scale, 1)), 7px)
-  );
-  --android-edge-padding: clamp(7px, calc(10px * var(--android-ui-scale, 1)), 10px);
+  --player-bar-height: var(--android-player-bar-compact-height);
+  --mobile-tabbar-height: var(--android-tabbar-compact-height);
+  --mobile-tabbar-outer-height: calc(var(--mobile-tabbar-height) + var(--android-tabbar-padding));
+  --android-edge-padding: var(--android-edge-padding-compact);
   --android-content-padding-left: max(var(--safe-area-left), var(--android-edge-padding));
   --android-content-padding-right: max(var(--safe-area-right), var(--android-edge-padding));
   --android-content-padding: var(--android-edge-padding);
@@ -1451,12 +1639,10 @@ audio {
 // 来源：src/layout/AppLayout.vue
 
 :root.android-app.android-compact-height #app-layout {
-  --player-bar-height: clamp(78px, calc(86px * var(--android-ui-scale, 1)), 88px);
-  --mobile-tabbar-height: clamp(58px, calc(64px * var(--android-ui-scale, 1)), 66px);
-  --mobile-tabbar-outer-height: calc(
-    var(--mobile-tabbar-height) + clamp(5px, calc(7px * var(--android-ui-scale, 1)), 7px)
-  );
-  --android-edge-padding: clamp(7px, calc(10px * var(--android-ui-scale, 1)), 10px);
+  --player-bar-height: var(--android-player-bar-compact-height);
+  --mobile-tabbar-height: var(--android-tabbar-compact-height);
+  --mobile-tabbar-outer-height: calc(var(--mobile-tabbar-height) + var(--android-tabbar-padding));
+  --android-edge-padding: var(--android-edge-padding-compact);
   --android-content-padding-left: max(var(--safe-area-left), var(--android-edge-padding));
   --android-content-padding-right: max(var(--safe-area-right), var(--android-edge-padding));
   --android-content-padding: var(--android-edge-padding);
@@ -1475,8 +1661,19 @@ audio {
   --android-edge-padding: clamp(7px, calc(9px * var(--android-ui-scale, 1)), 10px);
   --player-bar-height: clamp(76px, calc(84px * var(--android-ui-scale, 1)), 86px);
   --mobile-tabbar-height: clamp(56px, calc(62px * var(--android-ui-scale, 1)), 64px);
-  --mobile-dock-gap: clamp(6px, calc(8px * var(--android-ui-scale, 1)), 10px);
+  --mobile-dock-gap: clamp(12px, calc(16px * var(--android-ui-scale, 1)), 22px);
   --mobile-tabbar-bottom-lift: clamp(10px, calc(14px * var(--android-ui-scale, 1)), 18px);
+  --mobile-tabbar-bottom: calc(var(--safe-area-bottom) + var(--mobile-tabbar-bottom-lift));
+  --mobile-player-bottom: calc(
+    var(--mobile-tabbar-outer-height) + var(--mobile-dock-gap) + var(--mobile-tabbar-bottom)
+  );
+  --mobile-dock-height: calc(
+    var(--android-player-card-compact-height, var(--player-bar-height)) +
+      var(--mobile-player-bottom)
+  );
+  --mobile-dock-content-height: calc(
+    var(--mobile-dock-height) + var(--android-dock-clearance, 0px)
+  );
 }
 // 来源：src/views/Home/HomeOnline.vue
 
@@ -1810,7 +2007,13 @@ audio {
 
 :root.android-app.android-tablet-layout .song-list .list-menu {
   right: max(24px, var(--android-content-padding-right));
-  bottom: calc(var(--mobile-dock-height, 168px) + 18px);
+  bottom: calc(
+    var(
+        --mobile-stable-dock-content-height,
+        var(--mobile-dock-content-height, var(--mobile-dock-height, 168px))
+      ) +
+      12px
+  );
 }
 :root.android-app.android-hidpi-tablet #app-layout {
   --android-content-bottom-extra: clamp(16px, 2vw, 24px);
@@ -1818,7 +2021,13 @@ audio {
 
 :root.android-app.android-tablet-layout .list-menu {
   right: max(24px, var(--android-content-padding-right));
-  bottom: calc(var(--mobile-dock-height, 168px) + 18px);
+  bottom: calc(
+    var(
+        --mobile-stable-dock-content-height,
+        var(--mobile-dock-content-height, var(--mobile-dock-height, 168px))
+      ) +
+      12px
+  );
 }
 
 // Android Beta68 平板歌单页稳定变量
@@ -2021,7 +2230,10 @@ audio {
 
 :root.android-app.android-tablet-layout .song-list .virtual-list-wrapper {
   max-height: calc(
-    var(--android-viewport-height, 100dvh) - var(--safe-area-top) - var(--mobile-dock-height, 168px)
+    var(--android-viewport-height, 100dvh) - var(--safe-area-top) - var(
+        --mobile-stable-dock-content-height,
+        var(--mobile-dock-content-height, var(--mobile-dock-height, 168px))
+      )
   );
 }
 

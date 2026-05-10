@@ -1,13 +1,14 @@
 <template>
   <n-popover
     :show="userMenuShow"
-    style="padding: 12px; max-width: 240px"
+    :placement="compact ? 'bottom-end' : 'bottom'"
+    :style="popoverStyle"
     trigger="manual"
     @clickoutside="userMenuShow = false"
   >
     <template #trigger>
       <div
-        class="user"
+        :class="['user', { compact }]"
         :style="{ pointerEvents: userMenuShow ? 'none' : 'auto' }"
         @click="openMenu"
       >
@@ -36,7 +37,7 @@
         </n-flex>
       </div>
     </template>
-    <div class="user-menu" @click="userMenuShow = false">
+    <div :class="['user-menu', { compact }]" @click="userMenuShow = false">
       <!-- 用户信息 -->
       <n-flex class="user-info" align="center" justify="center" vertical>
         <n-text class="nickname text-hidden">{{ dataStore.userData.name || "未知用户名" }}</n-text>
@@ -61,7 +62,8 @@
           class="num-item"
           @click="router.push({ name: item.name })"
         >
-          <n-number-animation :from="0" :to="item.value" />
+          <span v-if="shouldPauseDecorativeAnimations" class="num-static">{{ item.value }}</span>
+          <n-number-animation v-else :from="0" :to="item.value" />
           <n-text :depth="3">{{ item.label }}</n-text>
         </div>
       </div>
@@ -119,11 +121,22 @@ import {
   removeAccount,
 } from "@/utils/auth";
 import { useMobile } from "@/composables/useMobile";
+import { useAndroidRoutePerformance } from "@/composables/useAndroidRoutePerformance";
+
+const props = defineProps<{ compact?: boolean }>();
 
 const router = useRouter();
 const dataStore = useDataStore();
 
 const { isDesktop } = useMobile();
+const { shouldPauseDecorativeAnimations } = useAndroidRoutePerformance();
+const compact = computed(() => props.compact ?? false);
+const popoverStyle = computed(() => ({
+  padding: compact.value ? "10px" : "12px",
+  width: compact.value ? "min(calc(100dvw - 24px), 228px)" : undefined,
+  maxWidth: compact.value ? "min(calc(100dvw - 24px), 240px)" : "240px",
+  boxSizing: "border-box",
+}));
 
 // 用户菜单展示
 const userMenuShow = ref<boolean>(false);
@@ -301,6 +314,29 @@ onBeforeMount(() => {
   &:active {
     background-color: rgba(var(--primary), 0.12);
   }
+
+  &.compact {
+    width: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 48px);
+    height: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 48px);
+    min-width: clamp(44px, calc(48px * var(--android-ui-scale, 1)), 48px);
+    justify-content: center;
+    border-radius: 16px;
+    background-color: rgba(var(--surface-container), 0.72);
+    box-sizing: border-box;
+    touch-action: manipulation;
+    overflow: hidden;
+
+    .avatar {
+      width: clamp(34px, calc(38px * var(--android-ui-scale, 1)), 38px);
+      height: clamp(34px, calc(38px * var(--android-ui-scale, 1)), 38px);
+      min-width: clamp(34px, calc(38px * var(--android-ui-scale, 1)), 38px);
+      border-width: 1px;
+    }
+
+    .user-data {
+      display: none;
+    }
+  }
 }
 .vip-img {
   height: 18px;
@@ -330,6 +366,9 @@ onBeforeMount(() => {
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      .num-static {
+        line-height: 1.2;
+      }
       .n-text {
         font-size: 12px;
         font-weight: normal;
@@ -337,6 +376,50 @@ onBeforeMount(() => {
       }
     }
   }
+  &.compact {
+    width: 100%;
+    max-width: 100%;
+
+    .nickname {
+      max-width: 180px;
+    }
+
+    .like-num {
+      gap: 6px;
+
+      .num-item {
+        min-width: 52px;
+        min-height: 44px;
+        justify-content: center;
+        border-radius: 10px;
+        touch-action: manipulation;
+      }
+    }
+
+    .account-list {
+      .account-item {
+        min-height: 44px;
+        padding: 8px;
+        touch-action: manipulation;
+      }
+
+      .delete-btn {
+        opacity: 1;
+        min-width: 34px;
+        min-height: 34px;
+        justify-content: center;
+      }
+
+      .add-account {
+        min-height: 42px;
+      }
+    }
+
+    .logout {
+      min-height: 44px;
+    }
+  }
+
   .account-list {
     .subtitle {
       font-size: 12px;

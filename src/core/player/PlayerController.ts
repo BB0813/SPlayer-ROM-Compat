@@ -616,7 +616,10 @@ class PlayerController {
   }
   /** 刷新播放进度 */
   private getTimeUpdateThrottleWait(): number {
-    if (isAndroidApp) return 1000;
+    if (isAndroidApp) {
+      const settingStore = useSettingStore();
+      return settingStore.androidPerformanceMode ? 1500 : 1000;
+    }
     return 200;
   }
 
