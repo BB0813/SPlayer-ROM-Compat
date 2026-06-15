@@ -16,7 +16,13 @@
     @touchcancel.capture="resetTouchState"
   >
     <div class="top-bar">
-      <div class="btn" role="button" tabindex="0" aria-label="收起播放器" @click.stop="statusStore.showFullPlayer = false">
+      <div
+        class="btn"
+        role="button"
+        tabindex="0"
+        aria-label="收起播放器"
+        @click.stop="statusStore.showFullPlayer = false"
+      >
         <SvgIcon name="Down" :size="26" />
       </div>
     </div>
@@ -45,13 +51,11 @@
                 :aria-label="isCurrentSongLiked ? '取消收藏' : '收藏'"
                 @click="
                   haptic.medium();
-                  toLikeSong(musicStore.playSong, !isCurrentSongLiked)
+                  toLikeSong(musicStore.playSong, !isCurrentSongLiked);
                 "
               >
                 <SvgIcon
-                  :name="
-                    isCurrentSongLiked ? 'Favorite' : 'FavoriteBorder'
-                  "
+                  :name="isCurrentSongLiked ? 'Favorite' : 'FavoriteBorder'"
                   :size="26"
                   :class="{ liked: isCurrentSongLiked }"
                 />
@@ -70,14 +74,37 @@
           </div>
 
           <div class="progress-section">
-            <span class="time" role="button" tabindex="0" aria-label="切换时间格式" @click="toggleTimeFormat">{{ timeDisplay[0] }}</span>
+            <span
+              class="time"
+              role="button"
+              tabindex="0"
+              aria-label="切换时间格式"
+              @click="toggleTimeFormat"
+              >{{ timeDisplay[0] }}</span
+            >
             <PlayerSlider class="player" :show-tooltip="false" />
-            <span class="time" role="button" tabindex="0" aria-label="切换时间格式" @click="toggleTimeFormat">{{ timeDisplay[1] }}</span>
+            <span
+              class="time"
+              role="button"
+              tabindex="0"
+              aria-label="切换时间格式"
+              @click="toggleTimeFormat"
+              >{{ timeDisplay[1] }}</span
+            >
           </div>
 
           <div class="control-section">
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-              <div class="mode-btn" role="button" tabindex="0" :aria-label="statusStore.shuffleMode === 'off' ? '开启随机播放' : '关闭随机播放'" @click.stop="haptic.light(); player.toggleShuffle()">
+              <div
+                class="mode-btn"
+                role="button"
+                tabindex="0"
+                :aria-label="statusStore.shuffleMode === 'off' ? '开启随机播放' : '关闭随机播放'"
+                @click.stop="
+                  haptic.light();
+                  player.toggleShuffle();
+                "
+              >
                 <SvgIcon
                   :name="statusStore.shuffleIcon"
                   :size="24"
@@ -87,7 +114,18 @@
             </template>
             <div v-else class="placeholder"></div>
 
-            <div class="ctrl-btn" role="button" tabindex="0" aria-label="上一首" v-debounce="() => { haptic.light(); player.nextOrPrev('prev') }">
+            <div
+              class="ctrl-btn"
+              role="button"
+              tabindex="0"
+              aria-label="上一首"
+              v-debounce="
+                () => {
+                  haptic.light();
+                  player.nextOrPrev('prev');
+                }
+              "
+            >
               <SvgIcon name="SkipPrev" :size="36" />
             </div>
 
@@ -99,7 +137,10 @@
               secondary
               circle
               :aria-label="statusStore.playStatus ? '暂停' : '播放'"
-              @click.stop="haptic.playPause(); player.playOrPause()"
+              @click.stop="
+                haptic.playPause();
+                player.playOrPause();
+              "
             >
               <template #icon>
                 <Transition name="fade" mode="out-in">
@@ -112,12 +153,32 @@
               </template>
             </n-button>
 
-            <div class="ctrl-btn" role="button" tabindex="0" aria-label="下一首" v-debounce="() => { haptic.light(); player.nextOrPrev('next') }">
+            <div
+              class="ctrl-btn"
+              role="button"
+              tabindex="0"
+              aria-label="下一首"
+              v-debounce="
+                () => {
+                  haptic.light();
+                  player.nextOrPrev('next');
+                }
+              "
+            >
               <SvgIcon name="SkipNext" :size="36" />
             </div>
 
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-              <div class="mode-btn" role="button" tabindex="0" :aria-label="statusStore.repeatMode === 'off' ? '开启循环播放' : '关闭循环播放'" @click.stop="haptic.light(); player.toggleRepeat()">
+              <div
+                class="mode-btn"
+                role="button"
+                tabindex="0"
+                :aria-label="statusStore.repeatMode === 'off' ? '开启循环播放' : '关闭循环播放'"
+                @click.stop="
+                  haptic.light();
+                  player.toggleRepeat();
+                "
+              >
                 <SvgIcon
                   :name="statusStore.repeatIcon"
                   :size="24"
@@ -149,7 +210,7 @@
             class="action-btn"
             @click.stop="
               haptic.medium();
-              toLikeSong(musicStore.playSong, !dataStore.isLikeSong(musicStore.playSong.id))
+              toLikeSong(musicStore.playSong, !dataStore.isLikeSong(musicStore.playSong.id));
             "
           >
             <SvgIcon

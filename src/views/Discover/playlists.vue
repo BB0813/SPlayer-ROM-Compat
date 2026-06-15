@@ -126,7 +126,7 @@ const hasHqPlaylist = computed<boolean>(() => {
 });
 
 // 解包 Android bridge 响应
-const unwrapResponse = <T = any>(result: any): T => {
+const unwrapResponse = <T = any,>(result: any): T => {
   if (result?.body !== undefined) return result.body as T;
   if (result?.data !== undefined) return result.data as T;
   return result as T;

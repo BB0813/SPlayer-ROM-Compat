@@ -260,10 +260,13 @@ class AudioManager extends TypedEventTarget<AudioEventMap> implements IPlaybackE
       commitSwitch();
     }
 
-    this.pendingDestroyTimer = setTimeout(() => {
-      oldEngine.destroy();
-      this.pendingDestroyTimer = null;
-    }, options.duration * 1000 + 1000);
+    this.pendingDestroyTimer = setTimeout(
+      () => {
+        oldEngine.destroy();
+        this.pendingDestroyTimer = null;
+      },
+      options.duration * 1000 + 1000,
+    );
   }
 
   public async resume(options?: { fadeIn?: boolean; fadeDuration?: number }): Promise<void> {
