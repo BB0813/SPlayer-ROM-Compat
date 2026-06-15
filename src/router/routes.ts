@@ -17,10 +17,6 @@ const appRoutes: Array<RouteRecordRaw> = [
     path: "/search",
     name: "search",
     component: () => import("@/views/Search/layout.vue"),
-    beforeEnter: (to, _, next) => {
-      if (!to.query.keyword) next({ path: "/403" });
-      else next();
-    },
     redirect: "/search/songs",
     children: [
       {

@@ -441,6 +441,10 @@ export class MpvService {
     this.sendCommand("set_property", ["speed", rate]);
   }
 
+  public setAudioDelay(delaySeconds: number) {
+    this.sendCommand("set_property", ["audio-delay", delaySeconds]);
+  }
+
   public terminate() {
     if (this.client) {
       try {

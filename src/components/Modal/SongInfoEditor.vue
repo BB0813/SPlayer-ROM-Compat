@@ -356,7 +356,6 @@ const saveSongInfo = debounce(async (song: SongType) => {
             ? coverData.value.replace(/^file:\/\//, "")
             : coverData.value,
     };
-    console.log(song.path, metadata);
     await window.electron.ipcRenderer.invoke("set-music-metadata", song.path, metadata);
     window.$message.success("歌曲信息修改成功");
     // 修改音乐信息

@@ -249,6 +249,46 @@ audio {
 // dropdown
 .n-dropdown {
   --n-border-radius: 8px !important;
+
+  // 修复下拉菜单图标对齐
+  .n-dropdown-option-body {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+
+  .n-dropdown-option {
+    padding: 4px 12px !important;
+  }
+
+  .n-dropdown-option-body__prefix {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin-left: 4px !important;
+    flex-shrink: 0 !important;
+
+    .n-icon {
+      width: 20px !important;
+      height: 20px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+  }
+
+  .n-dropdown-option-body__label {
+    flex: 1 !important;
+    white-space: nowrap !important;
+    padding-left: 10px !important;
+  }
 }
 
 .n-popselect-menu {
@@ -586,8 +626,6 @@ audio {
   }
 
   .n-slider {
-    min-height: var(--android-touch-target);
-    padding-block: var(--android-space-xs);
     touch-action: pan-x;
   }
 

@@ -60,6 +60,8 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
 
   /** 消息 ID 计数器 */
   private msgIdCounter = 0;
+  /** 最近一次错误码 */
+  private _errorCode = 0;
 
   /**
    * 是否正在等待 Seek 完成，
@@ -98,7 +100,9 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
     if (!this.audioCtx) return 0;
     const wallDelta = this.audioCtx.currentTime - this.anchorWallTime;
     const currentPosition = this.anchorSourceTime + wallDelta * this.currentTempo;
-    return Math.max(0, currentPosition);
+    // 应用音频延迟补偿（毫秒转秒）
+    const compensated = currentPosition + this.audioDelayCompensation / 1000;
+    return Math.max(0, compensated);
   }
 
   public get audioInfo() {
@@ -119,7 +123,7 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
   }
 
   public getErrorCode(): number {
-    return 0;
+    return this._errorCode;
   }
 
   private requestWorker<T = void>(
@@ -154,6 +158,7 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
 
   public async load(url: string | File) {
     this.reset();
+    this._errorCode = 0;
     this.dispatch("loadstart");
 
     this.init();
@@ -372,8 +377,8 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
   }
 
   public setAudioDelayCompensation(offset: number): void {
-    // FFmpeg 引擎使用独立的时钟同步机制，此设置无效
-    void offset;
+    // offset 单位为毫秒，调整时间锚点以补偿延迟
+    this.audioDelayCompensation = offset;
   }
 
   public async setTempo(tempo: number) {
@@ -643,6 +648,9 @@ export class FFmpegAudioPlayer extends BaseAudioPlayer {
         break;
       case "error":
         this.playerState = "error";
+        if (args[0] && "errorCode" in args[0]) {
+          this._errorCode = (args[0] as { errorCode: number }).errorCode;
+        }
         break;
       case "emptied":
         this.playerState = "idle";

@@ -125,6 +125,13 @@ const hasHqPlaylist = computed<boolean>(() => {
   return dataStore.catData.hqCats.some((item) => item.name === catName.value);
 });
 
+// 解包 Android bridge 响应
+const unwrapResponse = <T = any>(result: any): T => {
+  if (result?.body !== undefined) return result.body as T;
+  if (result?.data !== undefined) return result.data as T;
+  return result as T;
+};
+
 // 获取歌单数据
 const getAllCatlistPlaylist = async () => {
   // before
@@ -138,11 +145,13 @@ const getAllCatlistPlaylist = async () => {
     catHqType.value === "hq" ? true : false,
     before,
   );
+  // 解包响应（Android bridge 会包装在 body 中）
+  const data = unwrapResponse(result);
   // 是否还有
-  playlistCount.value = result?.total;
-  hasMore.value = result.more || result?.total > playlistOffset.value + 50;
+  playlistCount.value = data?.total;
+  hasMore.value = data?.more || data?.total > playlistOffset.value + 50;
   // 处理数据
-  const listData = formatCoverList(result.playlists);
+  const listData = formatCoverList(data?.playlists);
   playlistData.value = playlistData.value?.concat(listData);
   loading.value = false;
 };

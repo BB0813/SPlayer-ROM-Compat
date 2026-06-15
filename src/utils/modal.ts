@@ -336,8 +336,15 @@ export const openDownloadSongs = async (songs: SongType[]): Promise<void> => {
 
 // 打开设置
 export const openSetting = async (type: SettingType = "general", scrollTo?: string) => {
-  if (isModalOpen("setting", "设置页面已打开")) return;
+  if (isModalOpen("setting")) {
+    // 安全机制：如果标志卡住超过5秒，自动清除
+    setModalClosed("setting");
+  }
   setModalOpen("setting");
+  // 安全超时：如果模态框5秒内未正常关闭，自动清除标志
+  const safetyTimeout = setTimeout(() => {
+    setModalClosed("setting");
+  }, 5000);
   const { default: MainSetting } = await import("@/components/Setting/MainSetting.vue");
   window.$modal.create({
     preset: "card",
@@ -351,6 +358,7 @@ export const openSetting = async (type: SettingType = "general", scrollTo?: stri
       return h(MainSetting, { type, scrollTo });
     },
     onAfterLeave: () => {
+      clearTimeout(safetyTimeout);
       setModalClosed("setting");
     },
   });
@@ -634,8 +642,15 @@ export const openStreamingServerConfig = async (
 
 /** 打开主题配置弹窗 */
 export const openThemeConfig = async () => {
-  if (isModalOpen("themeConfig", "主题配置已打开")) return;
+  if (isModalOpen("themeConfig")) {
+    // 安全机制：如果标志卡住，自动清除
+    setModalClosed("themeConfig");
+  }
   setModalOpen("themeConfig");
+  // 安全超时
+  const safetyTimeout = setTimeout(() => {
+    setModalClosed("themeConfig");
+  }, 5000);
   const { default: ThemeConfig } = await import("@/components/Modal/ThemeConfig.vue");
   window.$modal.create({
     preset: "card",
@@ -650,6 +665,7 @@ export const openThemeConfig = async () => {
       return h(ThemeConfig);
     },
     onAfterLeave: () => {
+      clearTimeout(safetyTimeout);
       setModalClosed("themeConfig");
     },
   });

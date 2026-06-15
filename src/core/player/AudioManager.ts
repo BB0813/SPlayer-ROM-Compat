@@ -27,6 +27,9 @@ class AudioManager extends TypedEventTarget<AudioEventMap> implements IPlaybackE
 
   private isCrossfading: boolean = false;
 
+  /** 上一次交叉淡入淡出的旧引擎销毁定时器 */
+  private pendingDestroyTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** 注释已清理 */
   private _masterVolume: number = 1.0;
 
@@ -257,7 +260,10 @@ class AudioManager extends TypedEventTarget<AudioEventMap> implements IPlaybackE
       commitSwitch();
     }
 
-    setTimeout(() => oldEngine.destroy(), options.duration * 1000 + 1000);
+    this.pendingDestroyTimer = setTimeout(() => {
+      oldEngine.destroy();
+      this.pendingDestroyTimer = null;
+    }, options.duration * 1000 + 1000);
   }
 
   public async resume(options?: { fadeIn?: boolean; fadeDuration?: number }): Promise<void> {
@@ -281,10 +287,13 @@ class AudioManager extends TypedEventTarget<AudioEventMap> implements IPlaybackE
       clearTimeout(this.pendingSwitchTimer);
       this.pendingSwitchTimer = null;
     }
+    if (this.pendingDestroyTimer) {
+      clearTimeout(this.pendingDestroyTimer);
+      this.pendingDestroyTimer = null;
+    }
     this.engine.setHighPassFilter?.(0, 0);
     this.engine.setHighPassQ?.(0.707);
     if (this.pendingEngine) {
-      // 注释已清理
       try {
         this.pendingEngine.destroy();
       } catch {

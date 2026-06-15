@@ -16,7 +16,7 @@
     @touchcancel.capture="resetTouchState"
   >
     <div class="top-bar">
-      <div class="btn" @click.stop="statusStore.showFullPlayer = false">
+      <div class="btn" role="button" tabindex="0" aria-label="收起播放器" @click.stop="statusStore.showFullPlayer = false">
         <SvgIcon name="Down" :size="26" />
       </div>
     </div>
@@ -40,21 +40,28 @@
               <div
                 v-if="musicStore.playSong.type !== 'radio'"
                 class="action-btn"
+                role="button"
+                tabindex="0"
+                :aria-label="isCurrentSongLiked ? '取消收藏' : '收藏'"
                 @click="
-                  toLikeSong(musicStore.playSong, !dataStore.isLikeSong(musicStore.playSong.id))
+                  haptic.medium();
+                  toLikeSong(musicStore.playSong, !isCurrentSongLiked)
                 "
               >
                 <SvgIcon
                   :name="
-                    dataStore.isLikeSong(musicStore.playSong.id) ? 'Favorite' : 'FavoriteBorder'
+                    isCurrentSongLiked ? 'Favorite' : 'FavoriteBorder'
                   "
                   :size="26"
-                  :class="{ liked: dataStore.isLikeSong(musicStore.playSong.id) }"
+                  :class="{ liked: isCurrentSongLiked }"
                 />
               </div>
 
               <div
                 class="action-btn"
+                role="button"
+                tabindex="0"
+                aria-label="添加到歌单"
                 @click.stop="openPlaylistAdd([musicStore.playSong], !!musicStore.playSong.path)"
               >
                 <SvgIcon name="AddList" :size="26" />
@@ -63,14 +70,14 @@
           </div>
 
           <div class="progress-section">
-            <span class="time" @click="toggleTimeFormat">{{ timeDisplay[0] }}</span>
+            <span class="time" role="button" tabindex="0" aria-label="切换时间格式" @click="toggleTimeFormat">{{ timeDisplay[0] }}</span>
             <PlayerSlider class="player" :show-tooltip="false" />
-            <span class="time" @click="toggleTimeFormat">{{ timeDisplay[1] }}</span>
+            <span class="time" role="button" tabindex="0" aria-label="切换时间格式" @click="toggleTimeFormat">{{ timeDisplay[1] }}</span>
           </div>
 
           <div class="control-section">
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-              <div class="mode-btn" @click.stop="player.toggleShuffle()">
+              <div class="mode-btn" role="button" tabindex="0" :aria-label="statusStore.shuffleMode === 'off' ? '开启随机播放' : '关闭随机播放'" @click.stop="haptic.light(); player.toggleShuffle()">
                 <SvgIcon
                   :name="statusStore.shuffleIcon"
                   :size="24"
@@ -80,7 +87,7 @@
             </template>
             <div v-else class="placeholder"></div>
 
-            <div class="ctrl-btn" @click.stop="player.nextOrPrev('prev')">
+            <div class="ctrl-btn" role="button" tabindex="0" aria-label="上一首" v-debounce="() => { haptic.light(); player.nextOrPrev('prev') }">
               <SvgIcon name="SkipPrev" :size="36" />
             </div>
 
@@ -91,7 +98,8 @@
               strong
               secondary
               circle
-              @click.stop="player.playOrPause()"
+              :aria-label="statusStore.playStatus ? '暂停' : '播放'"
+              @click.stop="haptic.playPause(); player.playOrPause()"
             >
               <template #icon>
                 <Transition name="fade" mode="out-in">
@@ -104,12 +112,12 @@
               </template>
             </n-button>
 
-            <div class="ctrl-btn" @click.stop="player.nextOrPrev('next')">
+            <div class="ctrl-btn" role="button" tabindex="0" aria-label="下一首" v-debounce="() => { haptic.light(); player.nextOrPrev('next') }">
               <SvgIcon name="SkipNext" :size="36" />
             </div>
 
             <template v-if="musicStore.playSong.type !== 'radio' && !statusStore.personalFmMode">
-              <div class="mode-btn" @click.stop="player.toggleRepeat()">
+              <div class="mode-btn" role="button" tabindex="0" :aria-label="statusStore.repeatMode === 'off' ? '开启循环播放' : '关闭循环播放'" @click.stop="haptic.light(); player.toggleRepeat()">
                 <SvgIcon
                   :name="statusStore.repeatIcon"
                   :size="24"
@@ -140,6 +148,7 @@
             v-if="musicStore.playSong.type !== 'radio'"
             class="action-btn"
             @click.stop="
+              haptic.medium();
               toLikeSong(musicStore.playSong, !dataStore.isLikeSong(musicStore.playSong.id))
             "
           >
@@ -160,14 +169,16 @@
       {{ pageTipText }}
     </n-text>
 
-    <div class="pagination" v-if="canOpenLyricPage">
-      <div
-        v-for="i in 2"
-        :key="i"
-        :class="['dot', { active: pageIndex === i - 1 }]"
-        @click="pageIndex = i - 1"
-      />
-    </div>
+    <Transition name="fade">
+      <div class="pagination" v-if="canOpenLyricPage">
+        <div
+          v-for="i in 2"
+          :key="i"
+          :class="['dot', { active: pageIndex === i - 1 }]"
+          @click="pageIndex = i - 1"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -175,6 +186,7 @@
 import { useMusicStore, useStatusStore, useDataStore, useSettingStore } from "@/stores";
 import { usePlayerController } from "@/core/player/PlayerController";
 import { useTimeFormat } from "@/composables/useTimeFormat";
+import { useHaptic } from "@/composables/useHaptic";
 import { toLikeSong } from "@/utils/auth";
 import { openPlaylistAdd } from "@/utils/modal";
 import { removeBrackets } from "@/utils/format";
@@ -185,6 +197,7 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const player = usePlayerController();
 const { timeDisplay, toggleTimeFormat } = useTimeFormat();
+const haptic = useHaptic();
 
 const mobileStart = ref<HTMLElement | null>(null);
 const pageIndex = ref(0);
@@ -216,6 +229,7 @@ const mobileViewportStyle = computed<Record<string, string>>(() => {
   };
 });
 
+const isCurrentSongLiked = computed(() => dataStore.isLikeSong(musicStore.playSong.id));
 const canOpenLyricPage = computed(() => musicStore.playSong.type !== "radio");
 const pageTipText = computed(() =>
   pageIndex.value === 0
@@ -377,8 +391,10 @@ const finishSwipe = (clientX: number) => {
 
     if (shouldSwitchPage && finalLengthX > 0 && pageIndex.value === 0) {
       pageIndex.value = 1;
+      haptic.swipe();
     } else if (shouldSwitchPage && finalLengthX < 0 && pageIndex.value === 1) {
       pageIndex.value = 0;
+      haptic.swipe();
     }
   }
 
@@ -564,7 +580,7 @@ const contentTransform = computed(() => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 24px calc(40px + env(safe-area-inset-bottom, 0px)) 24px;
+      padding: 0 24px 0;
       overflow: hidden;
       overscroll-behavior: none;
       touch-action: none;
@@ -574,8 +590,8 @@ const contentTransform = computed(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 60px;
-        margin-bottom: 20px;
+        margin-top: 36px;
+        margin-bottom: 12px;
         :deep(.player-cover) {
           width: min(78vw, 42svh, 360px);
           &.record {
@@ -610,7 +626,7 @@ const contentTransform = computed(() => {
           width: 100%;
           display: flex;
           justify-content: space-between;
-          margin-bottom: 24px;
+          margin-bottom: 8px;
           .info-section {
             flex: 1;
             min-width: 0;
@@ -630,7 +646,7 @@ const contentTransform = computed(() => {
           }
           .info-actions {
             display: flex;
-            padding-top: 24px;
+            padding-top: 12px;
             gap: 16px;
             flex-shrink: 0;
             .action-btn {
@@ -662,23 +678,32 @@ const contentTransform = computed(() => {
         .progress-section {
           display: flex;
           align-items: center;
-          margin: 0 4px 24px;
+          width: 100%;
+          margin: 0 0 4px;
           .time {
-            font-size: max(13px, calc(13px * var(--android-ui-scale, 1)));
+            min-width: 42px;
             opacity: 0.6;
-            width: 40px;
-            text-align: center;
             color: rgb(var(--main-cover-color));
             font-variant-numeric: tabular-nums;
+            font-size: 12px;
+            line-height: 1;
+            &:first-child {
+              text-align: left;
+            }
+            &:last-child {
+              text-align: right;
+            }
           }
           .n-slider {
-            margin: 0 12px;
+            flex: 1;
+            min-width: 0;
+            margin: 0 8px;
           }
         }
         .control-section {
           width: 100%;
           max-width: 400px;
-          margin: 0 auto 24px;
+          margin: 0 auto 100px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -810,7 +835,7 @@ const contentTransform = computed(() => {
   .page-tip {
     position: absolute;
     left: 50%;
-    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     z-index: 3;
     padding: 4px 10px;
@@ -823,7 +848,7 @@ const contentTransform = computed(() => {
 
   .pagination {
     position: absolute;
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
     left: 0;
     width: 100%;
     display: flex;
@@ -1312,7 +1337,7 @@ const contentTransform = computed(() => {
 
           .control-section {
             max-width: min(390px, 100%);
-            margin-bottom: 0;
+            margin: clamp(8px, 2svh, 16px) auto 0;
           }
         }
       }
@@ -1595,7 +1620,7 @@ const contentTransform = computed(() => {
           .control-section {
             max-width: min(392px, 100%);
             min-height: 54px;
-            margin: 0 auto;
+            margin: clamp(8px, 2svh, 16px) auto 0;
             padding: 0 6px;
 
             .mode-btn,
@@ -1656,6 +1681,7 @@ const contentTransform = computed(() => {
 
           .control-section {
             min-height: 50px;
+            margin-top: 6px;
 
             .ctrl-btn {
               width: 42px;

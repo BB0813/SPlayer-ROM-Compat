@@ -72,9 +72,11 @@ const topListData = ref<{
 // 获取排行榜数据
 const getTopPlaylistData = async () => {
   const result = await topPlaylist();
+  // 解包 Android bridge 响应
+  const data = result?.body ?? result?.data ?? result;
   // 区分榜单
-  const official = formatCoverList(result.list?.filter((v: any) => v.ToplistType !== undefined));
-  const selected = formatCoverList(result.list?.filter((v: any) => v.ToplistType === undefined));
+  const official = formatCoverList(data?.list?.filter((v: any) => v.ToplistType !== undefined));
+  const selected = formatCoverList(data?.list?.filter((v: any) => v.ToplistType === undefined));
   topListData.value = { official, selected };
 };
 

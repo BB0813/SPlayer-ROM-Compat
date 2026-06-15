@@ -87,18 +87,22 @@ const getAllNewData = async () => {
   if (newTypeChoose.value === 0) {
     const area: AreaKey = newAreaNames[newAreaChoose.value]?.key || "ALL";
     const result = await newAlbumsAll(area, 50, newOffset.value);
+    // 解包 Android bridge 响应
+    const data = result?.body ?? result?.data ?? result;
     // 是否还有
-    hasMore.value = result.total > newOffset.value + 50;
+    hasMore.value = data?.total > newOffset.value + 50;
     // 处理数据
-    const albumData = formatCoverList(result.albums);
+    const albumData = formatCoverList(data?.albums);
     newAlbumData.value = newAlbumData.value.concat(albumData);
   }
   // 新歌速递
   else if (newTypeChoose.value === 1) {
     const area = newAreaNames[newAreaChoose.value]?.num || 0;
     const result = await newSongs(area);
+    // 解包 Android bridge 响应
+    const data = result?.body ?? result?.data ?? result;
     // 处理数据
-    newSongData.value = formatSongsList(result.data);
+    newSongData.value = formatSongsList(data?.data);
   }
   loading.value = false;
 };

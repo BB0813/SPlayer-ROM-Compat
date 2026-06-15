@@ -61,6 +61,10 @@ const initMpvIpc = (): void => {
     mpvService.setRate(rate);
   });
 
+  ipcMain.on("mpv-set-audio-delay", (_, delaySeconds: number) => {
+    mpvService.setAudioDelay(delaySeconds);
+  });
+
   // 获取音频设备列表
   ipcMain.handle("mpv-get-audio-devices", async () => {
     try {

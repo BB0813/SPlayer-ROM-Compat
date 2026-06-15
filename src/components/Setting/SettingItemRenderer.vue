@@ -434,9 +434,9 @@ const activeActions = computed(() => {
   .set.n-slider {
     flex: 1 0 100%;
     width: calc(100% - 8px);
-    min-height: 52px;
-    margin: 4px 4px 18px;
-    padding: 14px 4px 20px;
+    min-height: 44px;
+    margin: 4px 4px 8px;
+    padding: 10px 4px 12px;
     touch-action: none;
   }
 

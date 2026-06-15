@@ -620,7 +620,7 @@ onMounted(() => {
         padding: 0 12px;
 
         .n-scrollbar-content {
-          padding: 8px 0 calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+          padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
         }
       }
 
@@ -707,6 +707,7 @@ onMounted(() => {
   .n-menu {
     padding-bottom: 0;
     .n-menu-item {
+      min-height: 44px;
       &:first-child {
         margin-top: 0;
       }

@@ -467,10 +467,11 @@ class DownloadManager {
    */
   public removeDownload(id: number) {
     const dataStore = useDataStore();
-    // 如果正在下载，尝试取消（目前仅移除任务）
+    // 如果正在下载，发送取消请求到主进程
     if (this.activeDownloads.has(id)) {
-      // TODO: 实现取消正在进行的下载任务
-      // 暂时先从活动集合中移除，以释放下载槽位
+      if (isElectron && window.electron?.ipcRenderer) {
+        window.electron.ipcRenderer.invoke("cancel-download", id).catch(() => {});
+      }
       this.activeDownloads.delete(id);
     }
     // 从队列中移除

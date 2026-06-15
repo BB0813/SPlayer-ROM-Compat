@@ -95,3 +95,10 @@ docs/.vitepress/cache/
 .cursor/
 .claude/
 .ai_utf8_test.txt
+
+# Test report artifacts
+test-report/
+screenshots/rt-*.png
+
+# TypeScript build info
+*.tsbuildinfo

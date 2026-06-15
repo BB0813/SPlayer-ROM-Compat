@@ -5,7 +5,7 @@
     :class="{ 'full-player': statusStore.showFullPlayer }"
     :auto-focus="false"
     id="main-playlist"
-    style="width: 400px"
+    :style="{ width: 'min(400px, 85vw)' }"
   >
     <n-drawer-content :native-scrollbar="false" closable>
       <template #header>
@@ -19,14 +19,14 @@
         <VirtualScroll
           v-if="dataStore.playList.length"
           ref="playListRef"
-          :item-height="80"
+          :item-height="72"
           :item-fixed="true"
           :items="playListData"
           :default-scroll-index="statusStore.playIndex"
           class="playlist-list"
           :class="{ 'is-dragging-global': isDragging }"
-          style="max-height: calc(100dvh - 142px)"
-          :height="`calc(100dvh - 142px)`"
+          style="max-height: calc(100dvh - 120px)"
+          :height="`calc(100dvh - 120px)`"
         >
           <template #default="{ item: songData, index }">
             <div class="song-node">
@@ -277,11 +277,11 @@ const {
     align-items: center;
     justify-content: space-between;
     flex-direction: row;
-    min-height: 64px;
+    min-height: 56px;
     overflow: hidden;
     border-radius: 8px;
-    margin-bottom: 0;
-    padding: 0 12px;
+    margin-bottom: 2px;
+    padding: 0 8px;
     border: 1px solid transparent;
     background-color: rgba(var(--primary), 0.08);
     cursor: pointer;

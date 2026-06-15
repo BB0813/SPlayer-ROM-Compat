@@ -17,6 +17,12 @@ export const MPV_EVENTS = {
   ERROR: "error",
   CAN_PLAY: "canplay",
   LOAD_START: "loadstart",
+  SEEKING: "seeking",
+  SEEKED: "seeked",
+  WAITING: "waiting",
+  VOLUME_CHANGE: "volumechange",
+  PLAYING: "playing",
+  EMPTIED: "emptied",
 } as const;
 
 /**
@@ -131,6 +137,7 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
     // 播放重启（真正开始播放）
     window.electron.ipcRenderer.on("mpv-playback-restart", () => {
       this.playbackStarted = true;
+      this.dispatchEvent(new Event(MPV_EVENTS.SEEKED));
 
       // 决定最终状态
       if (this.forcePaused || this.autoPlayPending === false) {
@@ -141,6 +148,7 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
       } else {
         this._paused = false;
         this.dispatchEvent(new Event(MPV_EVENTS.PLAY));
+        this.dispatchEvent(new Event(MPV_EVENTS.PLAYING));
         // 确保播放状态
         window.electron.ipcRenderer.send("mpv-resume");
         this.forcePaused = false;
@@ -185,6 +193,7 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
 
     if (url) {
       this.dispatchEvent(new Event(MPV_EVENTS.LOAD_START));
+      this.dispatchEvent(new Event(MPV_EVENTS.WAITING));
 
       this.autoPlayPending = autoPlay;
       // 重置播放状态
@@ -220,6 +229,7 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
     void options;
 
     this.forcePaused = false;
+    this._paused = false;
     window.electron.ipcRenderer.send("mpv-resume");
   }
 
@@ -227,6 +237,7 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
     // MPV 不支持渐入渐出，忽略 options
     void options;
 
+    this._paused = true;
     window.electron.ipcRenderer.send("mpv-pause");
   }
 
@@ -237,15 +248,18 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
     this._duration = 0;
     this._paused = true;
     this.playbackStarted = false;
+    this.dispatchEvent(new Event(MPV_EVENTS.EMPTIED));
   }
 
   public seek(time: number): void {
+    this.dispatchEvent(new Event(MPV_EVENTS.SEEKING));
     window.electron.ipcRenderer.send("mpv-seek", time);
   }
 
   public setVolume(value: number): void {
     this._volume = Math.max(0, Math.min(1, value));
     window.electron.ipcRenderer.send("mpv-set-volume", this._volume * 100);
+    this.dispatchEvent(new Event(MPV_EVENTS.VOLUME_CHANGE));
   }
 
   public getVolume(): number {
@@ -269,8 +283,10 @@ export class MpvPlayer extends EventTarget implements IPlaybackEngine {
   }
 
   public setAudioDelayCompensation(offset: number): void {
-    // MPV 引擎不使用 Web Audio API，此设置无效
-    void offset;
+    // offset 单位为毫秒，MPV audio-delay 单位为秒
+    if (window?.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.send("mpv-set-audio-delay", offset / 1000);
+    }
   }
 
   public getErrorCode(): number {

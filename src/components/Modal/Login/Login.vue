@@ -64,7 +64,6 @@ const qrPause = ref(false);
 
 // 保存登录信息
 const saveLogin = async (loginData: any, type: LoginType = "qr") => {
-  console.log("loginData:", loginData);
   if (!loginData) return;
   if (loginData.code === 200) {
     try {

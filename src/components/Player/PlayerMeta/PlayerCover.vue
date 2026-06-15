@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
     height: 100%;
     z-index: 1;
     box-shadow: 0 0 20px 10px rgba(0, 0, 0, 0.1);
-    transition: opacity 0.1s ease-in-out;
+    transition: opacity 0.3s ease-in-out;
   }
   .dynamic-cover {
     position: absolute;

@@ -405,11 +405,14 @@ export const useDataStore = defineStore("data", {
       // 获取歌单分类
       try {
         const [catsRes, hqCatsRes] = await Promise.all([playlistCatlist(), playlistCatlist(true)]);
-        console.log(catsRes, hqCatsRes);
+        // 解包 Android bridge 响应
+        const unwrap = (r: any) => r?.body ?? r?.data ?? r;
+        const cats = unwrap(catsRes);
+        const hqCats = unwrap(hqCatsRes);
         this.catData = {
-          type: catsRes.categories,
-          cats: formatCategoryList(catsRes.sub),
-          hqCats: formatCategoryList(hqCatsRes.tags),
+          type: cats?.categories,
+          cats: formatCategoryList(cats?.sub),
+          hqCats: formatCategoryList(hqCats?.tags),
         };
       } catch (error) {
         console.error("Error getting playlist cat list:", error);

@@ -92,12 +92,15 @@ export class AudioElementPlayer extends BaseAudioPlayer {
    * 跳转到指定时间
    * @param time 目标时间（秒）
    */
-  public async seek(time: number): Promise<void> {
+  public async seek(time: number, immediate = false): Promise<void> {
     this.isInternalSeeking = true;
     this.targetSeekTime = time;
 
-    this.cancelPendingPause();
-    this.doSeek(time);
+    try {
+      await super.seek(time, immediate);
+    } finally {
+      this.isInternalSeeking = false;
+    }
   }
 
   /**

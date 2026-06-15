@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env sh
+#!/usr/bin/env sh
 set -eu
 
 APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
