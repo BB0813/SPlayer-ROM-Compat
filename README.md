@@ -13,6 +13,7 @@
 </p>
 
 SPlayer-ROM-Compat 是基于 SPlayer Android 化迁移的 ROM 兼容版。Compat 是“兼容”的缩写，项目目标是在 Android、HarmonyOS 以及国内各类定制 ROM 中稳定运行，并与系统音频、通知、后台和界面安全区策略和谐共生。
+本项目已归档 我将加入SPlayer-For-Android开发
 
 ---
 
